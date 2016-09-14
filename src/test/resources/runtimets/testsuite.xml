@@ -1,0 +1,37 @@
+<test-suite  xmlns="urn:xml.testframework.asterix.apache.org"
+             ResultOffsetPath="results"
+             QueryOffsetPath="queries"
+             QueryFileExtension=".aql">
+  <test-group name="channel">
+    <test-case FilePath="channel">
+        <compilation-unit name="room_occupants">
+            <output-dir compare="Text">room_occupants</output-dir>
+        </compilation-unit>
+    </test-case>
+    <test-case FilePath="channel">
+        <compilation-unit name="create_channel_check_datasets">
+            <output-dir compare="Text">create_channel_check_datasets</output-dir>
+        </compilation-unit>
+    </test-case>
+    <test-case FilePath="channel">
+        <compilation-unit name="create_channel_check_metadata">
+            <output-dir compare="Text">create_channel_check_metadata</output-dir>
+        </compilation-unit>
+    </test-case>
+    <test-case FilePath="channel">
+        <compilation-unit name="drop_channel_check_datasets">
+            <output-dir compare="Text">drop_channel_check_datasets</output-dir>
+        </compilation-unit>
+    </test-case>
+    <test-case FilePath="channel">
+        <compilation-unit name="drop_channel_check_metadata">
+            <output-dir compare="Text">drop_channel_check_metadata</output-dir>
+        </compilation-unit>
+    </test-case>
+            <test-case FilePath="channel">
+        <compilation-unit name="subscribe_channel_check_subscriptions">
+            <output-dir compare="Text">subscribe_channel_check_subscriptions</output-dir>
+        </compilation-unit>
+    </test-case>
+  </test-group>
+</test-suite>
