@@ -1,0 +1,5 @@
+use dataverse channels;
+
+for $test in dataset nearbyTweetChannelSubscriptions
+order by $test.param1
+return $test.param1;

@@ -1,0 +1,14 @@
+/*
+* Description  : Room Occupants Test
+* Expected Res : Success
+* Date         : Sep 2016
+* Author       : Steven Jacobs
+*/
+
+use dataverse channels;
+
+upsert into dataset UserLocations([
+{"userId":1, "roomNumber":222},
+{"userId":2, "roomNumber":222},
+{"userId":3, "roomNumber":222}]
+);

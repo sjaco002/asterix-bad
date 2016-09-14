@@ -1,0 +1,56 @@
+/*
+* Description  : Room Occupants Test
+* Expected Res : Success
+* Date         : Sep 2016
+* Author       : Steven Jacobs
+*/
+
+drop dataverse channels if exists;
+create dataverse channels;
+use dataverse channels;
+
+create type userLocation as {
+  userId: int,
+  roomNumber: int
+}
+create type watchedUser as {
+  userId: int,
+  name: string
+}
+create type roomSecurity as {
+  roomNumber: int,
+  securityGuardName: string,
+  securityGuardNumber: string 
+}
+
+create dataset watchedUsers(watchedUser)
+primary key userId;
+
+create dataset roomSecurityAssignments(roomSecurity)
+primary key roomNumber;
+
+upsert into dataset roomSecurityAssignments([
+{"roomNumber":123, "securityGuardName":"Mike", "securityGuardNumber":"555-4815"},
+{"roomNumber":222, "securityGuardName":"Steven", "securityGuardNumber":"555-1623"},
+{"roomNumber":350, "securityGuardName":"Vassilis", "securityGuardNumber":"555-1234"}]
+);
+
+upsert into dataset watchedUsers([
+{"userId":1, "name":"suspectNumber1"}]
+);
+
+
+create dataset UserLocations(userLocation)
+primary key userId;
+
+create function RoomOccupants($room) {
+    for $location in dataset UserLocations 
+    where $location.roomNumber = $room 
+    return $location.userId
+};
+
+create broker brokerA at "http://www.notifyA.com";
+create broker brokerB at "http://www.notifyB.com";
+
+
+create repetitive channel roomRecords using RoomOccupants@1 period duration("PT5S");

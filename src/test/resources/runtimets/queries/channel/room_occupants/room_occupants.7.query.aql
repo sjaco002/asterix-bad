@@ -1,0 +1,12 @@
+/*
+* Description  : Room Occupants Test
+* Expected Res : Success
+* Date         : Sep 2016
+* Author       : Steven Jacobs
+*/
+
+use dataverse channels;
+
+from $result in dataset roomRecordsResults
+order by $result.result
+select $result.result;

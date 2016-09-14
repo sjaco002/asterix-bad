@@ -1,0 +1,15 @@
+/*
+* Description  : Room Occupants Test
+* Expected Res : Success
+* Date         : Sep 2016
+* Author       : Steven Jacobs
+*/
+
+use dataverse channels;
+
+from $test in dataset roomRecordsSubscriptions
+order by $test.BrokerName
+select {
+"broker":$test.BrokerName,
+"parameter":$test.param0
+}

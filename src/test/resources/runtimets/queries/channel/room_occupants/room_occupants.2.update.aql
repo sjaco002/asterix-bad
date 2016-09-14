@@ -1,0 +1,12 @@
+/*
+* Description  : Room Occupants Test
+* Expected Res : Success
+* Date         : Sep 2016
+* Author       : Steven Jacobs
+*/
+
+
+use dataverse channels;
+
+subscribe to roomRecords (123) on brokerA;
+subscribe to roomRecords (350) on brokerB;
