@@ -51,7 +51,7 @@ import org.apache.hyracks.algebricks.core.algebra.operators.logical.AssignOperat
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.DataSourceScanOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.DistinctOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.DistributeResultOperator;
-import org.apache.hyracks.algebricks.core.algebra.operators.logical.ExtensionOperator;
+import org.apache.hyracks.algebricks.core.algebra.operators.logical.DelegateOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.GroupByOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.InsertDeleteUpsertOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.NestedTupleSourceOperator;
@@ -75,10 +75,10 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
             return false;
         }
         AbstractLogicalOperator op = (AbstractLogicalOperator) op1.getInputs().get(0).getValue();
-        if (op.getOperatorTag() != LogicalOperatorTag.EXTENSION_OPERATOR) {
+        if (op.getOperatorTag() != LogicalOperatorTag.DELEGATE_OPERATOR) {
             return false;
         }
-        ExtensionOperator eOp = (ExtensionOperator) op;
+        DelegateOperator eOp = (DelegateOperator) op;
         if (!(eOp.getDelegate() instanceof CommitOperator)) {
             return false;
         }
@@ -140,7 +140,7 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
         context.computeAndSetTypeEnvironmentForOperator(badProject);
 
         //Create my brokerNotify plan above the extension Operator
-        ExtensionOperator dOp = createNotifyBrokerPlan(brokerEndpointVar, subscriptionIdVar, channelExecutionVar,
+        DelegateOperator dOp = createNotifyBrokerPlan(brokerEndpointVar, subscriptionIdVar, channelExecutionVar,
                 context, eOp, (DistributeResultOperator) op1, channelDataverse, channelName);
 
         opRef.setValue(dOp);
@@ -148,7 +148,7 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
         return true;
     }
 
-    private ExtensionOperator createNotifyBrokerPlan(LogicalVariable brokerEndpointVar,
+    private DelegateOperator createNotifyBrokerPlan(LogicalVariable brokerEndpointVar,
             LogicalVariable subscriptionIdVar, LogicalVariable channelExecutionVar, IOptimizationContext context,
             ILogicalOperator eOp, DistributeResultOperator distributeOp, String channelDataverse, String channelName)
                     throws AlgebricksException {
@@ -196,7 +196,7 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
         EntityId activeId = new EntityId(BADConstants.CHANNEL_EXTENSION_NAME, channelDataverse, channelName);
         NotifyBrokerPOperator notifyBrokerPOp = new NotifyBrokerPOperator(activeId);
         notifyBrokerOp.setPhysicalOperator(notifyBrokerPOp);
-        ExtensionOperator extensionOp = new ExtensionOperator(notifyBrokerOp);
+        DelegateOperator extensionOp = new DelegateOperator(notifyBrokerOp);
         extensionOp.setPhysicalOperator(notifyBrokerPOp);
         extensionOp.getInputs().add(new MutableObject<ILogicalOperator>(groupbyOp));
 

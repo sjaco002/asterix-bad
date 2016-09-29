@@ -22,14 +22,14 @@ import java.util.Collection;
 
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.algebricks.core.algebra.base.LogicalVariable;
-import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractExtensibleLogicalOperator;
-import org.apache.hyracks.algebricks.core.algebra.operators.logical.IOperatorExtension;
+import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractDelegatedLogicalOperator;
+import org.apache.hyracks.algebricks.core.algebra.operators.logical.IOperatorDelegate;
 import org.apache.hyracks.algebricks.core.algebra.visitors.ILogicalExpressionReferenceTransform;
 
 /**
  * A repetitive channel operator, which uses a Java timer to run a given query periodically
  */
-public class NotifyBrokerOperator extends AbstractExtensibleLogicalOperator {
+public class NotifyBrokerOperator extends AbstractDelegatedLogicalOperator {
     private final LogicalVariable subscriptionIdVar;
     private final LogicalVariable brokerEndpointVar;
     private final LogicalVariable channelExecutionVar;
@@ -64,7 +64,7 @@ public class NotifyBrokerOperator extends AbstractExtensibleLogicalOperator {
     }
 
     @Override
-    public IOperatorExtension newInstance() {
+    public IOperatorDelegate newInstance() {
         return new NotifyBrokerOperator(brokerEndpointVar, subscriptionIdVar, channelExecutionVar);
     }
 

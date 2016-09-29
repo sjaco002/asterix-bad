@@ -67,7 +67,7 @@ import org.apache.asterix.metadata.declared.AqlMetadataProvider;
 import org.apache.asterix.metadata.entities.Function;
 import org.apache.asterix.om.base.temporal.ADurationParserFactory;
 import org.apache.asterix.runtime.util.AsterixAppContextInfo;
-import org.apache.asterix.runtime.util.AsterixClusterProperties;
+import org.apache.asterix.runtime.util.ClusterStateManager;
 import org.apache.asterix.translator.IStatementExecutor;
 import org.apache.asterix.translator.IStatementExecutor.ResultDelivery;
 import org.apache.asterix.translator.IStatementExecutor.Stats;
@@ -199,7 +199,7 @@ public class CreateChannelStatement implements IExtensionStatement {
         RepetitiveChannelOperatorDescriptor channelOp = new RepetitiveChannelOperatorDescriptor(jobSpec, dataverse,
                 channelName, duration, channeljobSpec, strIP, port);
 
-        String partition = AsterixClusterProperties.INSTANCE.getClusterLocations().getLocations()[0];
+        String partition = ClusterStateManager.INSTANCE.getClusterLocations().getLocations()[0];
         Set<String> ncs = new HashSet<>(Arrays.asList(partition));
         AlgebricksAbsolutePartitionConstraint partitionConstraint = new AlgebricksAbsolutePartitionConstraint(
                 ncs.toArray(new String[ncs.size()]));
@@ -246,7 +246,7 @@ public class CreateChannelStatement implements IExtensionStatement {
             IHyracksDataset hdc, Stats stats, String dataverse) throws Exception {
         StringBuilder builder = new StringBuilder();
         builder.append("insert into dataset " + dataverse + "." + resultsName + " ");
-        builder.append(" (" + " let $" + BADConstants.ChannelExecutionTime + " := current-datetime() \n");
+        builder.append(" as $a (" + " let $" + BADConstants.ChannelExecutionTime + " := current-datetime() \n");
 
         builder.append("for $sub in dataset " + dataverse + "." + subscriptionsName + "\n");
         builder.append(
@@ -266,7 +266,7 @@ public class CreateChannelStatement implements IExtensionStatement {
         builder.append("\"result\":$result");
         builder.append("}");
         builder.append(")");
-        builder.append(" return records");
+        builder.append(" returning $a");
         builder.append(";");
         AQLParserFactory aqlFact = new AQLParserFactory();
         List<Statement> fStatements = aqlFact.createParser(new StringReader(builder.toString())).parse();

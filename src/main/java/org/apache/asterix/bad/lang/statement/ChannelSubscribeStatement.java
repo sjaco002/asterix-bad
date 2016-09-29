@@ -29,16 +29,22 @@ import org.apache.asterix.bad.metadata.Broker;
 import org.apache.asterix.bad.metadata.Channel;
 import org.apache.asterix.common.exceptions.AsterixException;
 import org.apache.asterix.common.functions.FunctionSignature;
+import org.apache.asterix.lang.aql.expression.FLWOGRExpression;
+import org.apache.asterix.lang.common.base.Clause;
 import org.apache.asterix.lang.common.base.Expression;
+import org.apache.asterix.lang.common.clause.LetClause;
 import org.apache.asterix.lang.common.expression.CallExpr;
+import org.apache.asterix.lang.common.expression.FieldAccessor;
 import org.apache.asterix.lang.common.expression.FieldBinding;
 import org.apache.asterix.lang.common.expression.LiteralExpr;
 import org.apache.asterix.lang.common.expression.RecordConstructor;
+import org.apache.asterix.lang.common.expression.VariableExpr;
 import org.apache.asterix.lang.common.literal.StringLiteral;
 import org.apache.asterix.lang.common.statement.InsertStatement;
 import org.apache.asterix.lang.common.statement.Query;
 import org.apache.asterix.lang.common.statement.UpsertStatement;
 import org.apache.asterix.lang.common.struct.Identifier;
+import org.apache.asterix.lang.common.struct.VarIdentifier;
 import org.apache.asterix.lang.common.visitor.base.ILangVisitor;
 import org.apache.asterix.metadata.MetadataManager;
 import org.apache.asterix.metadata.MetadataTransactionContext;
@@ -182,18 +188,32 @@ public class ChannelSubscribeStatement implements IExtensionStatement {
             subscriptionTuple.setVarCounter(varCounter);
 
             if (subscriptionId == null) {
-                List<String> returnField = new ArrayList<>();
-                returnField.add(BADConstants.SubscriptionId);
+
+                VariableExpr subscriptionVar = new VariableExpr(new VarIdentifier("$sub", 1));
+                VariableExpr useSubscriptionVar = new VariableExpr(new VarIdentifier("$sub", 1));
+                VariableExpr resultVar = new VariableExpr(new VarIdentifier("$result", 0));
+                VariableExpr useResultVar = new VariableExpr(new VarIdentifier("$result", 0));
+                useResultVar.setIsNewVar(false);
+                useSubscriptionVar.setIsNewVar(false);
+                Query returnQuery = new Query(false);
+                List<Clause> clauseList = new ArrayList<>();
+                LetClause let = new LetClause(subscriptionVar,
+                        new FieldAccessor(useResultVar, new Identifier(BADConstants.SubscriptionId)));
+                clauseList.add(let);
+                FLWOGRExpression body = new FLWOGRExpression(clauseList, useSubscriptionVar);
+                returnQuery.setBody(body);
+
                 metadataProvider.setResultSetId(new ResultSetId(resultSetIdCounter++));
                 metadataProvider.setResultAsyncMode(
                         resultDelivery == ResultDelivery.ASYNC || resultDelivery == ResultDelivery.ASYNC_DEFERRED);
                 InsertStatement insert = new InsertStatement(new Identifier(dataverse),
-                        new Identifier(subscriptionsDatasetName), subscriptionTuple, varCounter, false, returnField);
+                        new Identifier(subscriptionsDatasetName), subscriptionTuple, varCounter, resultVar,
+                        returnQuery);
                 ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider, insert, hcc, hdc,
                         resultDelivery, stats, false);
             } else {
                 UpsertStatement upsert = new UpsertStatement(new Identifier(dataverse),
-                        new Identifier(subscriptionsDatasetName), subscriptionTuple, varCounter);
+                        new Identifier(subscriptionsDatasetName), subscriptionTuple, varCounter, null, null);
                 ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider, upsert, hcc, hdc,
                         resultDelivery, stats, false);
             }
