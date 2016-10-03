@@ -49,9 +49,9 @@ import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractLogi
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.AggregateOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.AssignOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.DataSourceScanOperator;
+import org.apache.hyracks.algebricks.core.algebra.operators.logical.DelegateOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.DistinctOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.DistributeResultOperator;
-import org.apache.hyracks.algebricks.core.algebra.operators.logical.DelegateOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.GroupByOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.InsertDeleteUpsertOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.NestedTupleSourceOperator;
@@ -118,10 +118,6 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
         AssignOperator assignOp = createbrokerEndPointAssignOperator(brokerEndpointVar, opAboveBrokersScan);
         //now brokerNameVar holds the brokerName for use farther up in the plan
 
-        //Place assignOp between the scan and the op above it
-        assignOp.getInputs().addAll(opAboveBrokersScan.getInputs());
-        opAboveBrokersScan.getInputs().clear();
-        opAboveBrokersScan.getInputs().add(new MutableObject<ILogicalOperator>(assignOp));
         context.computeAndSetTypeEnvironmentForOperator(assignOp);
         context.computeAndSetTypeEnvironmentForOperator(opAboveBrokersScan);
         context.computeAndSetTypeEnvironmentForOperator(eOp);
@@ -221,10 +217,13 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
         Mutable<ILogicalExpression> fieldRef = new MutableObject<ILogicalExpression>(
                 new ConstantExpression(new AsterixConstantValue(new AString(BADConstants.BrokerEndPoint))));
         DataSourceScanOperator brokerScan = null;
+        int index = 0;
         for (Mutable<ILogicalOperator> subOp : opAboveBrokersScan.getInputs()) {
             if (isBrokerScan((AbstractLogicalOperator) subOp.getValue())) {
                 brokerScan = (DataSourceScanOperator) subOp.getValue();
+                break;
             }
+            index++;
         }
         Mutable<ILogicalExpression> varRef = new MutableObject<ILogicalExpression>(
                 new VariableReferenceExpression(brokerScan.getVariables().get(2)));
@@ -235,7 +234,14 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
         varArray.add(brokerEndpointVar);
         ArrayList<Mutable<ILogicalExpression>> exprArray = new ArrayList<Mutable<ILogicalExpression>>(1);
         exprArray.add(new MutableObject<ILogicalExpression>(fieldAccessByName));
-        return new AssignOperator(varArray, exprArray);
+
+        AssignOperator assignOp = new AssignOperator(varArray, exprArray);
+
+        //Place assignOp between the scan and the op above it
+        assignOp.getInputs().add(new MutableObject<ILogicalOperator>(brokerScan));
+        opAboveBrokersScan.getInputs().set(index, new MutableObject<ILogicalOperator>(assignOp));
+
+        return assignOp;
     }
 
     /*This function searches for the needed op
