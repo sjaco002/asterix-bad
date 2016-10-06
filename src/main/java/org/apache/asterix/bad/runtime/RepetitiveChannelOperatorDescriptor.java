@@ -19,7 +19,6 @@ import java.util.logging.Logger;
 import org.apache.asterix.active.ActiveRuntimeId;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.bad.BADConstants;
-import org.apache.asterix.common.exceptions.AsterixException;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.dataflow.IOperatorNodePushable;
 import org.apache.hyracks.api.dataflow.value.IRecordDescriptorProvider;
@@ -63,7 +62,7 @@ public class RepetitiveChannelOperatorDescriptor extends AbstractSingleActivityO
                 RepetitiveChannelOperatorNodePushable.class.getSimpleName(), partition);
         try {
             return new RepetitiveChannelOperatorNodePushable(ctx, runtimeId, jobSpec, duration, strIP, port);
-        } catch (AsterixException e) {
+        } catch (Exception e) {
             throw new HyracksDataException(e);
         }
     }

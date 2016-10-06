@@ -26,8 +26,8 @@ import java.net.URL;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.asterix.active.BADConstants;
 import org.apache.asterix.active.EntityId;
-import org.apache.asterix.common.exceptions.AsterixException;
 import org.apache.asterix.om.base.AOrderedList;
 import org.apache.asterix.om.base.AUUID;
 import org.apache.hyracks.api.client.HyracksConnection;
@@ -44,14 +44,16 @@ public class ChannelJobService {
 
     private static final Logger LOGGER = Logger.getLogger(ChannelJobService.class.getName());
     IHyracksClientConnection hcc;
+    JobId jobId;
 
-    public ChannelJobService() throws AsterixException {
-
+    public ChannelJobService(String strIP, int port) throws Exception {
+        if (port != -1) {
+            hcc = new HyracksConnection(strIP, port);
+        }
     }
 
-    public void runChannelJob(JobSpecification channeljobSpec, String strIP, int port) throws Exception {
-        hcc = new HyracksConnection(strIP, port);
-        JobId jobId = hcc.startJob(channeljobSpec);
+    public void runChannelJob(JobSpecification channeljobSpec) throws Exception {
+        jobId = hcc.startJob(channeljobSpec);
         hcc.waitForCompletion(jobId);
     }
 
@@ -99,13 +101,17 @@ public class ChannelJobService {
             connection.setUseCaches(false);
             connection.setDoOutput(true);
 
-            //Send message
-            try {
-                DataOutputStream wr = new DataOutputStream(connection.getOutputStream());
-                wr.writeBytes(urlParameters);
-                wr.close();
-            } catch (Exception e) {
-                throw new AsterixException("Broker connection failed to write", e);
+            if (connection.getOutputStream() != null) {
+                //Send message
+                try {
+                    DataOutputStream wr = new DataOutputStream(connection.getOutputStream());
+                    wr.writeBytes(urlParameters);
+                    wr.close();
+                } catch (Exception e) {
+                    throw e;
+                }
+            } else {
+                throw new Exception();
             }
 
             if (LOGGER.isLoggable(Level.INFO)) {
@@ -115,21 +121,23 @@ public class ChannelJobService {
                 LOGGER.info("Response Code : " + responseCode);
             }
 
-            BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            String inputLine;
-            StringBuffer response = new StringBuffer();
-
-            while ((inputLine = in.readLine()) != null) {
-                response.append(inputLine);
-            }
-            in.close();
-
-            if (LOGGER.isLoggable(Level.INFO)) {
-                System.out.println(response.toString());
+            if (connection.getInputStream() != null) {
+                BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                String inputLine;
+                StringBuffer response = new StringBuffer();
+                while ((inputLine = in.readLine()) != null) {
+                    response.append(inputLine);
+                }
+                in.close();
+                if (LOGGER.isLoggable(Level.INFO)) {
+                    System.out.println(response.toString());
+                }
+            } else {
+                throw new Exception();
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.info("Broker connection failed to write");
         } finally {
             if (connection != null) {
                 connection.disconnect();

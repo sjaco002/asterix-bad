@@ -26,7 +26,6 @@ import java.util.logging.Logger;
 import org.apache.asterix.active.ActiveRuntimeId;
 import org.apache.asterix.active.ActiveSourceOperatorNodePushable;
 import org.apache.asterix.bad.ChannelJobService;
-import org.apache.asterix.common.exceptions.AsterixException;
 import org.apache.hyracks.api.comm.IFrameWriter;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
@@ -41,24 +40,20 @@ public class RepetitiveChannelOperatorNodePushable extends ActiveSourceOperatorN
     private final JobSpecification jobSpec;
     private long duration;
     private ChannelJobService channelJobService;
-    private String strIP;
-    private int port;
 
     public RepetitiveChannelOperatorNodePushable(IHyracksTaskContext ctx, ActiveRuntimeId runtimeId,
-            JobSpecification channeljobSpec, String duration, String strIP, int port) throws AsterixException {
+            JobSpecification channeljobSpec, String duration, String strIP, int port) throws Exception {
         super(ctx, runtimeId);
         this.jobSpec = channeljobSpec;
         this.duration = findPeriod(duration);
         //TODO: we should share channelJobService as a single instance
         //And only create one hcc
-        channelJobService = new ChannelJobService();
-        this.strIP = strIP;
-        this.port = port;
+        channelJobService = new ChannelJobService(strIP, port);
     }
 
     public void executeJob() throws Exception {
         LOGGER.info("Executing Job: " + runtimeId.toString());
-        channelJobService.runChannelJob(jobSpec, strIP, port);
+        channelJobService.runChannelJob(jobSpec);
     }
 
     @Override

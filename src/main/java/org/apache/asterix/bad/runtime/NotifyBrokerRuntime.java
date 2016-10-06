@@ -74,7 +74,11 @@ public class NotifyBrokerRuntime extends AbstractOneInputOneOutputOneFramePushRu
         this.activeManager = (ActiveManager) ((IAsterixAppRuntimeContext) ctx.getJobletContext().getApplicationContext()
                 .getApplicationObject()).getActiveManager();
         this.entityId = activeJobId;
-        channelJobService = new ChannelJobService();
+        try {
+            channelJobService = new ChannelJobService("", -1);
+        } catch (Exception e) {
+            throw new AlgebricksException(e);
+        }
     }
 
     @Override
