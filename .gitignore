@@ -1,4 +1,6 @@
 opttest
+asterix-bad/target
+asteri-opt-bom/target
 target
 .classpath
 .settings

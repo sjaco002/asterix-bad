@@ -26,7 +26,6 @@ import java.net.URL;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.asterix.active.BADConstants;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.om.base.AOrderedList;
 import org.apache.asterix.om.base.AUUID;
