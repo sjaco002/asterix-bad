@@ -21,6 +21,7 @@ package org.apache.asterix.bad.test;
 import java.io.File;
 import java.util.logging.Logger;
 
+import org.apache.asterix.bad.lang.BADCompilationProvider;
 import org.apache.asterix.common.config.GlobalConfig;
 import org.apache.asterix.external.util.ExternalDataConstants;
 import org.apache.asterix.external.util.IdentitiyResolverFactory;
@@ -40,6 +41,8 @@ public class BADOptimizerTest extends OptimizerTest {
         System.setProperty(GlobalConfig.CONFIG_FILE_PROPERTY, TEST_CONFIG_FILE_NAME);
         final File outdir = new File(PATH_ACTUAL);
         outdir.mkdirs();
+
+        extensionLangCompilationProvider = new BADCompilationProvider();
 
         integrationUtil.init(true);
         // Set the node resolver to be the identity resolver that expects node names

@@ -20,6 +20,7 @@
 package org.apache.asterix.bad.runtime;
 
 import java.io.DataInputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.asterix.active.ActiveManager;
@@ -110,7 +111,12 @@ public class NotifyBrokerRuntime extends AbstractOneInputOneOutputOneFramePushRu
             int resultSetOffset = inputArg2.getStartOffset();
             bbis.setByteBuffer(tRef.getFrameTupleAccessor().getBuffer(), resultSetOffset + 1);
             ADateTime executionTime = ADateTimeSerializerDeserializer.INSTANCE.deserialize(di);
-            String executionTimeString = executionTime.toSimpleString();
+            String executionTimeString;
+            try {
+                executionTimeString = executionTime.toSimpleString();
+            } catch (IOException e) {
+                throw new HyracksDataException(e);
+            }
 
             channelJobService.sendBrokerNotificationsForChannel(entityId, endpoint.getStringValue(), subs,
                     executionTimeString);
