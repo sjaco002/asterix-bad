@@ -31,6 +31,7 @@
     <groupId>org.apache.asterix</groupId>
     <artifactId>asterix-opt-bom</artifactId>
     <version>0.8.9-SNAPSHOT</version>
+    <packaging>pom</packaging>
     <name>asterix-opt-bom</name>
     <description>BAD Extension to AsterixDB</description>
     
