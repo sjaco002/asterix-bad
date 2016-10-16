@@ -80,7 +80,7 @@ public class BrokerDropStatement implements IExtensionStatement {
             IHyracksClientConnection hcc, IHyracksDataset hdc, ResultDelivery resultDelivery, Stats stats,
             int resultSetIdCounter) throws HyracksDataException, AlgebricksException {
         //TODO: dont drop a broker that's being used
-        String dataverse = ((QueryTranslator) statementExecutor).getActiveDataverse(dataverseName);
+        String dataverse = ((QueryTranslator) statementExecutor).getActiveDataverseName(dataverseName.getValue());
         MetadataTransactionContext mdTxnCtx = null;
         try {
             mdTxnCtx = MetadataManager.INSTANCE.beginTransaction();

@@ -98,7 +98,7 @@ public class ChannelDropStatement implements IExtensionStatement {
             IHyracksClientConnection hcc, IHyracksDataset hdc, ResultDelivery resultDelivery, Stats stats,
             int resultSetIdCounter) throws HyracksDataException, AlgebricksException {
 
-        String dataverse = ((QueryTranslator) statementExecutor).getActiveDataverse(dataverseName);
+        String dataverse = ((QueryTranslator) statementExecutor).getActiveDataverseName(dataverseName.getValue());
         boolean txnActive = false;
         EntityId entityId = new EntityId(BADConstants.CHANNEL_EXTENSION_NAME, dataverse, channelName.getValue());
         ChannelEventsListener listener = (ChannelEventsListener) ActiveJobNotificationHandler.INSTANCE

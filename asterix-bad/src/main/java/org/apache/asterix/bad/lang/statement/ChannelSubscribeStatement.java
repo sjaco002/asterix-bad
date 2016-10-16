@@ -129,8 +129,9 @@ public class ChannelSubscribeStatement implements IExtensionStatement {
             IHyracksClientConnection hcc, IHyracksDataset hdc, ResultDelivery resultDelivery, Stats stats,
             int resultSetIdCounter) throws HyracksDataException, AlgebricksException {
 
-        String dataverse = ((QueryTranslator) statementExecutor).getActiveDataverse(dataverseName);
-        String brokerDataverse = ((QueryTranslator) statementExecutor).getActiveDataverse(brokerDataverseName);
+        String dataverse = ((QueryTranslator) statementExecutor).getActiveDataverseName(dataverseName.getValue());
+        String brokerDataverse = ((QueryTranslator) statementExecutor)
+                .getActiveDataverseName(brokerDataverseName.getValue());
 
         MetadataTransactionContext mdTxnCtx = null;
         try {

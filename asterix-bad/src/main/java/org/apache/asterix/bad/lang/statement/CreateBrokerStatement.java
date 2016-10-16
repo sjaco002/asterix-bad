@@ -83,7 +83,7 @@ public class CreateBrokerStatement implements IExtensionStatement {
     public void handle(IStatementExecutor statementExecutor, AqlMetadataProvider metadataProvider,
             IHyracksClientConnection hcc, IHyracksDataset hdc, ResultDelivery resultDelivery, Stats stats,
             int resultSetIdCounter) throws HyracksDataException, AlgebricksException {
-        String dataverse = ((QueryTranslator) statementExecutor).getActiveDataverse(dataverseName);
+        String dataverse = ((QueryTranslator) statementExecutor).getActiveDataverseName(dataverseName.getValue());
         MetadataTransactionContext mdTxnCtx = null;
         try {
             mdTxnCtx = MetadataManager.INSTANCE.beginTransaction();

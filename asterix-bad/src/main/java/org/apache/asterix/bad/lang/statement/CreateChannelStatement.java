@@ -288,7 +288,7 @@ public class CreateChannelStatement implements IExtensionStatement {
         //TODO: The compiled job will break if anything changes to the function or two datasets
         // Need to make sure we do proper checking when altering these things
 
-        String dataverse = ((QueryTranslator) statementExecutor).getActiveDataverse(dataverseName);
+        String dataverse = ((QueryTranslator) statementExecutor).getActiveDataverseName(dataverseName.getValue());
 
         Identifier subscriptionsName = new Identifier(channelName + BADConstants.subscriptionEnding);
         Identifier resultsName = new Identifier(channelName + BADConstants.resultsEnding);
