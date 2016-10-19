@@ -20,6 +20,7 @@ package org.apache.asterix.bad.lang;
 
 import org.apache.asterix.algebra.base.ILangExpressionToPlanTranslatorFactory;
 import org.apache.asterix.compiler.provider.ILangCompilationProvider;
+import org.apache.asterix.compiler.provider.IRuleSetFactory;
 import org.apache.asterix.lang.aql.rewrites.AQLRewriterFactory;
 import org.apache.asterix.lang.aql.visitor.AQLAstPrintVisitorFactory;
 import org.apache.asterix.lang.common.base.IAstPrintVisitorFactory;
@@ -47,6 +48,11 @@ public class BADCompilationProvider implements ILangCompilationProvider {
     @Override
     public ILangExpressionToPlanTranslatorFactory getExpressionToPlanTranslatorFactory() {
         return new AqlExpressionToPlanTranslatorFactory();
+    }
+
+    @Override
+    public IRuleSetFactory getRuleSetFactory() {
+        return new BADRuleSetFactory();
     }
 
 }
