@@ -20,7 +20,6 @@ package org.apache.asterix.bad.lang;
 
 import java.util.List;
 
-import org.apache.asterix.app.cc.CompilerExtensionManager;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.compiler.provider.ILangCompilationProvider;
 import org.apache.asterix.lang.common.base.Statement;
@@ -29,8 +28,8 @@ import org.apache.asterix.translator.SessionConfig;
 public class BADStatementExecutor extends QueryTranslator {
 
     public BADStatementExecutor(List<Statement> aqlStatements, SessionConfig conf,
-            ILangCompilationProvider compliationProvider, CompilerExtensionManager ccExtensionManager) {
-        super(aqlStatements, conf, compliationProvider, ccExtensionManager);
+            ILangCompilationProvider compliationProvider) {
+        super(aqlStatements, conf, compliationProvider);
     }
 
     /*

@@ -55,7 +55,7 @@ Statement DropStatement() throws ParseException:
       {
         stmt = new ChannelDropStatement(pairId.first, pairId.second, ifExists);
       }
-      	      | <BROKER> pairId = QualifiedName() ifExists = IfExists()	
+      	      | "broker" pairId = QualifiedName() ifExists = IfExists()	
       {	
         stmt = new BrokerDropStatement(pairId.first, pairId.second, ifExists);	
       }
@@ -98,7 +98,7 @@ CreateBrokerStatement BrokerSpecification() throws ParseException:
 }
 {
   (
-    <BROKER>  name = QualifiedName()
+    "broker"  name = QualifiedName()
     <AT>  endPoint = StringLiteral()
     {
       cbs = new CreateBrokerStatement(name.first, name.second,endPoint);
@@ -169,10 +169,4 @@ Statement ChannelSubscriptionStatement() throws ParseException:
     {
       return stmt;
     }
-}
-
-<DEFAULT,IN_DBL_BRACE>
-TOKEN [IGNORE_CASE]:
-{
-    <BROKER : "broker">
 }
