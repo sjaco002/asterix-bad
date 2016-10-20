@@ -22,6 +22,7 @@ import java.io.File;
 import java.util.logging.Logger;
 
 import org.apache.asterix.bad.lang.BADCompilationProvider;
+import org.apache.asterix.bad.lang.BADQueryTranslatorFactory;
 import org.apache.asterix.common.config.GlobalConfig;
 import org.apache.asterix.external.util.ExternalDataConstants;
 import org.apache.asterix.external.util.IdentitiyResolverFactory;
@@ -43,6 +44,7 @@ public class BADOptimizerTest extends OptimizerTest {
         outdir.mkdirs();
 
         extensionLangCompilationProvider = new BADCompilationProvider();
+        statementExecutorFactory = new BADQueryTranslatorFactory();
 
         integrationUtil.init(true);
         // Set the node resolver to be the identity resolver that expects node names
