@@ -33,7 +33,7 @@ import org.apache.hyracks.algebricks.core.rewriter.base.IAlgebraicRewriteRule;
 public class BADRuleSetFactory implements IRuleSetFactory {
 
     @Override
-    public List<Pair<AbstractRuleController, List<IAlgebraicRewriteRule>>> buildLogicalRewrites()
+    public List<Pair<AbstractRuleController, List<IAlgebraicRewriteRule>>> getLogicalRewrites()
             throws AlgebricksException {
         List<Pair<AbstractRuleController, List<IAlgebraicRewriteRule>>> logicalRuleSet = DefaultRuleSetFactory.buildLogical();
         if (logicalRuleSet.size() != 14) {
@@ -51,7 +51,7 @@ public class BADRuleSetFactory implements IRuleSetFactory {
     }
 
     @Override
-    public List<Pair<AbstractRuleController, List<IAlgebraicRewriteRule>>> buildPhysicalRewrites() {
+    public List<Pair<AbstractRuleController, List<IAlgebraicRewriteRule>>> getPhysicalRewrites() {
         return DefaultRuleSetFactory.buildPhysical();
     }
 
