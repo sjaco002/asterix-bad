@@ -48,7 +48,7 @@ public class NotifyBrokerPOperator extends AbstractPhysicalOperator {
 
     @Override
     public PhysicalOperatorTag getOperatorTag() {
-        return PhysicalOperatorTag.EXTENSION_OPERATOR;
+        return PhysicalOperatorTag.DELEGATE_OPERATOR;
     }
 
     @Override

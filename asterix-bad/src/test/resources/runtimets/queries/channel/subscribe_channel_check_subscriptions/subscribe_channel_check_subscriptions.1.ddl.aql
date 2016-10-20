@@ -31,4 +31,6 @@ create function NearbyTweetsContainingText($location, $text) {
   return $tweet.message-text
 };
 
+create broker brokerA at "http://www.notifyA.com";
+
 create repetitive channel nearbyTweetChannel using NearbyTweetsContainingText@2 period duration("PT10M");

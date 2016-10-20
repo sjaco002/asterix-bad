@@ -21,7 +21,6 @@ package org.apache.asterix.bad.lang;
 import java.util.List;
 
 import org.apache.asterix.app.cc.IStatementExecutorExtension;
-import org.apache.asterix.app.translator.DefaultStatementExecutorFactory;
 import org.apache.asterix.common.api.ExtensionId;
 import org.apache.asterix.translator.IStatementExecutorFactory;
 import org.apache.hyracks.algebricks.common.utils.Pair;
@@ -32,7 +31,8 @@ public class BADQueryTranslatorExtension implements IStatementExecutorExtension 
             BADQueryTranslatorExtension.class.getSimpleName(), 0);
 
     private static class LazyHolder {
-        private static final IStatementExecutorFactory INSTANCE = new DefaultStatementExecutorFactory();
+        private static final IStatementExecutorFactory INSTANCE = new BADQueryTranslatorFactory();
+
     }
 
     @Override

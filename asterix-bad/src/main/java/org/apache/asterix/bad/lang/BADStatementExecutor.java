@@ -21,9 +21,19 @@ package org.apache.asterix.bad.lang;
 import java.util.List;
 
 import org.apache.asterix.app.translator.QueryTranslator;
+import org.apache.asterix.bad.lang.statement.BrokerDropStatement;
+import org.apache.asterix.bad.lang.statement.ChannelDropStatement;
+import org.apache.asterix.bad.metadata.Broker;
+import org.apache.asterix.bad.metadata.Channel;
 import org.apache.asterix.compiler.provider.ILangCompilationProvider;
 import org.apache.asterix.lang.common.base.Statement;
+import org.apache.asterix.lang.common.statement.DataverseDropStatement;
+import org.apache.asterix.lang.common.struct.Identifier;
+import org.apache.asterix.metadata.MetadataManager;
+import org.apache.asterix.metadata.MetadataTransactionContext;
+import org.apache.asterix.metadata.declared.AqlMetadataProvider;
 import org.apache.asterix.translator.SessionConfig;
+import org.apache.hyracks.api.client.IHyracksClientConnection;
 
 public class BADStatementExecutor extends QueryTranslator {
 
@@ -32,13 +42,28 @@ public class BADStatementExecutor extends QueryTranslator {
         super(aqlStatements, conf, compliationProvider);
     }
 
-    /*
+
     @Override
     protected void handleDataverseDropStatement(AqlMetadataProvider metadataProvider, Statement stmt,
             IHyracksClientConnection hcc) throws Exception {
-        super(metadataProvider, stmt, hcc);
-        //TODO: need to drop channels and brokers
-        //TODO: need to check if datasets or functions are in use by channels
-    }*/
+        //TODO: Remove this when metadata dependencies are in place
+        //TODO: Stop dataset drop when dataset used by channel
+        super.handleDataverseDropStatement(metadataProvider, stmt, hcc);
+        MetadataTransactionContext mdTxnCtx = MetadataManager.INSTANCE.beginTransaction();
+        metadataProvider.setMetadataTxnContext(mdTxnCtx);
+        Identifier dvId = ((DataverseDropStatement) stmt).getDataverseName();
+        List<Broker> brokers = BADLangExtension.getBrokers(mdTxnCtx, dvId.getValue());
+        for (Broker broker : brokers) {
+            BrokerDropStatement drop = new BrokerDropStatement(dvId, new Identifier(broker.getBrokerName()), false);
+            drop.handle(this, metadataProvider, hcc, null, null, null, 0);
+        }
+        List<Channel> channels = BADLangExtension.getChannels(mdTxnCtx, dvId.getValue());
+        for (Channel channel : channels) {
+            ChannelDropStatement drop = new ChannelDropStatement(dvId,
+                    new Identifier(channel.getChannelId().getEntityName()), false);
+            drop.handle(this, metadataProvider, hcc, null, null, null, 0);
+        }
+        MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
+    }
 
 }

@@ -4,9 +4,9 @@
  * Date         : Mar 2015
  */
 
-drop dataverse channels if exists;
-create dataverse channels;
-use dataverse channels;
+drop dataverse channels2 if exists;
+create dataverse channels2;
+use dataverse channels2;
 
 
 create type TweetMessageTypeuuid as closed {

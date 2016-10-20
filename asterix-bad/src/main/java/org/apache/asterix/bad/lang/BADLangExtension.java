@@ -25,19 +25,15 @@ import org.apache.asterix.bad.metadata.Broker;
 import org.apache.asterix.bad.metadata.BrokerSearchKey;
 import org.apache.asterix.bad.metadata.Channel;
 import org.apache.asterix.bad.metadata.ChannelSearchKey;
+import org.apache.asterix.bad.metadata.DataverseBrokersSearchKey;
+import org.apache.asterix.bad.metadata.DataverseChannelsSearchKey;
 import org.apache.asterix.common.api.ExtensionId;
 import org.apache.asterix.compiler.provider.ILangCompilationProvider;
 import org.apache.asterix.compiler.provider.SqlppCompilationProvider;
 import org.apache.asterix.metadata.MetadataManager;
 import org.apache.asterix.metadata.MetadataTransactionContext;
-import org.apache.commons.lang3.mutable.Mutable;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.algebricks.common.utils.Pair;
-import org.apache.hyracks.algebricks.core.algebra.base.ILogicalExpression;
-import org.apache.hyracks.algebricks.core.algebra.base.ILogicalOperator;
-import org.apache.hyracks.algebricks.core.algebra.base.IOptimizationContext;
-import org.apache.hyracks.algebricks.core.algebra.expressions.AbstractFunctionCallExpression;
-import org.apache.hyracks.algebricks.core.algebra.operators.logical.UnnestOperator;
 
 public class BADLangExtension implements ILangExtension {
 
@@ -69,13 +65,6 @@ public class BADLangExtension implements ILangExtension {
         return ExtensionKind.LANG;
     }
 
-    @Override
-    public boolean unnestToDataScan(Mutable<ILogicalOperator> opRef, IOptimizationContext context,
-            UnnestOperator unnestOp, ILogicalExpression unnestExpr, AbstractFunctionCallExpression functionCallExpr)
-                    throws AlgebricksException {
-        // TODO I dont need this?????
-        return false;
-    }
 
     public static Broker getBroker(MetadataTransactionContext mdTxnCtx, String dataverseName, String brokerName)
             throws AlgebricksException {
@@ -101,6 +90,18 @@ public class BADLangExtension implements ILangExtension {
         } else {
             return channels.get(0);
         }
+    }
+
+    public static List<Broker> getBrokers(MetadataTransactionContext mdTxnCtx, String dataverseName)
+            throws AlgebricksException {
+        DataverseBrokersSearchKey brokerSearchKey = new DataverseBrokersSearchKey(dataverseName);
+        return MetadataManager.INSTANCE.getEntities(mdTxnCtx, brokerSearchKey);
+    }
+
+    public static List<Channel> getChannels(MetadataTransactionContext mdTxnCtx, String dataverseName)
+            throws AlgebricksException {
+        DataverseChannelsSearchKey channelSearchKey = new DataverseChannelsSearchKey(dataverseName);
+        return MetadataManager.INSTANCE.getEntities(mdTxnCtx, channelSearchKey);
     }
 
 }
