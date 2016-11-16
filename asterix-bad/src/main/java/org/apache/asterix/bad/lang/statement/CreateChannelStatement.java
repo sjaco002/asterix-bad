@@ -23,6 +23,7 @@ import java.io.DataOutputStream;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -37,6 +38,7 @@ import org.apache.asterix.algebra.extension.IExtensionStatement;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
 import org.apache.asterix.bad.ChannelJobInfo;
+import org.apache.asterix.bad.ChannelJobService;
 import org.apache.asterix.bad.lang.BADLangExtension;
 import org.apache.asterix.bad.metadata.Channel;
 import org.apache.asterix.bad.metadata.ChannelEventsListener;
@@ -83,6 +85,8 @@ import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.dataflow.IOperatorDescriptor;
 import org.apache.hyracks.api.dataset.IHyracksDataset;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.api.job.JobFlag;
+import org.apache.hyracks.api.job.JobId;
 import org.apache.hyracks.api.job.JobSpecification;
 import org.apache.hyracks.dataflow.common.data.parsers.IValueParser;
 
@@ -98,14 +102,16 @@ public class CreateChannelStatement implements IExtensionStatement {
     private InsertStatement channelResultsInsertQuery;
     private String subscriptionsTableName;
     private String resultsTableName;
+    private boolean distributed;
 
     public CreateChannelStatement(Identifier dataverseName, Identifier channelName, FunctionSignature function,
-            Expression period) {
+            Expression period, boolean distributed) {
         this.channelName = channelName;
         this.dataverseName = dataverseName;
         this.function = function;
         this.period = (CallExpr) period;
         this.duration = "";
+        this.distributed = distributed;
     }
 
     public Identifier getDataverseName() {
@@ -274,6 +280,30 @@ public class CreateChannelStatement implements IExtensionStatement {
                 hcc, hdc, ResultDelivery.ASYNC, stats, true);
     }
 
+    private void setupCompiledJob(AqlMetadataProvider metadataProvider, String dataverse, EntityId entityId,
+            JobSpecification channeljobSpec, IHyracksClientConnection hcc) throws Exception {
+        ICCApplicationContext iCCApp = AsterixAppContextInfo.INSTANCE.getCCApplicationContext();
+        ClusterControllerInfo ccInfo = iCCApp.getCCContext().getClusterControllerInfo();
+        String strIP = ccInfo.getClientNetAddress();
+        int port = ccInfo.getClientNetPort();
+        //Create Channel Operator
+        Pair<JobSpecification, AlgebricksAbsolutePartitionConstraint> alteredJobSpec = buildChannelJobSpec(dataverse,
+                channelName.getValue(), duration, metadataProvider, channeljobSpec, strIP, port);
+
+        ChannelJobInfo channelJobInfo = new ChannelJobInfo(entityId, null, ActivityState.ACTIVE, alteredJobSpec.first);
+        alteredJobSpec.first.setProperty(ActiveJobNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, channelJobInfo);
+        JobUtils.runJob(hcc, alteredJobSpec.first, false);
+    }
+
+    private void setupDistributedJob(EntityId entityId, JobSpecification channeljobSpec, IHyracksClientConnection hcc)
+            throws Exception {
+        ChannelJobInfo channelJobInfo = new ChannelJobInfo(entityId, null, ActivityState.ACTIVE, channeljobSpec);
+        channeljobSpec.setProperty(ActiveJobNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, channelJobInfo);
+        JobId jobId = hcc.startJob(channeljobSpec, EnumSet.of(JobFlag.STORED_JOB));
+        ChannelJobService cjs = new ChannelJobService(hcc);
+        cjs.startJob(channeljobSpec, EnumSet.of(JobFlag.STORED_JOB), jobId);
+    }
+
     @Override
     public void handle(IStatementExecutor statementExecutor, AqlMetadataProvider metadataProvider,
             IHyracksClientConnection hcc, IHyracksDataset hdc, ResultDelivery resultDelivery, Stats stats,
@@ -281,11 +311,11 @@ public class CreateChannelStatement implements IExtensionStatement {
 
         //This function performs three tasks:
         //1. Create datasets for the Channel
-        //2. Create the compiled Channel Job
+        //2. Create and run the Channel Job
         //3. Create the metadata entry for the channel
 
         //TODO: Figure out how to handle when a subset of the 3 tasks fails
-        //TODO: The compiled job will break if anything changes to the function or two datasets
+        //TODO: The compiled job will break if anything changes on the function or two datasets
         // Need to make sure we do proper checking when altering these things
 
         String dataverse = ((QueryTranslator) statementExecutor).getActiveDataverse(dataverseName);
@@ -341,19 +371,11 @@ public class CreateChannelStatement implements IExtensionStatement {
             JobSpecification channeljobSpec = createChannelJob(statementExecutor, subscriptionsName, resultsName,
                     metadataProvider, hcc, hdc, stats, dataverse);
 
-            //Create Channel Operator
-            ICCApplicationContext iCCApp = AsterixAppContextInfo.INSTANCE.getCCApplicationContext();
-            ClusterControllerInfo ccInfo = iCCApp.getCCContext().getClusterControllerInfo();
-            String strIP = ccInfo.getClientNetAddress();
-            int port = ccInfo.getClientNetPort();
-            Pair<JobSpecification, AlgebricksAbsolutePartitionConstraint> alteredJobSpec = buildChannelJobSpec(
-                    dataverse, channelName.getValue(), duration, metadataProvider, channeljobSpec, strIP, port);
-
-            ChannelJobInfo channelJobInfo = new ChannelJobInfo(entityId, null, ActivityState.ACTIVE,
-                    alteredJobSpec.first);
-            alteredJobSpec.first.setProperty(ActiveJobNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, channelJobInfo);
-            JobUtils.runJob(hcc, alteredJobSpec.first, false);
-
+            if (distributed) {
+                setupDistributedJob(entityId, channeljobSpec, hcc);
+            } else {
+                setupCompiledJob(metadataProvider, dataverse, entityId, channeljobSpec, hcc);
+            }
             eventSubscriber.assertEvent(ActiveLifecycleEvent.ACTIVE_JOB_STARTED);
 
             MetadataManager.INSTANCE.addEntity(mdTxnCtx, channel);

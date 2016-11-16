@@ -26,9 +26,7 @@ import java.util.logging.Logger;
 import org.apache.asterix.active.ActiveRuntimeId;
 import org.apache.asterix.active.ActiveSourceOperatorNodePushable;
 import org.apache.asterix.bad.ChannelJobService;
-import org.apache.hyracks.api.comm.IFrameWriter;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
-import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.job.JobSpecification;
 
@@ -56,12 +54,6 @@ public class RepetitiveChannelOperatorNodePushable extends ActiveSourceOperatorN
         channelJobService.runChannelJob(jobSpec);
     }
 
-    @Override
-    public void setOutputFrameWriter(int index, IFrameWriter writer, RecordDescriptor recordDesc)
-            throws HyracksDataException {
-        // TODO Auto-generated method stub
-
-    }
 
     @Override
     protected void start() throws HyracksDataException, InterruptedException {

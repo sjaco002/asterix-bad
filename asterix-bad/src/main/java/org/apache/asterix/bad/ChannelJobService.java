@@ -23,6 +23,10 @@ import java.io.DataOutputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.EnumSet;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -32,6 +36,7 @@ import org.apache.asterix.om.base.AUUID;
 import org.apache.hyracks.api.client.HyracksConnection;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.api.job.JobFlag;
 import org.apache.hyracks.api.job.JobId;
 import org.apache.hyracks.api.job.JobSpecification;
 import org.json.JSONException;
@@ -43,7 +48,6 @@ public class ChannelJobService {
 
     private static final Logger LOGGER = Logger.getLogger(ChannelJobService.class.getName());
     IHyracksClientConnection hcc;
-    JobId jobId;
 
     public ChannelJobService(String strIP, int port) throws Exception {
         if (port != -1) {
@@ -51,8 +55,30 @@ public class ChannelJobService {
         }
     }
 
+    public ChannelJobService(IHyracksClientConnection hcc) {
+        this.hcc = hcc;
+    }
+
+    public void startJob(JobSpecification jobSpec, EnumSet<JobFlag> jobFlags, JobId jobId) throws Exception {
+        ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
+        scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    executeJob(jobSpec, jobFlags, jobId);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }, 10000, 10000, TimeUnit.MILLISECONDS);
+    }
+
+    public void executeJob(JobSpecification jobSpec, EnumSet<JobFlag> jobFlags, JobId jobId) throws Exception {
+        hcc.startJob(jobSpec, jobFlags, jobId);
+    }
+
     public void runChannelJob(JobSpecification channeljobSpec) throws Exception {
-        jobId = hcc.startJob(channeljobSpec);
+        JobId jobId = hcc.startJob(channeljobSpec);
         hcc.waitForCompletion(jobId);
     }
 

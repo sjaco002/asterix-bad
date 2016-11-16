@@ -35,7 +35,6 @@ import org.apache.asterix.om.base.AOrderedList;
 import org.apache.asterix.om.base.AString;
 import org.apache.asterix.om.types.AOrderedListType;
 import org.apache.asterix.om.types.BuiltinType;
-import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.algebricks.runtime.base.IScalarEvaluator;
 import org.apache.hyracks.algebricks.runtime.base.IScalarEvaluatorFactory;
 import org.apache.hyracks.algebricks.runtime.operators.base.AbstractOneInputOneOutputOneFramePushRuntime;
@@ -67,7 +66,7 @@ public class NotifyBrokerRuntime extends AbstractOneInputOneOutputOneFramePushRu
 
     public NotifyBrokerRuntime(IHyracksTaskContext ctx, IScalarEvaluatorFactory brokerEvalFactory,
             IScalarEvaluatorFactory subEvalFactory, IScalarEvaluatorFactory channelExecutionEvalFactory,
-            EntityId activeJobId) throws AlgebricksException {
+            EntityId activeJobId) throws HyracksDataException {
         this.tRef = new FrameTupleReference();
         eval0 = brokerEvalFactory.createScalarEvaluator(ctx);
         eval1 = subEvalFactory.createScalarEvaluator(ctx);
@@ -78,7 +77,7 @@ public class NotifyBrokerRuntime extends AbstractOneInputOneOutputOneFramePushRu
         try {
             channelJobService = new ChannelJobService("", -1);
         } catch (Exception e) {
-            throw new AlgebricksException(e);
+            throw new HyracksDataException(e);
         }
     }
 
@@ -93,13 +92,11 @@ public class NotifyBrokerRuntime extends AbstractOneInputOneOutputOneFramePushRu
         int nTuple = tAccess.getTupleCount();
         for (int t = 0; t < nTuple; t++) {
             tRef.reset(tAccess, t);
-            try {
-                eval0.evaluate(tRef, inputArg0);
-                eval1.evaluate(tRef, inputArg1);
-                eval2.evaluate(tRef, inputArg2);
-            } catch (AlgebricksException e) {
-                throw new HyracksDataException(e);
-            }
+
+            eval0.evaluate(tRef, inputArg0);
+            eval1.evaluate(tRef, inputArg1);
+            eval2.evaluate(tRef, inputArg2);
+
             int serBrokerOffset = inputArg0.getStartOffset();
             bbis.setByteBuffer(tRef.getFrameTupleAccessor().getBuffer(), serBrokerOffset + 1);
             AString endpoint = AStringSerializerDeserializer.INSTANCE.deserialize(di);

@@ -69,9 +69,12 @@ public class ChannelEventsListener implements IActiveEntityEventsListener {
                 case JOB_FINISH:
                     handleJobFinishEvent(event);
                     break;
-                default:
-                    LOGGER.warn("Unknown Channel Event" + event);
+                case PARTITION_EVENT:
+                    LOGGER.warn("Partition Channel Event");
                     break;
+                default:
+                    break;
+
             }
         } catch (Exception e) {
             LOGGER.error("Unhandled Exception", e);
@@ -141,21 +144,16 @@ public class ChannelEventsListener implements IActiveEntityEventsListener {
 
     @Override
     public void notifyJobCreation(JobId jobId, JobSpecification spec) {
-        EntityId channelId = null;
         try {
-            for (IOperatorDescriptor opDesc : spec.getOperatorMap().values()) {
-                if (opDesc instanceof RepetitiveChannelOperatorDescriptor) {
-                    channelId = ((RepetitiveChannelOperatorDescriptor) opDesc).getEntityId();
-                    registerJob(channelId, jobId, spec);
-                    return;
-                }
-            }
+            registerJob(jobId, spec);
+            return;
+
         } catch (Exception e) {
             LOGGER.error(e);
         }
     }
 
-    public synchronized void registerJob(EntityId entityId, JobId jobId, JobSpecification jobSpec) {
+    public synchronized void registerJob(JobId jobId, JobSpecification jobSpec) {
         if (jobs.get(jobId.getId()) != null) {
             throw new IllegalStateException("Channel job already registered");
         }
