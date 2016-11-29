@@ -18,16 +18,18 @@
  */
 package org.apache.asterix.bad.runtime;
 
+import java.util.EnumSet;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 import org.apache.asterix.active.ActiveRuntimeId;
 import org.apache.asterix.active.ActiveSourceOperatorNodePushable;
 import org.apache.asterix.bad.ChannelJobService;
+import org.apache.hyracks.api.client.HyracksConnection;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.api.job.JobFlag;
 import org.apache.hyracks.api.job.JobSpecification;
 
 public class RepetitiveChannelOperatorNodePushable extends ActiveSourceOperatorNodePushable {
@@ -37,37 +39,25 @@ public class RepetitiveChannelOperatorNodePushable extends ActiveSourceOperatorN
     private ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
     private final JobSpecification jobSpec;
     private long duration;
-    private ChannelJobService channelJobService;
+    private final HyracksConnection hcc;
 
     public RepetitiveChannelOperatorNodePushable(IHyracksTaskContext ctx, ActiveRuntimeId runtimeId,
             JobSpecification channeljobSpec, String duration, String strIP, int port) throws Exception {
         super(ctx, runtimeId);
         this.jobSpec = channeljobSpec;
-        this.duration = findPeriod(duration);
-        //TODO: we should share channelJobService as a single instance
-        //And only create one hcc
-        channelJobService = new ChannelJobService(strIP, port);
-    }
-
-    public void executeJob() throws Exception {
-        LOGGER.info("Executing Job: " + runtimeId.toString());
-        channelJobService.runChannelJob(jobSpec);
+        this.duration = ChannelJobService.findPeriod(duration);
+        hcc = new HyracksConnection(strIP, port);
     }
 
 
     @Override
     protected void start() throws HyracksDataException, InterruptedException {
-        scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    executeJob();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }, duration, duration, TimeUnit.MILLISECONDS);
-
+        try {
+            scheduledExecutorService =
+                    ChannelJobService.startJob(jobSpec, EnumSet.noneOf(JobFlag.class), null, hcc, duration);
+        } catch (Exception e) {
+            throw new HyracksDataException(e);
+        }
         while (!scheduledExecutorService.isTerminated()) {
 
         }
@@ -77,36 +67,6 @@ public class RepetitiveChannelOperatorNodePushable extends ActiveSourceOperatorN
     @Override
     protected void abort() throws HyracksDataException, InterruptedException {
         scheduledExecutorService.shutdown();
-    }
-
-    private long findPeriod(String duration) {
-        //TODO: Allow Repetitive Channels to use YMD durations  
-        String hoursMinutesSeconds = "";
-        if (duration.indexOf('T') != -1) {
-            hoursMinutesSeconds = duration.substring(duration.indexOf('T') + 1);
-        }
-        double seconds = 0;
-        if (hoursMinutesSeconds != "") {
-            int pos = 0;
-            if (hoursMinutesSeconds.indexOf('H') != -1) {
-                Double hours = Double.parseDouble(hoursMinutesSeconds.substring(pos, hoursMinutesSeconds.indexOf('H')));
-                seconds += (hours * 60 * 60);
-                pos = hoursMinutesSeconds.indexOf('H') + 1;
-
-            }
-            if (hoursMinutesSeconds.indexOf('M') != -1) {
-                Double minutes = Double
-                        .parseDouble(hoursMinutesSeconds.substring(pos, hoursMinutesSeconds.indexOf('M')));
-                seconds += (minutes * 60);
-                pos = hoursMinutesSeconds.indexOf('M') + 1;
-            }
-            if (hoursMinutesSeconds.indexOf('S') != -1) {
-                Double s = Double.parseDouble(hoursMinutesSeconds.substring(pos, hoursMinutesSeconds.indexOf('S')));
-                seconds += (s);
-            }
-
-        }
-        return (long) (seconds * 1000);
     }
 
 }

@@ -33,7 +33,6 @@ import java.util.logging.Logger;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.om.base.AOrderedList;
 import org.apache.asterix.om.base.AUUID;
-import org.apache.hyracks.api.client.HyracksConnection;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.job.JobFlag;
@@ -47,43 +46,41 @@ import org.json.JSONException;
 public class ChannelJobService {
 
     private static final Logger LOGGER = Logger.getLogger(ChannelJobService.class.getName());
-    IHyracksClientConnection hcc;
 
-    public ChannelJobService(String strIP, int port) throws Exception {
-        if (port != -1) {
-            hcc = new HyracksConnection(strIP, port);
-        }
-    }
-
-    public ChannelJobService(IHyracksClientConnection hcc) {
-        this.hcc = hcc;
-    }
-
-    public void startJob(JobSpecification jobSpec, EnumSet<JobFlag> jobFlags, JobId jobId) throws Exception {
+    public static ScheduledExecutorService startJob(JobSpecification jobSpec, EnumSet<JobFlag> jobFlags, JobId jobId,
+            IHyracksClientConnection hcc, long duration)
+            throws Exception {
         ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
         scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
                 try {
-                    executeJob(jobSpec, jobFlags, jobId);
+                    executeJob(jobSpec, jobFlags, jobId, hcc);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
-        }, 10000, 10000, TimeUnit.MILLISECONDS);
-        //TODO: Use actual channel interval
+        }, duration, duration, TimeUnit.MILLISECONDS);
+        return scheduledExecutorService;
     }
 
-    public void executeJob(JobSpecification jobSpec, EnumSet<JobFlag> jobFlags, JobId jobId) throws Exception {
-        hcc.startJob(jobSpec, jobFlags, jobId);
+    public static void executeJob(JobSpecification jobSpec, EnumSet<JobFlag> jobFlags, JobId jobId,
+            IHyracksClientConnection hcc)
+            throws Exception {
+        LOGGER.info("Executing Channel Job");
+        if (jobId == null) {
+            hcc.startJob(jobSpec, jobFlags);
+        } else {
+            hcc.startJob(jobSpec, jobFlags, jobId);
+        }
     }
 
-    public void runChannelJob(JobSpecification channeljobSpec) throws Exception {
+    public static void runChannelJob(JobSpecification channeljobSpec, IHyracksClientConnection hcc) throws Exception {
         JobId jobId = hcc.startJob(channeljobSpec);
         hcc.waitForCompletion(jobId);
     }
 
-    public void sendBrokerNotificationsForChannel(EntityId activeJobId, String brokerEndpoint,
+    public static void sendBrokerNotificationsForChannel(EntityId activeJobId, String brokerEndpoint,
             AOrderedList subscriptionIds, String channelExecutionTime) throws HyracksDataException {
         String formattedString;
         try {
@@ -94,7 +91,7 @@ public class ChannelJobService {
         sendMessage(brokerEndpoint, formattedString);
     }
 
-    public String formatJSON(EntityId activeJobId, AOrderedList subscriptionIds, String channelExecutionTime)
+    public static String formatJSON(EntityId activeJobId, AOrderedList subscriptionIds, String channelExecutionTime)
             throws JSONException {
         String JSON = "{ \"dataverseName\":\"" + activeJobId.getDataverse() + "\", \"channelName\":\""
                 + activeJobId.getEntityName() + "\", \"" + BADConstants.ChannelExecutionTime + "\":\""
@@ -110,6 +107,36 @@ public class ChannelJobService {
         JSON += "]}";
         return JSON;
 
+    }
+
+    public static long findPeriod(String duration) {
+        //TODO: Allow Repetitive Channels to use YMD durations  
+        String hoursMinutesSeconds = "";
+        if (duration.indexOf('T') != -1) {
+            hoursMinutesSeconds = duration.substring(duration.indexOf('T') + 1);
+        }
+        double seconds = 0;
+        if (hoursMinutesSeconds != "") {
+            int pos = 0;
+            if (hoursMinutesSeconds.indexOf('H') != -1) {
+                Double hours = Double.parseDouble(hoursMinutesSeconds.substring(pos, hoursMinutesSeconds.indexOf('H')));
+                seconds += (hours * 60 * 60);
+                pos = hoursMinutesSeconds.indexOf('H') + 1;
+
+            }
+            if (hoursMinutesSeconds.indexOf('M') != -1) {
+                Double minutes =
+                        Double.parseDouble(hoursMinutesSeconds.substring(pos, hoursMinutesSeconds.indexOf('M')));
+                seconds += (minutes * 60);
+                pos = hoursMinutesSeconds.indexOf('M') + 1;
+            }
+            if (hoursMinutesSeconds.indexOf('S') != -1) {
+                Double s = Double.parseDouble(hoursMinutesSeconds.substring(pos, hoursMinutesSeconds.indexOf('S')));
+                seconds += (s);
+            }
+
+        }
+        return (long) (seconds * 1000);
     }
 
     public static void sendMessage(String targetURL, String urlParameters) {

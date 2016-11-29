@@ -300,8 +300,8 @@ public class CreateChannelStatement implements IExtensionStatement {
         ChannelJobInfo channelJobInfo = new ChannelJobInfo(entityId, null, ActivityState.ACTIVE, channeljobSpec);
         channeljobSpec.setProperty(ActiveJobNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, channelJobInfo);
         JobId jobId = hcc.startJob(channeljobSpec, EnumSet.of(JobFlag.STORED_JOB));
-        ChannelJobService cjs = new ChannelJobService(hcc);
-        cjs.startJob(channeljobSpec, EnumSet.of(JobFlag.STORED_JOB), jobId);
+        ChannelJobService.startJob(channeljobSpec, EnumSet.of(JobFlag.STORED_JOB), jobId, hcc,
+                ChannelJobService.findPeriod(duration));
     }
 
     @Override

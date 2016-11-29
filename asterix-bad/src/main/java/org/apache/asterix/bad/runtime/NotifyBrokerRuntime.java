@@ -62,7 +62,6 @@ public class NotifyBrokerRuntime extends AbstractOneInputOneOutputOneFramePushRu
     private IScalarEvaluator eval2;
     private final ActiveManager activeManager;
     private final EntityId entityId;
-    private ChannelJobService channelJobService;
 
     public NotifyBrokerRuntime(IHyracksTaskContext ctx, IScalarEvaluatorFactory brokerEvalFactory,
             IScalarEvaluatorFactory subEvalFactory, IScalarEvaluatorFactory channelExecutionEvalFactory,
@@ -74,11 +73,6 @@ public class NotifyBrokerRuntime extends AbstractOneInputOneOutputOneFramePushRu
         this.activeManager = (ActiveManager) ((IAsterixAppRuntimeContext) ctx.getJobletContext().getApplicationContext()
                 .getApplicationObject()).getActiveManager();
         this.entityId = activeJobId;
-        try {
-            channelJobService = new ChannelJobService("", -1);
-        } catch (Exception e) {
-            throw new HyracksDataException(e);
-        }
     }
 
     @Override
@@ -115,7 +109,7 @@ public class NotifyBrokerRuntime extends AbstractOneInputOneOutputOneFramePushRu
                 throw new HyracksDataException(e);
             }
 
-            channelJobService.sendBrokerNotificationsForChannel(entityId, endpoint.getStringValue(), subs,
+            ChannelJobService.sendBrokerNotificationsForChannel(entityId, endpoint.getStringValue(), subs,
                     executionTimeString);
 
         }
