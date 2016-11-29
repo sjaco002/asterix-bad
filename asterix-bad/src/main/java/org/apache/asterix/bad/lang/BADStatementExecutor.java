@@ -31,7 +31,7 @@ import org.apache.asterix.lang.common.statement.DataverseDropStatement;
 import org.apache.asterix.lang.common.struct.Identifier;
 import org.apache.asterix.metadata.MetadataManager;
 import org.apache.asterix.metadata.MetadataTransactionContext;
-import org.apache.asterix.metadata.declared.AqlMetadataProvider;
+import org.apache.asterix.metadata.declared.MetadataProvider;
 import org.apache.asterix.translator.SessionConfig;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 
@@ -44,7 +44,7 @@ public class BADStatementExecutor extends QueryTranslator {
 
 
     @Override
-    protected void handleDataverseDropStatement(AqlMetadataProvider metadataProvider, Statement stmt,
+    protected void handleDataverseDropStatement(MetadataProvider metadataProvider, Statement stmt,
             IHyracksClientConnection hcc) throws Exception {
         //TODO: Remove this when metadata dependencies are in place
         //TODO: Stop dataset drop when dataset used by channel

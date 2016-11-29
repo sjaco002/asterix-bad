@@ -65,7 +65,7 @@ import org.apache.asterix.lang.common.visitor.base.ILangVisitor;
 import org.apache.asterix.metadata.MetadataException;
 import org.apache.asterix.metadata.MetadataManager;
 import org.apache.asterix.metadata.MetadataTransactionContext;
-import org.apache.asterix.metadata.declared.AqlMetadataProvider;
+import org.apache.asterix.metadata.declared.MetadataProvider;
 import org.apache.asterix.metadata.entities.Function;
 import org.apache.asterix.om.base.temporal.ADurationParserFactory;
 import org.apache.asterix.runtime.util.AsterixAppContextInfo;
@@ -183,7 +183,7 @@ public class CreateChannelStatement implements IExtensionStatement {
     }
 
     public Pair<JobSpecification, AlgebricksAbsolutePartitionConstraint> buildChannelJobSpec(String dataverse,
-            String channelName, String duration, AqlMetadataProvider metadataProvider, JobSpecification channeljobSpec,
+            String channelName, String duration, MetadataProvider metadataProvider, JobSpecification channeljobSpec,
             String strIP, int port) throws Exception {
         JobSpecification spec = JobSpecificationUtils.createJobSpecification();
         IOperatorDescriptor channelQueryExecuter;
@@ -213,7 +213,7 @@ public class CreateChannelStatement implements IExtensionStatement {
     }
 
     private void createDatasets(IStatementExecutor statementExecutor, Identifier subscriptionsName,
-            Identifier resultsName, AqlMetadataProvider metadataProvider, IHyracksClientConnection hcc,
+            Identifier resultsName, MetadataProvider metadataProvider, IHyracksClientConnection hcc,
             IHyracksDataset hdc, Stats stats, String dataverse) throws AsterixException, Exception {
 
         Identifier subscriptionsTypeName = new Identifier(BADConstants.ChannelSubscriptionsType);
@@ -248,7 +248,7 @@ public class CreateChannelStatement implements IExtensionStatement {
     }
 
     private JobSpecification createChannelJob(IStatementExecutor statementExecutor, Identifier subscriptionsName,
-            Identifier resultsName, AqlMetadataProvider metadataProvider, IHyracksClientConnection hcc,
+            Identifier resultsName, MetadataProvider metadataProvider, IHyracksClientConnection hcc,
             IHyracksDataset hdc, Stats stats, String dataverse) throws Exception {
         StringBuilder builder = new StringBuilder();
         builder.append("insert into dataset " + dataverse + "." + resultsName + " ");
@@ -280,7 +280,7 @@ public class CreateChannelStatement implements IExtensionStatement {
                 hcc, hdc, ResultDelivery.ASYNC, stats, true);
     }
 
-    private void setupCompiledJob(AqlMetadataProvider metadataProvider, String dataverse, EntityId entityId,
+    private void setupCompiledJob(MetadataProvider metadataProvider, String dataverse, EntityId entityId,
             JobSpecification channeljobSpec, IHyracksClientConnection hcc) throws Exception {
         ICCApplicationContext iCCApp = AsterixAppContextInfo.INSTANCE.getCCApplicationContext();
         ClusterControllerInfo ccInfo = iCCApp.getCCContext().getClusterControllerInfo();
@@ -305,7 +305,7 @@ public class CreateChannelStatement implements IExtensionStatement {
     }
 
     @Override
-    public void handle(IStatementExecutor statementExecutor, AqlMetadataProvider metadataProvider,
+    public void handle(IStatementExecutor statementExecutor, MetadataProvider metadataProvider,
             IHyracksClientConnection hcc, IHyracksDataset hdc, ResultDelivery resultDelivery, Stats stats,
             int resultSetIdCounter) throws HyracksDataException, AlgebricksException {
 
