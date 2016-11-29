@@ -71,6 +71,7 @@ public class ChannelJobService {
                 }
             }
         }, 10000, 10000, TimeUnit.MILLISECONDS);
+        //TODO: Use actual channel interval
     }
 
     public void executeJob(JobSpecification jobSpec, EnumSet<JobFlag> jobFlags, JobId jobId) throws Exception {
