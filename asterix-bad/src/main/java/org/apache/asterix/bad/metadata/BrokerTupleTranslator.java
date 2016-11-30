@@ -20,7 +20,7 @@ import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.IOException;
 
-import org.apache.asterix.formats.nontagged.AqlSerializerDeserializerProvider;
+import org.apache.asterix.formats.nontagged.SerializerDeserializerProvider;
 import org.apache.asterix.metadata.MetadataException;
 import org.apache.asterix.metadata.entitytupletranslators.AbstractTupleTranslator;
 import org.apache.asterix.om.base.ARecord;
@@ -42,7 +42,8 @@ public class BrokerTupleTranslator extends AbstractTupleTranslator<Broker> {
     public static final int BROKER_PAYLOAD_TUPLE_FIELD_INDEX = 2;
 
     @SuppressWarnings("unchecked")
-    private ISerializerDeserializer<ARecord> recordSerDes = AqlSerializerDeserializerProvider.INSTANCE
+    private ISerializerDeserializer<ARecord> recordSerDes =
+            SerializerDeserializerProvider.INSTANCE
             .getSerializerDeserializer(BADMetadataRecordTypes.BROKER_RECORDTYPE);
 
     @SuppressWarnings("unchecked")

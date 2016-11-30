@@ -21,7 +21,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 
 import org.apache.asterix.common.functions.FunctionSignature;
-import org.apache.asterix.formats.nontagged.AqlSerializerDeserializerProvider;
+import org.apache.asterix.formats.nontagged.SerializerDeserializerProvider;
 import org.apache.asterix.metadata.MetadataException;
 import org.apache.asterix.metadata.entitytupletranslators.AbstractTupleTranslator;
 import org.apache.asterix.om.base.ARecord;
@@ -43,7 +43,7 @@ public class ChannelTupleTranslator extends AbstractTupleTranslator<Channel> {
     public static final int CHANNEL_PAYLOAD_TUPLE_FIELD_INDEX = 2;
 
     @SuppressWarnings("unchecked")
-    private ISerializerDeserializer<ARecord> recordSerDes = AqlSerializerDeserializerProvider.INSTANCE
+    private ISerializerDeserializer<ARecord> recordSerDes = SerializerDeserializerProvider.INSTANCE
             .getSerializerDeserializer(BADMetadataRecordTypes.CHANNEL_RECORDTYPE);
 
     @SuppressWarnings("unchecked")
