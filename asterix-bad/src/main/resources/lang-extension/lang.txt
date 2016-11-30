@@ -17,7 +17,8 @@ Statement SingleStatement() throws ParseException:
   (
     // merge area 2
     before:
-    after:    | stmt = ChannelSubscriptionStatement())
+    after:    | stmt = ChannelSubscriptionStatement()
+    	      | stmt = ExecuteProcedureStatement())
   {
     // merge area 3
   }
@@ -34,7 +35,7 @@ Statement CreateStatement() throws ParseException:
   (
     // merge area 2
     before:
-    after:    | stmt = ChannelSpecification() | stmt = BrokerSpecification())
+    after:    | stmt = ChannelSpecification() | stmt = BrokerSpecification() | stmt = ProcedureSpecification())
   {
     // merge area 3
   }
@@ -89,6 +90,35 @@ CreateChannelStatement ChannelSpecification() throws ParseException:
       return ccs;
     }
 }
+
+
+@new
+CreateProcedureStatement ProcedureSpecification() throws ParseException:
+{
+  Pair<Identifier,Identifier> nameComponents = null;
+  FunctionSignature signature;
+  List<VarIdentifier> paramList = new ArrayList<VarIdentifier>();
+}
+{
+  (
+    "procedure" nameComponents = QualifiedName()
+     paramList = ParameterList()
+    <LEFTBRACE>
+  {
+     beginPos = token;
+  }
+  functionBodyExpr = Expression() <RIGHTBRACE>
+    {
+      endPos = token;
+      functionBody = extractFragment(beginPos.beginLine, beginPos.beginColumn, endPos.beginLine, endPos.beginColumn);
+      signature = new FunctionSignature(nameComponents.first, nameComponents.second, paramList.size());
+      removeCurrentScope();
+      return new CreateProcedureStatement(signature, paramList, functionBody);
+    }
+}
+
+
+
 
 @new
 CreateBrokerStatement BrokerSpecification() throws ParseException:

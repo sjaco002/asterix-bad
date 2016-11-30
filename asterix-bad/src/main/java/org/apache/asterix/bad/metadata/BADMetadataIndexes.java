@@ -44,8 +44,16 @@ public class BADMetadataIndexes {
             MetadataIndexImmutableProperties.FIRST_AVAILABLE_EXTENSION_METADATA_DATASET_ID + 1,
             MetadataIndexImmutableProperties.FIRST_AVAILABLE_EXTENSION_METADATA_DATASET_ID + 1);
 
+    public static final ExtensionMetadataDatasetId BAD_PROCEDURE_INDEX_ID = new ExtensionMetadataDatasetId(
+            BADMetadataExtension.BAD_METADATA_EXTENSION_ID, BADConstants.PROCEDURE_KEYWORD);
+    public static final MetadataIndexImmutableProperties PROPERTIES_PROCEDURE =
+            new MetadataIndexImmutableProperties(BADConstants.PROCEDURE_KEYWORD,
+                    MetadataIndexImmutableProperties.FIRST_AVAILABLE_EXTENSION_METADATA_DATASET_ID + 2,
+                    MetadataIndexImmutableProperties.FIRST_AVAILABLE_EXTENSION_METADATA_DATASET_ID + 2);
+
     public static final int NUM_FIELDS_CHANNEL_IDX = 3;
     public static final int NUM_FIELDS_BROKER_IDX = 3;
+    public static final int NUM_FIELDS_PROCEDURE_IDX = 4;
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public static final ExtensionMetadataDataset CHANNEL_DATASET = new ExtensionMetadataDataset(PROPERTIES_CHANNEL,
@@ -62,5 +70,13 @@ public class BADMetadataIndexes {
                     Arrays.asList(BADConstants.BrokerName)),
             0, BADMetadataRecordTypes.BROKER_RECORDTYPE, true, new int[] { 0, 1 }, BAD_BROKER_INDEX_ID,
             new BrokerTupleTranslator(true));
+
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    public static final ExtensionMetadataDataset PROCEDURE_DATASET = new ExtensionMetadataDataset(PROPERTIES_PROCEDURE,
+            NUM_FIELDS_PROCEDURE_IDX, new IAType[] { BuiltinType.ASTRING, BuiltinType.ASTRING, BuiltinType.ASTRING },
+            Arrays.asList(Arrays.asList(MetadataRecordTypes.FIELD_NAME_DATAVERSE_NAME),
+                    Arrays.asList(BADConstants.ProcedureName), Arrays.asList(BADConstants.FIELD_NAME_ARITY)),
+            0, BADMetadataRecordTypes.PROCEDURE_RECORDTYPE, true, new int[] { 0, 1, 2 }, BAD_PROCEDURE_INDEX_ID,
+            new ProcedureTupleTranslator(true));
 
 }

@@ -19,28 +19,36 @@
 package org.apache.asterix.bad;
 
 public interface BADConstants {
-    final String SubscriptionId = "subscriptionId";
-    final String BrokerName = "BrokerName";
-    final String ChannelName = "ChannelName";
-    final String DataverseName = "DataverseName";
-    final String BrokerEndPoint = "BrokerEndPoint";
-    final String DeliveryTime = "deliveryTime";
-    final String ResultId = "resultId";
-    final String ChannelExecutionTime = "channelExecutionTime";
-    final String ChannelSubscriptionsType = "ChannelSubscriptionsType";
-    final String ChannelResultsType = "ChannelResultsType";
-    final String ResultsDatasetName = "ResultsDatasetName";
-    final String SubscriptionsDatasetName = "SubscriptionsDatasetName";
-    final String CHANNEL_EXTENSION_NAME = "Channel";
-    final String BROKER_KEYWORD = "Broker";
-    final String RECORD_TYPENAME_BROKER = "BrokerRecordType";
-    final String RECORD_TYPENAME_CHANNEL = "ChannelRecordType";
-    final String subscriptionEnding = "Subscriptions";
-    final String resultsEnding = "Results";
-    final String BAD_METADATA_EXTENSION_NAME = "BADMetadataExtension";
-    final String BAD_DATAVERSE_NAME = "Metadata";
-    final String Duration = "Duration";
-    final String Function = "Function";
+    public static final String SubscriptionId = "subscriptionId";
+    public static final String BrokerName = "BrokerName";
+    public static final String ChannelName = "ChannelName";
+    public static final String ProcedureName = "ProcedureName";
+    public static final String DataverseName = "DataverseName";
+    public static final String BrokerEndPoint = "BrokerEndPoint";
+    public static final String DeliveryTime = "deliveryTime";
+    public static final String ResultId = "resultId";
+    public static final String ChannelExecutionTime = "channelExecutionTime";
+    public static final String ChannelSubscriptionsType = "ChannelSubscriptionsType";
+    public static final String ChannelResultsType = "ChannelResultsType";
+    public static final String ResultsDatasetName = "ResultsDatasetName";
+    public static final String SubscriptionsDatasetName = "SubscriptionsDatasetName";
+    public static final String CHANNEL_EXTENSION_NAME = "Channel";
+    public static final String PROCEDURE_KEYWORD = "Procedure";
+    public static final String BROKER_KEYWORD = "Broker";
+    public static final String RECORD_TYPENAME_BROKER = "BrokerRecordType";
+    public static final String RECORD_TYPENAME_CHANNEL = "ChannelRecordType";
+    public static final String RECORD_TYPENAME_PROCEDURE = "ProcedureRecordType";
+    public static final String subscriptionEnding = "Subscriptions";
+    public static final String resultsEnding = "Results";
+    public static final String BAD_METADATA_EXTENSION_NAME = "BADMetadataExtension";
+    public static final String BAD_DATAVERSE_NAME = "Metadata";
+    public static final String Duration = "Duration";
+    public static final String Function = "Function";
+    public static final String FIELD_NAME_ARITY = "Arity";
+    public static final String FIELD_NAME_PARAMS = "Params";
+    public static final String FIELD_NAME_RETURN_TYPE = "ReturnType";
+    public static final String FIELD_NAME_DEFINITION = "Definition";
+    public static final String FIELD_NAME_LANGUAGE = "Language";
 
     public enum ChannelJobType {
         REPETITIVE

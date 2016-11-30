@@ -57,6 +57,9 @@ public class BADMetadataExtension implements IMetadataExtension {
     public static final Datatype BAD_CHANNEL_DATATYPE = new Datatype(BADConstants.BAD_DATAVERSE_NAME,
             BADConstants.RECORD_TYPENAME_CHANNEL, BADMetadataRecordTypes.CHANNEL_RECORDTYPE, false);
 
+    public static final Datatype BAD_PROCEDURE_DATATYPE = new Datatype(BADConstants.BAD_DATAVERSE_NAME,
+            BADConstants.RECORD_TYPENAME_PROCEDURE, BADMetadataRecordTypes.PROCEDURE_RECORDTYPE, false);
+
     @Override
     public ExtensionId getId() {
         return BAD_METADATA_EXTENSION_ID;
@@ -88,12 +91,14 @@ public class BADMetadataExtension implements IMetadataExtension {
         // enlist datasets
         MetadataBootstrap.enlistMetadataDataset(BADMetadataIndexes.CHANNEL_DATASET);
         MetadataBootstrap.enlistMetadataDataset(BADMetadataIndexes.BROKER_DATASET);
+        MetadataBootstrap.enlistMetadataDataset(BADMetadataIndexes.PROCEDURE_DATASET);
         if (MetadataBootstrap.isNewUniverse()) {
             MetadataTransactionContext mdTxnCtx = MetadataManager.INSTANCE.beginTransaction();
             try {
                 // add metadata datasets
                 MetadataBootstrap.insertMetadataDatasets(mdTxnCtx,
-                        new IMetadataIndex[] { BADMetadataIndexes.CHANNEL_DATASET, BADMetadataIndexes.BROKER_DATASET });
+                        new IMetadataIndex[] { BADMetadataIndexes.CHANNEL_DATASET, BADMetadataIndexes.BROKER_DATASET,
+                                BADMetadataIndexes.PROCEDURE_DATASET });
                 // insert default dataverse
                 // TODO prevent user from dropping this dataverse
                 // MetadataManager.INSTANCE.addDataverse(mdTxnCtx, BAD_DATAVERSE);
@@ -102,6 +107,7 @@ public class BADMetadataExtension implements IMetadataExtension {
                 MetadataManager.INSTANCE.addDatatype(mdTxnCtx, BAD_SUBSCRIPTION_DATATYPE);
                 MetadataManager.INSTANCE.addDatatype(mdTxnCtx, BAD_BROKER_DATATYPE);
                 MetadataManager.INSTANCE.addDatatype(mdTxnCtx, BAD_CHANNEL_DATATYPE);
+                MetadataManager.INSTANCE.addDatatype(mdTxnCtx, BAD_PROCEDURE_DATATYPE);
                 // TODO prevent user from dropping these types
                 MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
             } catch (Exception e) {

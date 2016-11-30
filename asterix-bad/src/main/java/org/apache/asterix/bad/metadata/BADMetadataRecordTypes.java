@@ -20,6 +20,7 @@ package org.apache.asterix.bad.metadata;
 
 import org.apache.asterix.bad.BADConstants;
 import org.apache.asterix.metadata.bootstrap.MetadataRecordTypes;
+import org.apache.asterix.om.types.AOrderedListType;
 import org.apache.asterix.om.types.ARecordType;
 import org.apache.asterix.om.types.BuiltinType;
 import org.apache.asterix.om.types.IAType;
@@ -71,6 +72,28 @@ public class BADMetadataRecordTypes {
             // FieldTypes
             new IAType[] { BuiltinType.ASTRING, BuiltinType.ASTRING, BuiltinType.ASTRING, BuiltinType.ASTRING,
                     BuiltinType.ASTRING, BuiltinType.ASTRING },
+            //IsOpen?
+            true);
+
+    //----------------------------------------- Procedure ----------------------------------------//
+    public static final int PROCEDURE_ARECORD_DATAVERSENAME_FIELD_INDEX = 0;
+    public static final int PROCEDURE_ARECORD_PROCEDURE_NAME_FIELD_INDEX = 1;
+    public static final int PROCEDURE_ARECORD_PROCEDURE_ARITY_FIELD_INDEX = 2;
+    public static final int PROCEDURE_ARECORD_PROCEDURE_PARAM_LIST_FIELD_INDEX = 3;
+    public static final int PROCEDURE_ARECORD_PROCEDURE_RETURN_TYPE_FIELD_INDEX = 4;
+    public static final int PROCEDURE_ARECORD_PROCEDURE_DEFINITION_FIELD_INDEX = 5;
+    public static final int PROCEDURE_ARECORD_PROCEDURE_LANGUAGE_FIELD_INDEX = 6;
+    public static final ARecordType PROCEDURE_RECORDTYPE = MetadataRecordTypes.createRecordType(
+            // RecordTypeName
+            BADConstants.RECORD_TYPENAME_PROCEDURE,
+            // FieldNames
+            new String[] { BADConstants.DataverseName, BADConstants.ProcedureName, BADConstants.FIELD_NAME_ARITY,
+                    BADConstants.FIELD_NAME_PARAMS, BADConstants.FIELD_NAME_RETURN_TYPE,
+                    BADConstants.FIELD_NAME_DEFINITION, BADConstants.FIELD_NAME_LANGUAGE },
+            // FieldTypes
+            new IAType[] { BuiltinType.ASTRING, BuiltinType.ASTRING, BuiltinType.ASTRING,
+                    new AOrderedListType(BuiltinType.ASTRING, null), BuiltinType.ASTRING, BuiltinType.ASTRING,
+                    BuiltinType.ASTRING },
             //IsOpen?
             true);
 
