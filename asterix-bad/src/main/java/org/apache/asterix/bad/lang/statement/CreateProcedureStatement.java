@@ -166,7 +166,7 @@ public class CreateProcedureStatement implements IExtensionStatement {
             JobSpecification channeljobSpec =
                     createProcedureJob(getFunctionBody(), statementExecutor, metadataProvider, hcc, hdc, stats);
 
-            setupDistributedJob(entityId, channeljobSpec, hcc);
+            // setupDistributedJob(entityId, channeljobSpec, hcc);
 
             eventSubscriber.assertEvent(ActiveLifecycleEvent.ACTIVE_JOB_STARTED);
 
