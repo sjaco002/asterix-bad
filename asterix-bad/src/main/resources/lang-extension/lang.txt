@@ -4,6 +4,7 @@ import org.apache.asterix.bad.lang.statement.ChannelSubscribeStatement;
 import org.apache.asterix.bad.lang.statement.ChannelUnsubscribeStatement;
 import org.apache.asterix.bad.lang.statement.CreateBrokerStatement;
 import org.apache.asterix.bad.lang.statement.CreateChannelStatement;
+import org.apache.asterix.bad.lang.statement.CreateProcedureStatement;
 
 
 @merge
@@ -17,8 +18,7 @@ Statement SingleStatement() throws ParseException:
   (
     // merge area 2
     before:
-    after:    | stmt = ChannelSubscriptionStatement()
-    	      | stmt = ExecuteProcedureStatement())
+    after:    | stmt = ChannelSubscriptionStatement())
   {
     // merge area 3
   }
@@ -98,9 +98,12 @@ CreateProcedureStatement ProcedureSpecification() throws ParseException:
   Pair<Identifier,Identifier> nameComponents = null;
   FunctionSignature signature;
   List<VarIdentifier> paramList = new ArrayList<VarIdentifier>();
+  String functionBody;
+  Token beginPos;
+  Token endPos;
+  Expression functionBodyExpr;
 }
 {
-  (
     "procedure" nameComponents = QualifiedName()
      paramList = ParameterList()
     <LEFTBRACE>
@@ -111,7 +114,7 @@ CreateProcedureStatement ProcedureSpecification() throws ParseException:
     {
       endPos = token;
       functionBody = extractFragment(beginPos.beginLine, beginPos.beginColumn, endPos.beginLine, endPos.beginColumn);
-      signature = new FunctionSignature(nameComponents.first, nameComponents.second, paramList.size());
+      signature = new FunctionSignature(nameComponents.first.toString(), nameComponents.second.toString(), paramList.size());
       removeCurrentScope();
       return new CreateProcedureStatement(signature, paramList, functionBody);
     }
