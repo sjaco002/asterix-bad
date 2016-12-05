@@ -42,11 +42,15 @@ public class RepetitiveChannelOperatorNodePushable extends ActiveSourceOperatorN
     private final HyracksConnection hcc;
 
     public RepetitiveChannelOperatorNodePushable(IHyracksTaskContext ctx, ActiveRuntimeId runtimeId,
-            JobSpecification channeljobSpec, String duration, String strIP, int port) throws Exception {
+            JobSpecification channeljobSpec, String duration, String strIP, int port) throws HyracksDataException {
         super(ctx, runtimeId);
         this.jobSpec = channeljobSpec;
         this.duration = ChannelJobService.findPeriod(duration);
-        hcc = new HyracksConnection(strIP, port);
+        try {
+            hcc = new HyracksConnection(strIP, port);
+        } catch (Exception e) {
+            throw new HyracksDataException(e);
+        }
     }
 
 

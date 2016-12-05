@@ -93,7 +93,4 @@ public class Procedure implements IExtensionMetadataEntity {
     public ExtensionMetadataDatasetId getDatasetId() {
         return BADMetadataIndexes.BAD_PROCEDURE_INDEX_ID;
     }
-
-
-
 }

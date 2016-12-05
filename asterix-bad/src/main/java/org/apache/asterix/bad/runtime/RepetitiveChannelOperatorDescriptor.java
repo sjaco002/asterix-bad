@@ -60,11 +60,7 @@ public class RepetitiveChannelOperatorDescriptor extends AbstractSingleActivityO
             IRecordDescriptorProvider recordDescProvider, int partition, int nPartitions) throws HyracksDataException {
         ActiveRuntimeId runtimeId = new ActiveRuntimeId(entityId,
                 RepetitiveChannelOperatorNodePushable.class.getSimpleName(), partition);
-        try {
-            return new RepetitiveChannelOperatorNodePushable(ctx, runtimeId, jobSpec, duration, strIP, port);
-        } catch (Exception e) {
-            throw new HyracksDataException(e);
-        }
+        return new RepetitiveChannelOperatorNodePushable(ctx, runtimeId, jobSpec, duration, strIP, port);
     }
 
     public String getDuration() {

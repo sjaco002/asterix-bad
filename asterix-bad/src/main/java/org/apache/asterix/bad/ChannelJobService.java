@@ -38,7 +38,6 @@ import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.job.JobFlag;
 import org.apache.hyracks.api.job.JobId;
 import org.apache.hyracks.api.job.JobSpecification;
-import org.json.JSONException;
 
 /**
  * Provides functionality for running channel jobs and communicating with Brokers
@@ -57,7 +56,7 @@ public class ChannelJobService {
                 try {
                     executeJob(jobSpec, jobFlags, jobId, hcc);
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    LOGGER.log(Level.WARNING, "Channel Job Failed to run.", e);
                 }
             }
         }, duration, duration, TimeUnit.MILLISECONDS);
@@ -83,16 +82,11 @@ public class ChannelJobService {
     public static void sendBrokerNotificationsForChannel(EntityId activeJobId, String brokerEndpoint,
             AOrderedList subscriptionIds, String channelExecutionTime) throws HyracksDataException {
         String formattedString;
-        try {
             formattedString = formatJSON(activeJobId, subscriptionIds, channelExecutionTime);
-        } catch (JSONException e) {
-            throw new HyracksDataException(e);
-        }
         sendMessage(brokerEndpoint, formattedString);
     }
 
-    public static String formatJSON(EntityId activeJobId, AOrderedList subscriptionIds, String channelExecutionTime)
-            throws JSONException {
+    public static String formatJSON(EntityId activeJobId, AOrderedList subscriptionIds, String channelExecutionTime) {
         String JSON = "{ \"dataverseName\":\"" + activeJobId.getDataverse() + "\", \"channelName\":\""
                 + activeJobId.getEntityName() + "\", \"" + BADConstants.ChannelExecutionTime + "\":\""
                 + channelExecutionTime + "\", \"subscriptionIds\":[";
@@ -110,7 +104,7 @@ public class ChannelJobService {
     }
 
     public static long findPeriod(String duration) {
-        //TODO: Allow Repetitive Channels to use YMD durations  
+        //TODO: Allow Repetitive Channels to use YMD durations
         String hoursMinutesSeconds = "";
         if (duration.indexOf('T') != -1) {
             hoursMinutesSeconds = duration.substring(duration.indexOf('T') + 1);
@@ -122,7 +116,6 @@ public class ChannelJobService {
                 Double hours = Double.parseDouble(hoursMinutesSeconds.substring(pos, hoursMinutesSeconds.indexOf('H')));
                 seconds += (hours * 60 * 60);
                 pos = hoursMinutesSeconds.indexOf('H') + 1;
-
             }
             if (hoursMinutesSeconds.indexOf('M') != -1) {
                 Double minutes =
@@ -134,7 +127,6 @@ public class ChannelJobService {
                 Double s = Double.parseDouble(hoursMinutesSeconds.substring(pos, hoursMinutesSeconds.indexOf('S')));
                 seconds += (s);
             }
-
         }
         return (long) (seconds * 1000);
     }
@@ -156,15 +148,11 @@ public class ChannelJobService {
 
             if (connection.getOutputStream() != null) {
                 //Send message
-                try {
-                    DataOutputStream wr = new DataOutputStream(connection.getOutputStream());
-                    wr.writeBytes(urlParameters);
-                    wr.close();
-                } catch (Exception e) {
-                    throw e;
-                }
+                DataOutputStream wr = new DataOutputStream(connection.getOutputStream());
+                wr.writeBytes(urlParameters);
+                wr.close();
             } else {
-                throw new Exception();
+                LOGGER.log(Level.WARNING, "Channel Failed to connect to Broker.");
             }
 
             if (LOGGER.isLoggable(Level.INFO)) {
@@ -183,14 +171,14 @@ public class ChannelJobService {
                 }
                 in.close();
                 if (LOGGER.isLoggable(Level.INFO)) {
-                    System.out.println(response.toString());
+                    LOGGER.log(Level.INFO, response.toString());
                 }
             } else {
-                throw new Exception();
+                LOGGER.log(Level.WARNING, "Channel Failed to get response from Broker.");
             }
 
         } catch (Exception e) {
-            LOGGER.info("Broker connection failed to write");
+            LOGGER.log(Level.WARNING, "Channel Failed to connect to Broker.");
         } finally {
             if (connection != null) {
                 connection.disconnect();

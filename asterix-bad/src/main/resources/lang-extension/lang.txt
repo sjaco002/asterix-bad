@@ -56,8 +56,8 @@ Statement DropStatement() throws ParseException:
       {
         stmt = new ChannelDropStatement(pairId.first, pairId.second, ifExists);
       }
-      	      | "broker" pairId = QualifiedName() ifExists = IfExists()	
-      {	
+              | "broker" pairId = QualifiedName() ifExists = IfExists()
+      {
         stmt = new BrokerDropStatement(pairId.first, pairId.second, ifExists);	
       }
       )
