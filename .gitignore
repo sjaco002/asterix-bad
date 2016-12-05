@@ -7,4 +7,3 @@ git.properties
 .DS_Store
 *.swp
 build
-*.hprof
