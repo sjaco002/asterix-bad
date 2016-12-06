@@ -70,7 +70,7 @@ public class ChannelJobService {
         if (jobId == null) {
             hcc.startJob(jobSpec, jobFlags);
         } else {
-            hcc.startJob(jobSpec, jobFlags, jobId);
+            hcc.startJob(jobId);
         }
     }
 
