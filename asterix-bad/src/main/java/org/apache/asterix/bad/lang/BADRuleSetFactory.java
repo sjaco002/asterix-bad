@@ -38,6 +38,8 @@ public class BADRuleSetFactory implements IRuleSetFactory {
             throws AlgebricksException {
         List<Pair<AbstractRuleController, List<IAlgebraicRewriteRule>>> logicalRuleSet = DefaultRuleSetFactory.buildLogical();
         if (logicalRuleSet.size() != 14) {
+            //TODO: This only guarantees that the number of rulesets hasn't changed
+            //Need to handle if they've been manipulated in other ways
             throw new AlgebricksException("Incorrect RuleSet");
         }
         List<IAlgebraicRewriteRule> normalizationCollection = RuleCollections.buildNormalizationRuleCollection();
