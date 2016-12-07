@@ -22,13 +22,11 @@
     <artifactId>asterix-opt</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
-    
     <parent>
         <groupId>org.apache.asterix</groupId>
         <artifactId>apache-asterixdb</artifactId>
         <version>0.8.9-SNAPSHOT</version>
     </parent>
-    
     <modules>
         <module>asterix-bad</module>
         <module>asterix-opt-bom</module>

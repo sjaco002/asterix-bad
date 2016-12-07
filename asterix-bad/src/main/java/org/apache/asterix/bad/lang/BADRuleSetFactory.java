@@ -24,6 +24,7 @@ import org.apache.asterix.bad.rules.InsertBrokerNotifierForChannelRule;
 import org.apache.asterix.compiler.provider.DefaultRuleSetFactory;
 import org.apache.asterix.compiler.provider.IRuleSetFactory;
 import org.apache.asterix.optimizer.base.RuleCollections;
+import org.apache.asterix.optimizer.rules.UnnestToDataScanRule;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.algebricks.common.utils.Pair;
 import org.apache.hyracks.algebricks.compiler.rewriter.rulecontrollers.SequentialOnceRuleController;
@@ -40,10 +41,14 @@ public class BADRuleSetFactory implements IRuleSetFactory {
             throw new AlgebricksException("Incorrect RuleSet");
         }
         List<IAlgebraicRewriteRule> normalizationCollection = RuleCollections.buildNormalizationRuleCollection();
-        if (normalizationCollection.size() != 21) {
-            throw new AlgebricksException("Incorrect RuleSet");
+
+        for (int i = 0; i < normalizationCollection.size(); i++) {
+            IAlgebraicRewriteRule rule = normalizationCollection.get(i);
+            if (rule instanceof UnnestToDataScanRule) {
+                normalizationCollection.add(i + 1, new InsertBrokerNotifierForChannelRule());
+                break;
+            }
         }
-        normalizationCollection.add(18, new InsertBrokerNotifierForChannelRule());
         SequentialOnceRuleController seqOnceCtrl = new SequentialOnceRuleController(true);
         logicalRuleSet.set(3, new Pair<>(seqOnceCtrl, normalizationCollection));
         logicalRuleSet.set(7, new Pair<>(seqOnceCtrl, normalizationCollection));
