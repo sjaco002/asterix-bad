@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -300,8 +301,10 @@ public class CreateChannelStatement implements IExtensionStatement {
         ChannelJobInfo channelJobInfo = new ChannelJobInfo(entityId, null, ActivityState.ACTIVE, channeljobSpec);
         channeljobSpec.setProperty(ActiveJobNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, channelJobInfo);
         JobId jobId = hcc.distributeJob(channeljobSpec);
-        ChannelJobService.startJob(channeljobSpec, EnumSet.noneOf(JobFlag.class), jobId, hcc,
-                ChannelJobService.findPeriod(duration));
+        ScheduledExecutorService ses = ChannelJobService.startJob(channeljobSpec, EnumSet.noneOf(JobFlag.class), jobId,
+                hcc, ChannelJobService.findPeriod(duration));
+        //TODO:Give the JobId to the ChannelEventsListener (to destroy the job by id later)
+        //TODO:Give the ses to the ChannelEventsListener to cancel later
     }
 
     @Override

@@ -128,6 +128,8 @@ public class ChannelDropStatement implements IExtensionStatement {
                 throw new AsterixException("Channel " + channelName + " is not running");
             }
 
+            //TODO:hcc.destroyJob for pre-distributed jobs
+
             ICCMessageBroker messageBroker = (ICCMessageBroker) AsterixAppContextInfo.INSTANCE.getCCApplicationContext()
                     .getMessageBroker();
 
