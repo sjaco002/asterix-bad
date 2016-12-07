@@ -1,0 +1,3 @@
+use dataverse channels;
+
+subscribe to nearbyTweetChannel (point("10.0, 10.0"), "Prosper") on brokerA;

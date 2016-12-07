@@ -1,0 +1,3 @@
+use dataverse channels;
+
+subscribe to nearbyTweetChannel (point("30.0, 30.0"), "Live") on brokerA;

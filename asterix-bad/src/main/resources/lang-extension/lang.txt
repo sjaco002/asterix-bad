@@ -1,0 +1,206 @@
+import org.apache.asterix.bad.lang.statement.BrokerDropStatement;
+import org.apache.asterix.bad.lang.statement.ChannelDropStatement;
+import org.apache.asterix.bad.lang.statement.ChannelSubscribeStatement;
+import org.apache.asterix.bad.lang.statement.ChannelUnsubscribeStatement;
+import org.apache.asterix.bad.lang.statement.CreateBrokerStatement;
+import org.apache.asterix.bad.lang.statement.CreateChannelStatement;
+import org.apache.asterix.bad.lang.statement.CreateProcedureStatement;
+
+
+@merge
+Statement SingleStatement() throws ParseException:
+{
+  // merge area 1
+  before:
+  after:
+}
+{
+  (
+    // merge area 2
+    before:
+    after:    | stmt = ChannelSubscriptionStatement())
+  {
+    // merge area 3
+  }
+}
+
+@merge
+Statement CreateStatement() throws ParseException:
+{
+  // merge area 1
+  before:
+  after:
+}
+{
+  (
+    // merge area 2
+    before:
+    after:    | stmt = ChannelSpecification() | stmt = BrokerSpecification() | stmt = ProcedureSpecification())
+  {
+    // merge area 3
+  }
+}
+
+@merge
+Statement DropStatement() throws ParseException:
+{
+  // merge area 1
+  before:
+  after:
+}
+{
+  (
+    // merge area 2
+    before:
+    after:    | "channel" pairId = QualifiedName() ifExists = IfExists()
+      {
+        stmt = new ChannelDropStatement(pairId.first, pairId.second, ifExists);
+      }
+              | "broker" pairId = QualifiedName() ifExists = IfExists()
+      {
+        stmt = new BrokerDropStatement(pairId.first, pairId.second, ifExists);	
+      }
+      )
+  {
+    // merge area 3
+  }
+}
+
+@new
+CreateChannelStatement ChannelSpecification() throws ParseException:
+{
+  Pair<Identifier,Identifier> nameComponents = null;
+  FunctionSignature appliedFunction = null;
+  CreateChannelStatement ccs = null;
+  String fqFunctionName = null;
+  Expression period = null;
+  boolean distributed = false;
+}
+{
+  (
+    "repetitive" "channel"  nameComponents = QualifiedName()
+    <USING> appliedFunction = FunctionSignature()
+    "period" period = FunctionCallExpr() ("distributed" { distributed = true; })?
+    {
+      ccs = new CreateChannelStatement(nameComponents.first,
+                                   nameComponents.second, appliedFunction, period, distributed);
+    }
+  )
+    {
+      return ccs;
+    }
+}
+
+
+@new
+CreateProcedureStatement ProcedureSpecification() throws ParseException:
+{
+  Pair<Identifier,Identifier> nameComponents = null;
+  FunctionSignature signature;
+  List<VarIdentifier> paramList = new ArrayList<VarIdentifier>();
+  String functionBody;
+  Token beginPos;
+  Token endPos;
+  Expression functionBodyExpr;
+}
+{
+    "procedure" nameComponents = QualifiedName()
+     paramList = ParameterList()
+    <LEFTBRACE>
+  {
+     beginPos = token;
+  }
+  functionBodyExpr = Expression() <RIGHTBRACE>
+    {
+      endPos = token;
+      functionBody = extractFragment(beginPos.beginLine, beginPos.beginColumn, endPos.beginLine, endPos.beginColumn);
+      signature = new FunctionSignature(nameComponents.first.toString(), nameComponents.second.toString(), paramList.size());
+      removeCurrentScope();
+      return new CreateProcedureStatement(signature, paramList, functionBody);
+    }
+}
+
+
+
+
+@new
+CreateBrokerStatement BrokerSpecification() throws ParseException:
+{
+  CreateBrokerStatement cbs = null;
+  Pair<Identifier,Identifier> name = null;
+  String endPoint = null;
+}
+{
+  (
+    "broker"  name = QualifiedName()
+    <AT>  endPoint = StringLiteral()
+    {
+      cbs = new CreateBrokerStatement(name.first, name.second,endPoint);
+    }
+  )
+    {
+      return cbs;
+    }
+}
+
+@new
+Statement ChannelSubscriptionStatement() throws ParseException:
+{
+  Statement stmt = null;
+  Pair<Identifier,Identifier> nameComponents = null;
+  List<Expression> argList = new ArrayList<Expression>();
+  Expression tmp = null;
+  String id = null;
+  String subscriptionId = null;
+  Pair<Identifier,Identifier> brokerName = null;
+}
+{
+  (
+  "subscribe" <TO> nameComponents = QualifiedName()
+   <LEFTPAREN> (tmp = Expression()
+   {
+      argList.add(tmp);
+   }
+   (<COMMA> tmp = Expression()
+   {
+      argList.add(tmp);
+   }
+   )*)? <RIGHTPAREN> <ON> brokerName = QualifiedName()
+   {
+      stmt = new ChannelSubscribeStatement(nameComponents.first, nameComponents.second, argList, getVarCounter(), brokerName.first, brokerName.second, subscriptionId);
+   }
+   | "unsubscribe" id = StringLiteral() <FROM> nameComponents = QualifiedName()
+      {
+        setDataverses(new ArrayList<String>());
+        setDatasets(new ArrayList<String>());
+        VariableExpr varExp = new VariableExpr();
+        VarIdentifier var = new VarIdentifier();
+        varExp.setVar(var);
+        var.setValue("$subscriptionPlaceholder");
+        getCurrentScope().addNewVarSymbolToScope(varExp.getVar());
+        List<String> dataverses = getDataverses();
+        List<String> datasets = getDatasets();
+        // we remove the pointer to the dataverses and datasets
+        setDataverses(null);
+        setDatasets(null);
+        stmt = new ChannelUnsubscribeStatement(varExp, nameComponents.first, nameComponents.second, id, getVarCounter(), dataverses, datasets);
+      }
+     | "change" "subscription" subscriptionId = StringLiteral()  <ON> nameComponents = QualifiedName()
+       <LEFTPAREN> (tmp = Expression()
+       {
+         argList.add(tmp);
+       }
+       (<COMMA> tmp = Expression()
+       {
+         argList.add(tmp);
+       }
+       )*)? <RIGHTPAREN>
+        <TO> brokerName = QualifiedName()
+      {
+        stmt = new ChannelSubscribeStatement(nameComponents.first, nameComponents.second, argList, getVarCounter(), brokerName.first, brokerName.second, subscriptionId);
+      }
+    )
+    {
+      return stmt;
+    }
+}

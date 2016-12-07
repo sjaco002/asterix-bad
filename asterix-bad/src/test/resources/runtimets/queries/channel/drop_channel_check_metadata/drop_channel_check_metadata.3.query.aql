@@ -1,0 +1,5 @@
+use dataverse channels;
+
+for $result in dataset Metadata.Channel
+order by $result.ChannelName
+return $result;
