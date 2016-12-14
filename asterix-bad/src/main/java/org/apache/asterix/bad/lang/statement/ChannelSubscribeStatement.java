@@ -206,7 +206,7 @@ public class ChannelSubscribeStatement implements IExtensionStatement {
 
                 metadataProvider.setResultSetId(new ResultSetId(resultSetIdCounter++));
                 metadataProvider.setResultAsyncMode(
-                        resultDelivery == ResultDelivery.ASYNC || resultDelivery == ResultDelivery.ASYNC_DEFERRED);
+                        resultDelivery == ResultDelivery.ASYNC || resultDelivery == ResultDelivery.DEFERRED);
                 InsertStatement insert = new InsertStatement(new Identifier(dataverse),
                         new Identifier(subscriptionsDatasetName), subscriptionTuple, varCounter, resultVar,
                         returnQuery);
