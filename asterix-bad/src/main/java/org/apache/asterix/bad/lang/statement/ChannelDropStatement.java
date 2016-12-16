@@ -44,7 +44,7 @@ import org.apache.asterix.lang.common.visitor.base.ILangVisitor;
 import org.apache.asterix.metadata.MetadataManager;
 import org.apache.asterix.metadata.MetadataTransactionContext;
 import org.apache.asterix.metadata.declared.MetadataProvider;
-import org.apache.asterix.runtime.util.AsterixAppContextInfo;
+import org.apache.asterix.runtime.util.AppContextInfo;
 import org.apache.asterix.translator.IStatementExecutor;
 import org.apache.asterix.translator.IStatementExecutor.ResultDelivery;
 import org.apache.asterix.translator.IStatementExecutor.Stats;
@@ -128,8 +128,8 @@ public class ChannelDropStatement implements IExtensionStatement {
                 throw new AsterixException("Channel " + channelName + " is not running");
             }
 
-            ICCMessageBroker messageBroker = (ICCMessageBroker) AsterixAppContextInfo.INSTANCE.getCCApplicationContext()
-                    .getMessageBroker();
+            ICCMessageBroker messageBroker =
+                    (ICCMessageBroker) AppContextInfo.INSTANCE.getCCApplicationContext().getMessageBroker();
 
             ChannelJobInfo cInfo = listener.getJobInfo(channel.getChannelId());;
             Set<String> ncs = new HashSet<>(cInfo.getLocations());

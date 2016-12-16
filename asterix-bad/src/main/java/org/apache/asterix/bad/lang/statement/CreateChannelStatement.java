@@ -68,7 +68,7 @@ import org.apache.asterix.metadata.MetadataTransactionContext;
 import org.apache.asterix.metadata.declared.MetadataProvider;
 import org.apache.asterix.metadata.entities.Function;
 import org.apache.asterix.om.base.temporal.ADurationParserFactory;
-import org.apache.asterix.runtime.util.AsterixAppContextInfo;
+import org.apache.asterix.runtime.util.AppContextInfo;
 import org.apache.asterix.runtime.util.ClusterStateManager;
 import org.apache.asterix.translator.IStatementExecutor;
 import org.apache.asterix.translator.IStatementExecutor.ResultDelivery;
@@ -282,7 +282,7 @@ public class CreateChannelStatement implements IExtensionStatement {
 
     private void setupCompiledJob(MetadataProvider metadataProvider, String dataverse, EntityId entityId,
             JobSpecification channeljobSpec, IHyracksClientConnection hcc) throws Exception {
-        ICCApplicationContext iCCApp = AsterixAppContextInfo.INSTANCE.getCCApplicationContext();
+        ICCApplicationContext iCCApp = AppContextInfo.INSTANCE.getCCApplicationContext();
         ClusterControllerInfo ccInfo = iCCApp.getCCContext().getClusterControllerInfo();
         String strIP = ccInfo.getClientNetAddress();
         int port = ccInfo.getClientNetPort();

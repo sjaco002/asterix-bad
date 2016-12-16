@@ -35,7 +35,7 @@ import org.apache.asterix.bad.runtime.RepetitiveChannelOperatorDescriptor;
 import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber;
 import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber.ActiveLifecycleEvent;
 import org.apache.asterix.external.feed.management.FeedConnectionId;
-import org.apache.asterix.runtime.util.AsterixAppContextInfo;
+import org.apache.asterix.runtime.util.AppContextInfo;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.dataflow.IOperatorDescriptor;
 import org.apache.hyracks.api.dataflow.OperatorDescriptorId;
@@ -97,7 +97,7 @@ public class ChannelEventsListener implements IActiveEntityEventsListener {
     private synchronized void handleJobFinishMessage(ChannelJobInfo cInfo) throws Exception {
         EntityId channelJobId = cInfo.getEntityId();
 
-        IHyracksClientConnection hcc = AsterixAppContextInfo.INSTANCE.getHcc();
+        IHyracksClientConnection hcc = AppContextInfo.INSTANCE.getHcc();
         JobInfo info = hcc.getJobInfo(cInfo.getJobId());
         JobStatus status = info.getStatus();
         boolean failure = status != null && status.equals(JobStatus.FAILURE);
@@ -128,7 +128,7 @@ public class ChannelEventsListener implements IActiveEntityEventsListener {
             }
         }
 
-        IHyracksClientConnection hcc = AsterixAppContextInfo.INSTANCE.getHcc();
+        IHyracksClientConnection hcc = AppContextInfo.INSTANCE.getHcc();
         JobInfo info = hcc.getJobInfo(cInfo.getJobId());
         List<String> locations = new ArrayList<>();
         for (OperatorDescriptorId channelOperatorId : channelOperatorIds) {

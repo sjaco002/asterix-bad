@@ -18,6 +18,7 @@
  */
 package org.apache.asterix.bad.lang;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.asterix.bad.rules.InsertBrokerNotifierForChannelRule;
@@ -37,21 +38,39 @@ public class BADRuleSetFactory implements IRuleSetFactory {
     public List<Pair<AbstractRuleController, List<IAlgebraicRewriteRule>>> getLogicalRewrites()
             throws AlgebricksException {
         List<Pair<AbstractRuleController, List<IAlgebraicRewriteRule>>> logicalRuleSet = DefaultRuleSetFactory.buildLogical();
-        if (logicalRuleSet.size() != 14) {
-            throw new AlgebricksException("Incorrect RuleSet");
-        }
-        List<IAlgebraicRewriteRule> normalizationCollection = RuleCollections.buildNormalizationRuleCollection();
 
-        for (int i = 0; i < normalizationCollection.size(); i++) {
-            IAlgebraicRewriteRule rule = normalizationCollection.get(i);
+        List<IAlgebraicRewriteRule> normalizationCollection = RuleCollections.buildNormalizationRuleCollection();
+        List<IAlgebraicRewriteRule> alteredNormalizationCollection = new ArrayList<>();
+        alteredNormalizationCollection.addAll(normalizationCollection);
+
+        //Create a normalization collection that includes the broker rule
+        for (int i = 0; i < alteredNormalizationCollection.size(); i++) {
+            IAlgebraicRewriteRule rule = alteredNormalizationCollection.get(i);
             if (rule instanceof UnnestToDataScanRule) {
-                normalizationCollection.add(i + 1, new InsertBrokerNotifierForChannelRule());
+                alteredNormalizationCollection.add(i + 1, new InsertBrokerNotifierForChannelRule());
                 break;
             }
         }
+
+        //Find instances of the normalization collection and replace them with the new one
         SequentialOnceRuleController seqOnceCtrl = new SequentialOnceRuleController(true);
-        logicalRuleSet.set(3, new Pair<>(seqOnceCtrl, normalizationCollection));
-        logicalRuleSet.set(7, new Pair<>(seqOnceCtrl, normalizationCollection));
+        for (int i =0; i < logicalRuleSet.size(); i++){
+            List<IAlgebraicRewriteRule> collection = logicalRuleSet.get(i).second;
+            if (collection.size() == normalizationCollection.size()) {
+                boolean isNormalizationCollection = true;
+                for (int j = 0; j < collection.size(); j++) {
+                    //Make sure the set of rules is the same
+                    if (!collection.get(j).getClass().equals(normalizationCollection.get(j).getClass())) {
+                        isNormalizationCollection = false;
+                        break;
+                    }
+                }
+                if (isNormalizationCollection) {
+                    //replace with the new collection
+                    logicalRuleSet.set(i, new Pair<>(seqOnceCtrl, alteredNormalizationCollection));
+                }
+            }
+        }
         return logicalRuleSet;
     }
 
@@ -59,5 +78,4 @@ public class BADRuleSetFactory implements IRuleSetFactory {
     public List<Pair<AbstractRuleController, List<IAlgebraicRewriteRule>>> getPhysicalRewrites() {
         return DefaultRuleSetFactory.buildPhysical();
     }
-
 }
