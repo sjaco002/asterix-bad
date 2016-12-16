@@ -30,7 +30,7 @@ import org.apache.asterix.lang.common.util.FunctionUtil;
 import org.apache.asterix.metadata.declared.DatasetDataSource;
 import org.apache.asterix.om.base.AString;
 import org.apache.asterix.om.constants.AsterixConstantValue;
-import org.apache.asterix.om.functions.AsterixBuiltinFunctions;
+import org.apache.asterix.om.functions.BuiltinFunctions;
 import org.apache.commons.lang3.mutable.Mutable;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
@@ -174,8 +174,8 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
         LogicalVariable subscriptionListVar = context.newVar();
         List<LogicalVariable> aggVars = new ArrayList<LogicalVariable>();
         aggVars.add(subscriptionListVar);
-        AggregateFunctionCallExpression funAgg = AsterixBuiltinFunctions.makeAggregateFunctionExpression(
-                AsterixBuiltinFunctions.LISTIFY, new ArrayList<Mutable<ILogicalExpression>>());
+        AggregateFunctionCallExpression funAgg = BuiltinFunctions.makeAggregateFunctionExpression(
+                BuiltinFunctions.LISTIFY, new ArrayList<Mutable<ILogicalExpression>>());
         funAgg.getArguments()
                 .add(new MutableObject<ILogicalExpression>(new VariableReferenceExpression(subscriptionIdVar)));
         List<Mutable<ILogicalExpression>> aggExpressions = new ArrayList<Mutable<ILogicalExpression>>();
@@ -229,7 +229,7 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
                 new VariableReferenceExpression(brokerScan.getVariables().get(2)));
 
         ScalarFunctionCallExpression fieldAccessByName = new ScalarFunctionCallExpression(
-                FunctionUtil.getFunctionInfo(AsterixBuiltinFunctions.FIELD_ACCESS_BY_NAME), varRef, fieldRef);
+                FunctionUtil.getFunctionInfo(BuiltinFunctions.FIELD_ACCESS_BY_NAME), varRef, fieldRef);
         ArrayList<LogicalVariable> varArray = new ArrayList<LogicalVariable>(1);
         varArray.add(brokerEndpointVar);
         ArrayList<Mutable<ILogicalExpression>> exprArray = new ArrayList<Mutable<ILogicalExpression>>(1);

@@ -42,7 +42,7 @@ import org.apache.asterix.lang.common.visitor.base.ILangVisitor;
 import org.apache.asterix.metadata.MetadataManager;
 import org.apache.asterix.metadata.MetadataTransactionContext;
 import org.apache.asterix.metadata.declared.MetadataProvider;
-import org.apache.asterix.om.functions.AsterixBuiltinFunctions;
+import org.apache.asterix.om.functions.BuiltinFunctions;
 import org.apache.asterix.translator.IStatementExecutor;
 import org.apache.asterix.translator.IStatementExecutor.ResultDelivery;
 import org.apache.asterix.translator.IStatementExecutor.Stats;
@@ -143,7 +143,7 @@ public class ChannelUnsubscribeStatement implements IExtensionStatement {
             List<Expression> UUIDList = new ArrayList<Expression>();
             UUIDList.add(new LiteralExpr(new StringLiteral(subscriptionId)));
 
-            FunctionIdentifier function = AsterixBuiltinFunctions.UUID_CONSTRUCTOR;
+            FunctionIdentifier function = BuiltinFunctions.UUID_CONSTRUCTOR;
             FunctionSignature UUIDfunc = new FunctionSignature(function.getNamespace(), function.getName(),
                     function.getArity());
             CallExpr UUIDCall = new CallExpr(UUIDfunc, UUIDList);

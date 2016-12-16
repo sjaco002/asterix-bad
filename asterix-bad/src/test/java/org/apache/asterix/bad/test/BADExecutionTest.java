@@ -23,7 +23,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.logging.Logger;
 
-import org.apache.asterix.common.config.AsterixTransactionProperties;
+import org.apache.asterix.common.config.TransactionProperties;
 import org.apache.asterix.test.aql.TestExecutor;
 import org.apache.asterix.test.runtime.ExecutionTestUtil;
 import org.apache.asterix.testframework.context.TestCaseContext;
@@ -50,7 +50,7 @@ public class BADExecutionTest {
 
     protected static final String TEST_CONFIG_FILE_NAME = "src/test/resources/conf/asterix-build-configuration.xml";
 
-    protected static AsterixTransactionProperties txnProperties;
+    protected static TransactionProperties txnProperties;
     private static final TestExecutor testExecutor = new TestExecutor();
     private static final boolean cleanupOnStart = true;
     private static final boolean cleanupOnStop = true;
