@@ -18,25 +18,17 @@
  */
 package org.apache.asterix.bad.lang.statement;
 
-import java.util.HashSet;
-import java.util.Set;
-
 import org.apache.asterix.active.ActiveJobNotificationHandler;
-import org.apache.asterix.active.ActiveRuntimeId;
+import org.apache.asterix.active.ActiveLifecycleListener;
 import org.apache.asterix.active.EntityId;
-import org.apache.asterix.active.message.ActiveManagerMessage;
 import org.apache.asterix.algebra.extension.IExtensionStatement;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
-import org.apache.asterix.bad.ChannelJobInfo;
 import org.apache.asterix.bad.lang.BADLangExtension;
 import org.apache.asterix.bad.metadata.Channel;
 import org.apache.asterix.bad.metadata.ChannelEventsListener;
-import org.apache.asterix.bad.runtime.RepetitiveChannelOperatorNodePushable;
 import org.apache.asterix.common.exceptions.AsterixException;
-import org.apache.asterix.common.messaging.api.ICCMessageBroker;
 import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber;
-import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber.ActiveLifecycleEvent;
 import org.apache.asterix.external.feed.management.ActiveLifecycleEventSubscriber;
 import org.apache.asterix.lang.common.statement.DropDatasetStatement;
 import org.apache.asterix.lang.common.struct.Identifier;
@@ -44,15 +36,14 @@ import org.apache.asterix.lang.common.visitor.base.ILangVisitor;
 import org.apache.asterix.metadata.MetadataManager;
 import org.apache.asterix.metadata.MetadataTransactionContext;
 import org.apache.asterix.metadata.declared.MetadataProvider;
-import org.apache.asterix.runtime.util.AppContextInfo;
 import org.apache.asterix.translator.IStatementExecutor;
 import org.apache.asterix.translator.IStatementExecutor.ResultDelivery;
 import org.apache.asterix.translator.IStatementExecutor.Stats;
-import org.apache.hyracks.algebricks.common.constraints.AlgebricksAbsolutePartitionConstraint;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.dataset.IHyracksDataset;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.api.job.JobId;
 
 public class ChannelDropStatement implements IExtensionStatement {
 
@@ -129,22 +120,13 @@ public class ChannelDropStatement implements IExtensionStatement {
             }
 
 
-            ICCMessageBroker messageBroker =
-                    (ICCMessageBroker) AppContextInfo.INSTANCE.getCCApplicationContext().getMessageBroker();
-
-            ChannelJobInfo cInfo = listener.getJobInfo(channel.getChannelId());;
-            Set<String> ncs = new HashSet<>(cInfo.getLocations());
-            AlgebricksAbsolutePartitionConstraint locations = new AlgebricksAbsolutePartitionConstraint(
-                    ncs.toArray(new String[ncs.size()]));
-            int partition = 0;
-            for (String location : locations.getLocations()) {
-                messageBroker.sendApplicationMessageToNC(
-                        new ActiveManagerMessage(ActiveManagerMessage.STOP_ACTIVITY, "cc",
-                                new ActiveRuntimeId(channel.getChannelId(),
-                                        RepetitiveChannelOperatorNodePushable.class.getSimpleName(), partition++)),
-                        location);
+            listener.getExecutorService().shutdownNow();
+            JobId hyracksJobId = listener.getHyracksJobId();
+            if (hyracksJobId != null) {
+                hcc.destroyJob(hyracksJobId);
             }
-            eventSubscriber.assertEvent(ActiveLifecycleEvent.ACTIVE_JOB_ENDED);
+            listener.deActivate();
+            ActiveLifecycleListener.INSTANCE.notifyJobFinish(hyracksJobId);
 
             //Drop the Channel Datasets
             //TODO: Need to find some way to handle if this fails.
@@ -157,9 +139,6 @@ public class ChannelDropStatement implements IExtensionStatement {
                     new Identifier(channel.getSubscriptionsDataset()), true);
             ((QueryTranslator) statementExecutor).handleDatasetDropStatement(metadataProvider, dropStmt, hcc);
 
-            if (subscriberRegistered) {
-                listener.deregisterEventSubscriber(eventSubscriber);
-            }
 
             //Remove the Channel Metadata
             MetadataManager.INSTANCE.deleteEntity(mdTxnCtx, channel);

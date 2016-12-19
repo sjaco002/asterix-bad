@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
+import java.util.concurrent.ScheduledExecutorService;
 
 import org.apache.asterix.active.ActiveEvent;
 import org.apache.asterix.active.ActiveJob;
@@ -31,14 +31,11 @@ import org.apache.asterix.active.EntityId;
 import org.apache.asterix.active.IActiveEntityEventsListener;
 import org.apache.asterix.bad.BADConstants;
 import org.apache.asterix.bad.ChannelJobInfo;
-import org.apache.asterix.bad.runtime.RepetitiveChannelOperatorDescriptor;
 import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber;
 import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber.ActiveLifecycleEvent;
 import org.apache.asterix.external.feed.management.FeedConnectionId;
 import org.apache.asterix.runtime.util.AppContextInfo;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
-import org.apache.hyracks.api.dataflow.IOperatorDescriptor;
-import org.apache.hyracks.api.dataflow.OperatorDescriptorId;
 import org.apache.hyracks.api.job.JobId;
 import org.apache.hyracks.api.job.JobInfo;
 import org.apache.hyracks.api.job.JobSpecification;
@@ -51,12 +48,16 @@ public class ChannelEventsListener implements IActiveEntityEventsListener {
     private final Map<Long, ActiveJob> jobs;
     private final Map<EntityId, ChannelJobInfo> jobInfos;
     private EntityId entityId;
+    private JobId hyracksJobId;
+    private ScheduledExecutorService executorService;
+    private boolean active;
 
     public ChannelEventsListener(EntityId entityId) {
         this.entityId = entityId;
         subscribers = new ArrayList<>();
         jobs = new HashMap<>();
         jobInfos = new HashMap<>();
+        active = false;
     }
 
     @Override
@@ -81,9 +82,23 @@ public class ChannelEventsListener implements IActiveEntityEventsListener {
         }
     }
 
+    public void storeDistributedInfo(JobId jobId, ScheduledExecutorService ses) {
+        this.hyracksJobId = jobId;
+        this.executorService = ses;
+    }
+
+    public ScheduledExecutorService getExecutorService() {
+        return executorService;
+    }
+
+    public JobId getHyracksJobId() {
+        return hyracksJobId;
+    }
+
     private synchronized void handleJobStartEvent(ActiveEvent message) throws Exception {
         ActiveJob jobInfo = jobs.get(message.getJobId().getId());
         handleJobStartMessage((ChannelJobInfo) jobInfo);
+        active = true;
     }
 
     private synchronized void handleJobFinishEvent(ActiveEvent message) throws Exception {
@@ -95,19 +110,21 @@ public class ChannelEventsListener implements IActiveEntityEventsListener {
     }
 
     private synchronized void handleJobFinishMessage(ChannelJobInfo cInfo) throws Exception {
-        EntityId channelJobId = cInfo.getEntityId();
+        if (!isEntityActive()) {
+            EntityId channelJobId = cInfo.getEntityId();
 
-        IHyracksClientConnection hcc = AppContextInfo.INSTANCE.getHcc();
-        JobInfo info = hcc.getJobInfo(cInfo.getJobId());
-        JobStatus status = info.getStatus();
-        boolean failure = status != null && status.equals(JobStatus.FAILURE);
+            IHyracksClientConnection hcc = AppContextInfo.INSTANCE.getHcc();
+            JobInfo info = hcc.getJobInfo(cInfo.getJobId());
+            JobStatus status = info.getStatus();
+            boolean failure = status != null && status.equals(JobStatus.FAILURE);
 
-        jobInfos.remove(channelJobId);
-        jobs.remove(cInfo.getJobId().getId());
-        // notify event listeners
-        ActiveLifecycleEvent event = failure ? ActiveLifecycleEvent.ACTIVE_JOB_FAILED
-                : ActiveLifecycleEvent.ACTIVE_JOB_ENDED;
-        notifyEventSubscribers(event);
+            jobInfos.remove(channelJobId);
+            jobs.remove(cInfo.getJobId().getId());
+            // notify event listeners
+            ActiveLifecycleEvent event =
+                    failure ? ActiveLifecycleEvent.ACTIVE_JOB_FAILED : ActiveLifecycleEvent.ACTIVE_JOB_ENDED;
+            notifyEventSubscribers(event);
+        }
     }
 
     private void notifyEventSubscribers(ActiveLifecycleEvent event) {
@@ -119,26 +136,6 @@ public class ChannelEventsListener implements IActiveEntityEventsListener {
     }
 
     private static synchronized void handleJobStartMessage(ChannelJobInfo cInfo) throws Exception {
-        List<OperatorDescriptorId> channelOperatorIds = new ArrayList<>();
-        Map<OperatorDescriptorId, IOperatorDescriptor> operators = cInfo.getSpec().getOperatorMap();
-        for (Entry<OperatorDescriptorId, IOperatorDescriptor> entry : operators.entrySet()) {
-            IOperatorDescriptor opDesc = entry.getValue();
-            if (opDesc instanceof RepetitiveChannelOperatorDescriptor) {
-                channelOperatorIds.add(opDesc.getOperatorId());
-            }
-        }
-
-        IHyracksClientConnection hcc = AppContextInfo.INSTANCE.getHcc();
-        JobInfo info = hcc.getJobInfo(cInfo.getJobId());
-        List<String> locations = new ArrayList<>();
-        for (OperatorDescriptorId channelOperatorId : channelOperatorIds) {
-            Map<Integer, String> operatorLocations = info.getOperatorLocations().get(channelOperatorId);
-            int nOperatorInstances = operatorLocations.size();
-            for (int i = 0; i < nOperatorInstances; i++) {
-                locations.add(operatorLocations.get(i));
-            }
-        }
-        cInfo.setLocations(locations);
         cInfo.setState(ActivityState.ACTIVE);
     }
 
@@ -190,15 +187,7 @@ public class ChannelEventsListener implements IActiveEntityEventsListener {
     }
 
     public synchronized boolean isChannelActive(EntityId activeJobId, IActiveLifecycleEventSubscriber eventSubscriber) {
-        boolean active = false;
-        ChannelJobInfo cInfo = jobInfos.get(activeJobId);
-        if (cInfo != null) {
-            active = cInfo.getState().equals(ActivityState.ACTIVE);
-        }
-        if (active) {
-            registerEventSubscriber(eventSubscriber);
-        }
-        return active;
+        return isEntityActive();
     }
 
     public FeedConnectionId[] getConnections() {
@@ -207,7 +196,11 @@ public class ChannelEventsListener implements IActiveEntityEventsListener {
 
     @Override
     public boolean isEntityActive() {
-        return !jobs.isEmpty();
+        return active;
+    }
+
+    public void deActivate() {
+        active = false;
     }
 
     @Override
