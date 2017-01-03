@@ -61,19 +61,19 @@
   </property>
   <property>
     <name>compiler.framesize</name>
-    <value>32768</value>
+    <value>32KB</value>
   </property>
   <property>
     <name>compiler.sortmemory</name>
-    <value>327680</value>
+    <value>640KB</value>
   </property>
   <property>
     <name>compiler.groupmemory</name>
-    <value>163840</value>
+    <value>640KB</value>
   </property>
   <property>
     <name>compiler.joinmemory</name>
-    <value>163840</value>
+    <value>640KB</value>
   </property>
   <property>
     <name>compiler.pregelix.home</name>
