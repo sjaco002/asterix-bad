@@ -196,20 +196,18 @@ public class ChannelSubscribeStatement implements IExtensionStatement {
                 VariableExpr useResultVar = new VariableExpr(new VarIdentifier("$result", 0));
                 useResultVar.setIsNewVar(false);
                 useSubscriptionVar.setIsNewVar(false);
-                Query returnQuery = new Query(false);
                 List<Clause> clauseList = new ArrayList<>();
                 LetClause let = new LetClause(subscriptionVar,
                         new FieldAccessor(useResultVar, new Identifier(BADConstants.SubscriptionId)));
                 clauseList.add(let);
                 FLWOGRExpression body = new FLWOGRExpression(clauseList, useSubscriptionVar);
-                returnQuery.setBody(body);
 
                 metadataProvider.setResultSetId(new ResultSetId(resultSetIdCounter++));
                 metadataProvider.setResultAsyncMode(
                         resultDelivery == ResultDelivery.ASYNC || resultDelivery == ResultDelivery.DEFERRED);
                 InsertStatement insert = new InsertStatement(new Identifier(dataverse),
                         new Identifier(subscriptionsDatasetName), subscriptionTuple, varCounter, resultVar,
-                        returnQuery);
+ body);
                 ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider, insert, hcc, hdc,
                         resultDelivery, stats, false);
             } else {

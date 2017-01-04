@@ -17,7 +17,7 @@
                         -- STREAM_PROJECT  |PARTITIONED|
                           -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
                             -- INSERT_DELETE  |PARTITIONED|
-                              -- HASH_PARTITION_EXCHANGE [$$36]  |PARTITIONED|
+                              -- HASH_PARTITION_EXCHANGE [$$35]  |PARTITIONED|
                                 -- ASSIGN  |PARTITIONED|
                                   -- STREAM_PROJECT  |PARTITIONED|
                                     -- ASSIGN  |PARTITIONED|
