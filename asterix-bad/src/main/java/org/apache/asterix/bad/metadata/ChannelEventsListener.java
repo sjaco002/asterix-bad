@@ -30,7 +30,7 @@ import org.apache.asterix.active.ActivityState;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.active.IActiveEntityEventsListener;
 import org.apache.asterix.bad.BADConstants;
-import org.apache.asterix.bad.ChannelJobInfo;
+import org.apache.asterix.bad.DistributedJobInfo;
 import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber;
 import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber.ActiveLifecycleEvent;
 import org.apache.asterix.external.feed.management.FeedConnectionId;
@@ -46,7 +46,7 @@ public class ChannelEventsListener implements IActiveEntityEventsListener {
     private static final Logger LOGGER = Logger.getLogger(ChannelEventsListener.class);
     private final List<IActiveLifecycleEventSubscriber> subscribers;
     private final Map<Long, ActiveJob> jobs;
-    private final Map<EntityId, ChannelJobInfo> jobInfos;
+    private final Map<EntityId, DistributedJobInfo> jobInfos;
     private EntityId entityId;
     private JobId hyracksJobId;
     private ScheduledExecutorService executorService;
@@ -97,7 +97,7 @@ public class ChannelEventsListener implements IActiveEntityEventsListener {
 
     private synchronized void handleJobStartEvent(ActiveEvent message) throws Exception {
         ActiveJob jobInfo = jobs.get(message.getJobId().getId());
-        handleJobStartMessage((ChannelJobInfo) jobInfo);
+        handleJobStartMessage((DistributedJobInfo) jobInfo);
         active = true;
     }
 
@@ -106,10 +106,10 @@ public class ChannelEventsListener implements IActiveEntityEventsListener {
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("Channel Job finished for  " + jobInfo);
         }
-        handleJobFinishMessage((ChannelJobInfo) jobInfo);
+        handleJobFinishMessage((DistributedJobInfo) jobInfo);
     }
 
-    private synchronized void handleJobFinishMessage(ChannelJobInfo cInfo) throws Exception {
+    private synchronized void handleJobFinishMessage(DistributedJobInfo cInfo) throws Exception {
         if (!isEntityActive()) {
             EntityId channelJobId = cInfo.getEntityId();
 
@@ -135,7 +135,7 @@ public class ChannelEventsListener implements IActiveEntityEventsListener {
         }
     }
 
-    private static synchronized void handleJobStartMessage(ChannelJobInfo cInfo) throws Exception {
+    private static synchronized void handleJobStartMessage(DistributedJobInfo cInfo) throws Exception {
         cInfo.setState(ActivityState.ACTIVE);
     }
 
@@ -158,7 +158,7 @@ public class ChannelEventsListener implements IActiveEntityEventsListener {
             throw new IllegalStateException("Channel job already registered");
         }
 
-        ChannelJobInfo cInfo = new ChannelJobInfo(entityId, jobId, ActivityState.CREATED, jobSpec);
+        DistributedJobInfo cInfo = new DistributedJobInfo(entityId, jobId, ActivityState.CREATED, jobSpec);
         jobs.put(jobId.getId(), cInfo);
         jobInfos.put(entityId, cInfo);
 
@@ -174,7 +174,7 @@ public class ChannelEventsListener implements IActiveEntityEventsListener {
         return jobInfos.get(activeJobId).getSpec();
     }
 
-    public ChannelJobInfo getJobInfo(EntityId activeJobId) {
+    public DistributedJobInfo getJobInfo(EntityId activeJobId) {
         return jobInfos.get(activeJobId);
     }
 

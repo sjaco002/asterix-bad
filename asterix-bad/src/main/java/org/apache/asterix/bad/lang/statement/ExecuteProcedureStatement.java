@@ -1,0 +1,131 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+package org.apache.asterix.bad.lang.statement;
+
+import org.apache.asterix.active.ActiveJobNotificationHandler;
+import org.apache.asterix.active.EntityId;
+import org.apache.asterix.algebra.extension.IExtensionStatement;
+import org.apache.asterix.app.translator.QueryTranslator;
+import org.apache.asterix.bad.BADConstants;
+import org.apache.asterix.bad.lang.BADLangExtension;
+import org.apache.asterix.bad.metadata.ChannelEventsListener;
+import org.apache.asterix.bad.metadata.Procedure;
+import org.apache.asterix.common.exceptions.AsterixException;
+import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber;
+import org.apache.asterix.external.feed.management.ActiveLifecycleEventSubscriber;
+import org.apache.asterix.lang.common.struct.Identifier;
+import org.apache.asterix.lang.common.visitor.base.ILangVisitor;
+import org.apache.asterix.metadata.MetadataManager;
+import org.apache.asterix.metadata.MetadataTransactionContext;
+import org.apache.asterix.metadata.declared.MetadataProvider;
+import org.apache.asterix.translator.IStatementExecutor;
+import org.apache.asterix.translator.IStatementExecutor.ResultDelivery;
+import org.apache.asterix.translator.IStatementExecutor.Stats;
+import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
+import org.apache.hyracks.api.client.IHyracksClientConnection;
+import org.apache.hyracks.api.dataset.IHyracksDataset;
+import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.api.job.JobId;
+
+public class ExecuteProcedureStatement implements IExtensionStatement {
+
+    private final String dataverseName;
+    private final String procedureName;
+    private final int arity;
+
+    public ExecuteProcedureStatement(String dataverseName, String procedureName, int arity) {
+        this.dataverseName = dataverseName;
+        this.procedureName = procedureName;
+        this.arity = arity;
+    }
+
+    public String getDataverseName() {
+        return dataverseName;
+    }
+
+    public String getProcedureName() {
+        return procedureName;
+    }
+
+    public int getArity() {
+        return arity;
+    }
+
+    @Override
+    public byte getKind() {
+        return Kind.EXTENSION;
+    }
+
+    @Override
+    public byte getCategory() {
+        return Category.UPDATE;
+    }
+
+    @Override
+    public <R, T> R accept(ILangVisitor<R, T> visitor, T arg) throws AsterixException {
+        return null;
+    }
+
+    @Override
+    public void handle(IStatementExecutor statementExecutor, MetadataProvider metadataProvider,
+            IHyracksClientConnection hcc, IHyracksDataset hdc, ResultDelivery resultDelivery, Stats stats,
+            int resultSetIdCounter) throws HyracksDataException, AlgebricksException {
+
+        String dataverse = ((QueryTranslator) statementExecutor).getActiveDataverse(new Identifier(dataverseName));
+        boolean txnActive = false;
+        EntityId entityId = new EntityId(BADConstants.CHANNEL_EXTENSION_NAME, dataverse, procedureName);
+        ChannelEventsListener listener = (ChannelEventsListener) ActiveJobNotificationHandler.INSTANCE
+                .getActiveEntityListener(entityId);
+        IActiveLifecycleEventSubscriber eventSubscriber = new ActiveLifecycleEventSubscriber();
+        boolean subscriberRegistered = false;
+        Procedure procedure = null;
+
+        MetadataTransactionContext mdTxnCtx = null;
+        try {
+            mdTxnCtx = MetadataManager.INSTANCE.beginTransaction();
+            txnActive = true;
+            procedure = BADLangExtension.getProcedure(mdTxnCtx, dataverse, procedureName,
+                    Integer.toString(getArity()));
+            if (procedure == null) {
+                throw new AlgebricksException("There is no procedure with this name " + procedureName + ".");
+            }
+            if (listener != null) {
+                subscriberRegistered = listener.isChannelActive(entityId, eventSubscriber);
+            }
+            if (!subscriberRegistered) {
+                throw new AsterixException("Procedure " + procedureName + " is not running");
+            }
+
+
+            listener.getExecutorService().shutdownNow();
+            JobId hyracksJobId = listener.getHyracksJobId();
+            hcc.startJob(hyracksJobId);
+
+            MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
+            txnActive = false;
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (txnActive) {
+                QueryTranslator.abort(e, e, mdTxnCtx);
+            }
+            throw new HyracksDataException(e);
+        }
+    }
+
+}

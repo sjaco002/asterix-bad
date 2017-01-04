@@ -35,7 +35,7 @@ import org.apache.asterix.active.EntityId;
 import org.apache.asterix.algebra.extension.IExtensionStatement;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
-import org.apache.asterix.bad.ChannelJobInfo;
+import org.apache.asterix.bad.DistributedJobInfo;
 import org.apache.asterix.bad.ChannelJobService;
 import org.apache.asterix.bad.lang.BADLangExtension;
 import org.apache.asterix.bad.metadata.Channel;
@@ -239,7 +239,7 @@ public class CreateChannelStatement implements IExtensionStatement {
     private void setupExecutorJob(EntityId entityId, JobSpecification channeljobSpec, IHyracksClientConnection hcc,
             ChannelEventsListener listener, boolean predistributed)
             throws Exception {
-        ChannelJobInfo channelJobInfo = new ChannelJobInfo(entityId, null, ActivityState.ACTIVE, channeljobSpec);
+        DistributedJobInfo channelJobInfo = new DistributedJobInfo(entityId, null, ActivityState.ACTIVE, channeljobSpec);
         channeljobSpec.setProperty(ActiveJobNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, channelJobInfo);
         JobId jobId = null;
         if (predistributed) {

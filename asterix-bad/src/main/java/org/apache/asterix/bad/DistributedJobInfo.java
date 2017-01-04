@@ -27,12 +27,12 @@ import org.apache.asterix.bad.BADConstants.ChannelJobType;
 import org.apache.hyracks.api.job.JobId;
 import org.apache.hyracks.api.job.JobSpecification;
 
-public class ChannelJobInfo extends ActiveJob {
+public class DistributedJobInfo extends ActiveJob {
 
     private static final long serialVersionUID = 1L;
     private List<String> locations;
 
-    public ChannelJobInfo(EntityId entityId, JobId jobId, ActivityState state, JobSpecification spec) {
+    public DistributedJobInfo(EntityId entityId, JobId jobId, ActivityState state, JobSpecification spec) {
         super(entityId, jobId, state, ChannelJobType.REPETITIVE, spec);
     }
 

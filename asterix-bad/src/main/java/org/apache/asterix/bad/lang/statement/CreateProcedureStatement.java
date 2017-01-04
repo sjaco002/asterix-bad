@@ -25,10 +25,12 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.asterix.active.ActiveJobNotificationHandler;
+import org.apache.asterix.active.ActivityState;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.algebra.extension.IExtensionStatement;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
+import org.apache.asterix.bad.DistributedJobInfo;
 import org.apache.asterix.bad.lang.BADLangExtension;
 import org.apache.asterix.bad.metadata.ChannelEventsListener;
 import org.apache.asterix.bad.metadata.Procedure;
@@ -53,6 +55,7 @@ import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.dataset.IHyracksDataset;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.api.job.JobId;
 import org.apache.hyracks.api.job.JobSpecification;
 
 public class CreateProcedureStatement implements IExtensionStatement {
@@ -119,6 +122,15 @@ public class CreateProcedureStatement implements IExtensionStatement {
                 hcc, hdc, ResultDelivery.ASYNC, stats, true);
     }
 
+    private void setupDistributedJob(EntityId entityId, JobSpecification jobSpec, IHyracksClientConnection hcc,
+            ChannelEventsListener listener) throws Exception {
+        DistributedJobInfo distributedJobInfo = new DistributedJobInfo(entityId, null, ActivityState.ACTIVE, jobSpec);
+        jobSpec.setProperty(ActiveJobNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, distributedJobInfo);
+        JobId jobId = hcc.distributeJob(jobSpec);
+        listener.storeDistributedInfo(jobId, null);
+        ActiveJobNotificationHandler.INSTANCE.monitorJob(jobId, distributedJobInfo);
+    }
+
     @Override
     public void handle(IStatementExecutor statementExecutor, MetadataProvider metadataProvider,
             IHyracksClientConnection hcc, IHyracksDataset hdc, ResultDelivery resultDelivery, Stats stats,
@@ -166,7 +178,7 @@ public class CreateProcedureStatement implements IExtensionStatement {
             JobSpecification channeljobSpec =
                     createProcedureJob(getFunctionBody(), statementExecutor, metadataProvider, hcc, hdc, stats);
 
-            // setupDistributedJob(entityId, channeljobSpec, hcc);
+            setupDistributedJob(entityId, channeljobSpec, hcc, listener);
 
             eventSubscriber.assertEvent(ActiveLifecycleEvent.ACTIVE_JOB_STARTED);
 
