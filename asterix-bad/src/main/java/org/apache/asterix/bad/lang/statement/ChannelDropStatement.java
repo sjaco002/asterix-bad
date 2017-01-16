@@ -34,6 +34,7 @@ import org.apache.asterix.bad.metadata.Channel;
 import org.apache.asterix.bad.metadata.ChannelEventsListener;
 import org.apache.asterix.bad.runtime.RepetitiveChannelOperatorNodePushable;
 import org.apache.asterix.common.exceptions.AsterixException;
+import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.common.messaging.api.ICCMessageBroker;
 import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber;
 import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber.ActiveLifecycleEvent;
@@ -89,7 +90,7 @@ public class ChannelDropStatement implements IExtensionStatement {
     }
 
     @Override
-    public <R, T> R accept(ILangVisitor<R, T> visitor, T arg) throws AsterixException {
+    public <R, T> R accept(ILangVisitor<R, T> visitor, T arg) throws CompilationException {
         return null;
     }
 
