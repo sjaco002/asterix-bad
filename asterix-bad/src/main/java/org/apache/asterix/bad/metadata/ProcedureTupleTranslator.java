@@ -104,8 +104,12 @@ public class ProcedureTupleTranslator extends AbstractTupleTranslator<Procedure>
                 .getValueByPos(BADMetadataRecordTypes.PROCEDURE_ARECORD_PROCEDURE_LANGUAGE_FIELD_INDEX))
                         .getStringValue();
 
+        String duration = ((AString) procedureRecord
+                .getValueByPos(BADMetadataRecordTypes.PROCEDURE_ARECORD_PROCEDURE_DURATION_FIELD_INDEX))
+                        .getStringValue();
+
         return new Procedure(dataverseName, procedureName, Integer.parseInt(arity), params, returnType, definition,
-                language);
+                language, duration);
 
     }
 
@@ -177,6 +181,12 @@ public class ProcedureTupleTranslator extends AbstractTupleTranslator<Procedure>
         aString.setValue(procedure.getLanguage());
         stringSerde.serialize(aString, fieldValue.getDataOutput());
         recordBuilder.addField(BADMetadataRecordTypes.PROCEDURE_ARECORD_PROCEDURE_LANGUAGE_FIELD_INDEX, fieldValue);
+
+        // write field 7
+        fieldValue.reset();
+        aString.setValue(procedure.getDuration());
+        stringSerde.serialize(aString, fieldValue.getDataOutput());
+        recordBuilder.addField(BADMetadataRecordTypes.PROCEDURE_ARECORD_PROCEDURE_DURATION_FIELD_INDEX, fieldValue);
 
         // write record
         recordBuilder.write(tupleBuilder.getDataOutput(), true);

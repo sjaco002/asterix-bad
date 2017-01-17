@@ -6,6 +6,7 @@ import org.apache.asterix.bad.lang.statement.CreateBrokerStatement;
 import org.apache.asterix.bad.lang.statement.CreateChannelStatement;
 import org.apache.asterix.bad.lang.statement.CreateProcedureStatement;
 import org.apache.asterix.bad.lang.statement.ExecuteProcedureStatement;
+import org.apache.asterix.bad.lang.statement.ProcedureDropStatement;
 
 
 @merge
@@ -61,6 +62,10 @@ Statement DropStatement() throws ParseException:
       {
         stmt = new BrokerDropStatement(pairId.first, pairId.second, ifExists);	
       }
+              | "procedure" funcSig = FunctionSignature() ifExists = IfExists()
+      {
+        stmt = new ProcedureDropStatement(funcSig, ifExists);	
+      }
       )
   {
     // merge area 3
@@ -75,13 +80,13 @@ CreateChannelStatement ChannelSpecification() throws ParseException:
   CreateChannelStatement ccs = null;
   String fqFunctionName = null;
   Expression period = null;
-  boolean distributed = false;
+  boolean distributed = true;
 }
 {
   (
     "repetitive" "channel"  nameComponents = QualifiedName()
     <USING> appliedFunction = FunctionSignature()
-    "period" period = FunctionCallExpr() ("distributed" { distributed = true; })?
+    "period" period = FunctionCallExpr() ("nondistributed" { distributed = false; })?
     {
       ccs = new CreateChannelStatement(nameComponents.first,
                                    nameComponents.second, appliedFunction, period, distributed);
@@ -96,29 +101,33 @@ CreateChannelStatement ChannelSpecification() throws ParseException:
 @new
 CreateProcedureStatement ProcedureSpecification() throws ParseException:
 {
-  Pair<Identifier,Identifier> nameComponents = null;
+  FunctionName fctName = null;
   FunctionSignature signature;
   List<VarIdentifier> paramList = new ArrayList<VarIdentifier>();
   String functionBody;
   Token beginPos;
   Token endPos;
-  Expression functionBodyExpr;
+  Statement functionBodyExpr;
+  Expression period = null;
 }
 {
-    "procedure" nameComponents = QualifiedName()
+     "procedure" fctName = FunctionName()
      paramList = ParameterList()
     <LEFTBRACE>
   {
      beginPos = token;
   }
-  functionBodyExpr = Expression() <RIGHTBRACE>
+  functionBodyExpr = SingleStatement() <RIGHTBRACE>
     {
       endPos = token;
       functionBody = extractFragment(beginPos.beginLine, beginPos.beginColumn, endPos.beginLine, endPos.beginColumn);
-      signature = new FunctionSignature(nameComponents.first.toString(), nameComponents.second.toString(), paramList.size());
+      signature = new FunctionSignature(fctName.dataverse, fctName.function, paramList.size());
       removeCurrentScope();
-      return new CreateProcedureStatement(signature, paramList, functionBody);
     }
+  ("period" period = FunctionCallExpr())?
+  {
+  return new CreateProcedureStatement(signature, paramList, functionBody, period);
+  }
 }
 
 @new

@@ -49,7 +49,7 @@ public class ChannelEventsListener implements IActiveEntityEventsListener {
     private final Map<EntityId, DistributedJobInfo> jobInfos;
     private EntityId entityId;
     private JobId hyracksJobId;
-    private ScheduledExecutorService executorService;
+    private ScheduledExecutorService executorService = null;
     private boolean active;
 
     public ChannelEventsListener(EntityId entityId) {

@@ -18,21 +18,17 @@
  */
 package org.apache.asterix.bad.lang.statement;
 
-import java.util.EnumSet;
-import java.util.concurrent.ScheduledExecutorService;
-
 import org.apache.asterix.active.ActiveJobNotificationHandler;
+import org.apache.asterix.active.ActiveLifecycleListener;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.algebra.extension.IExtensionStatement;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
-import org.apache.asterix.bad.ChannelJobService;
 import org.apache.asterix.bad.lang.BADLangExtension;
 import org.apache.asterix.bad.metadata.ChannelEventsListener;
 import org.apache.asterix.bad.metadata.Procedure;
 import org.apache.asterix.common.exceptions.AsterixException;
-import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber;
-import org.apache.asterix.external.feed.management.ActiveLifecycleEventSubscriber;
+import org.apache.asterix.common.functions.FunctionSignature;
 import org.apache.asterix.lang.common.struct.Identifier;
 import org.apache.asterix.lang.common.visitor.base.ILangVisitor;
 import org.apache.asterix.metadata.MetadataManager;
@@ -45,31 +41,24 @@ import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.dataset.IHyracksDataset;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
-import org.apache.hyracks.api.job.JobFlag;
 import org.apache.hyracks.api.job.JobId;
 
-public class ExecuteProcedureStatement implements IExtensionStatement {
+public class ProcedureDropStatement implements IExtensionStatement {
 
-    private final String dataverseName;
-    private final String procedureName;
-    private final int arity;
+    private final FunctionSignature signature;
+    private boolean ifExists;
 
-    public ExecuteProcedureStatement(String dataverseName, String procedureName, int arity) {
-        this.dataverseName = dataverseName;
-        this.procedureName = procedureName;
-        this.arity = arity;
+    public ProcedureDropStatement(FunctionSignature signature, boolean ifExists) {
+        this.signature = signature;
+        this.ifExists = ifExists;
     }
 
-    public String getDataverseName() {
-        return dataverseName;
+    public FunctionSignature getFunctionSignature() {
+        return signature;
     }
 
-    public String getProcedureName() {
-        return procedureName;
-    }
-
-    public int getArity() {
-        return arity;
+    public boolean getIfExists() {
+        return ifExists;
     }
 
     @Override
@@ -79,7 +68,7 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
 
     @Override
     public byte getCategory() {
-        return Category.UPDATE;
+        return Category.DDL;
     }
 
     @Override
@@ -91,37 +80,46 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
     public void handle(IStatementExecutor statementExecutor, MetadataProvider metadataProvider,
             IHyracksClientConnection hcc, IHyracksDataset hdc, ResultDelivery resultDelivery, Stats stats,
             int resultSetIdCounter) throws HyracksDataException, AlgebricksException {
+        FunctionSignature signature = getFunctionSignature();
+        String dataverse =
+                ((QueryTranslator) statementExecutor).getActiveDataverse(new Identifier(signature.getNamespace()));
+        signature.setNamespace(dataverse);
 
-        String dataverse = ((QueryTranslator) statementExecutor).getActiveDataverse(new Identifier(dataverseName));
         boolean txnActive = false;
-        EntityId entityId = new EntityId(BADConstants.PROCEDURE_KEYWORD, dataverse, procedureName);
+        EntityId entityId = new EntityId(BADConstants.PROCEDURE_KEYWORD, dataverse, signature.getName());
         ChannelEventsListener listener = (ChannelEventsListener) ActiveJobNotificationHandler.INSTANCE
                 .getActiveEntityListener(entityId);
-        IActiveLifecycleEventSubscriber eventSubscriber = new ActiveLifecycleEventSubscriber();
-        boolean subscriberRegistered = false;
         Procedure procedure = null;
 
         MetadataTransactionContext mdTxnCtx = null;
         try {
             mdTxnCtx = MetadataManager.INSTANCE.beginTransaction();
             txnActive = true;
-            procedure = BADLangExtension.getProcedure(mdTxnCtx, dataverse, procedureName,
-                    Integer.toString(getArity()));
-            if (procedure == null) {
-                throw new AlgebricksException("There is no procedure with this name " + procedureName + ".");
-            }
-
-            JobId hyracksJobId = listener.getHyracksJobId();
-            if (procedure.getDuration().equals("")) {
-                hcc.startJob(hyracksJobId);
-            } else {
-                ScheduledExecutorService ses = ChannelJobService.startJob(null, EnumSet.noneOf(JobFlag.class),
-                        hyracksJobId, hcc, ChannelJobService.findPeriod(procedure.getDuration()));
-                listener.storeDistributedInfo(hyracksJobId, ses);
-            }
-
-            MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
+            procedure = BADLangExtension.getProcedure(mdTxnCtx, dataverse, signature.getName(),
+                    Integer.toString(signature.getArity()));
             txnActive = false;
+            if (procedure == null) {
+                if (ifExists) {
+                    MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
+                    return;
+                } else {
+                    throw new AlgebricksException("There is no procedure with this name " + signature.getName() + ".");
+                }
+            }
+
+            if (listener.getExecutorService() != null) {
+                listener.getExecutorService().shutdownNow();
+            }
+            JobId hyracksJobId = listener.getHyracksJobId();
+            if (hyracksJobId != null) {
+                hcc.destroyJob(hyracksJobId);
+            }
+            listener.deActivate();
+            ActiveLifecycleListener.INSTANCE.notifyJobFinish(hyracksJobId);
+
+            //Remove the Channel Metadata
+            MetadataManager.INSTANCE.deleteEntity(mdTxnCtx, procedure);
+            MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
         } catch (Exception e) {
             e.printStackTrace();
             if (txnActive) {

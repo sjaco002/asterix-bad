@@ -39,15 +39,17 @@ public class Procedure implements IExtensionMetadataEntity {
     private final String body;
     private final String returnType;
     private final String language;
+    private final String duration;
 
     public Procedure(String dataverseName, String functionName, int arity, List<String> params, String returnType,
-            String functionBody, String language) {
+            String functionBody, String language, String duration) {
         this.procedureId = new EntityId(BADConstants.PROCEDURE_KEYWORD, dataverseName, functionName);
         this.params = params;
         this.body = functionBody;
         this.returnType = returnType == null ? RETURNTYPE_VOID : returnType;
         this.language = language;
         this.arity = arity;
+        this.duration = duration;
     }
 
     public EntityId getEntityId() {
@@ -72,6 +74,10 @@ public class Procedure implements IExtensionMetadataEntity {
 
     public int getArity() {
         return arity;
+    }
+
+    public String getDuration() {
+        return duration;
     }
 
     @Override

@@ -112,13 +112,6 @@ public class ChannelDropStatement implements IExtensionStatement {
                     throw new AlgebricksException("There is no channel with this name " + channelName + ".");
                 }
             }
-            if (listener != null) {
-                subscriberRegistered = listener.isChannelActive(entityId, eventSubscriber);
-            }
-            if (!subscriberRegistered) {
-                throw new AsterixException("Channel " + channelName + " is not running");
-            }
-
 
             listener.getExecutorService().shutdownNow();
             JobId hyracksJobId = listener.getHyracksJobId();

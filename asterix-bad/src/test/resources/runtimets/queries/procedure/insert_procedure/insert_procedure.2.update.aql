@@ -1,0 +1,9 @@
+/*
+* Description  : Simple Insert Procedure
+* Expected Res : Success
+* Date         : Jan 2017
+* Author       : Steven Jacobs
+*/
+
+use dataverse channels;
+execute findMe();

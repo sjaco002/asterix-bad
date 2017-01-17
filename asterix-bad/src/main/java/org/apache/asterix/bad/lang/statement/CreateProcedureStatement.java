@@ -18,6 +18,8 @@
  */
 package org.apache.asterix.bad.lang.statement;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,14 +42,20 @@ import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber;
 import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber.ActiveLifecycleEvent;
 import org.apache.asterix.external.feed.management.ActiveLifecycleEventSubscriber;
 import org.apache.asterix.lang.aql.parser.AQLParserFactory;
+import org.apache.asterix.lang.common.base.Expression;
 import org.apache.asterix.lang.common.base.Statement;
+import org.apache.asterix.lang.common.expression.CallExpr;
+import org.apache.asterix.lang.common.expression.LiteralExpr;
+import org.apache.asterix.lang.common.literal.StringLiteral;
 import org.apache.asterix.lang.common.struct.Identifier;
 import org.apache.asterix.lang.common.struct.VarIdentifier;
 import org.apache.asterix.lang.common.visitor.base.ILangVisitor;
+import org.apache.asterix.metadata.MetadataException;
 import org.apache.asterix.metadata.MetadataManager;
 import org.apache.asterix.metadata.MetadataTransactionContext;
 import org.apache.asterix.metadata.declared.MetadataProvider;
 import org.apache.asterix.metadata.entities.Function;
+import org.apache.asterix.om.base.temporal.ADurationParserFactory;
 import org.apache.asterix.translator.IStatementExecutor;
 import org.apache.asterix.translator.IStatementExecutor.ResultDelivery;
 import org.apache.asterix.translator.IStatementExecutor.Stats;
@@ -57,6 +65,7 @@ import org.apache.hyracks.api.dataset.IHyracksDataset;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.job.JobId;
 import org.apache.hyracks.api.job.JobSpecification;
+import org.apache.hyracks.dataflow.common.data.parsers.IValueParser;
 
 public class CreateProcedureStatement implements IExtensionStatement {
 
@@ -65,6 +74,8 @@ public class CreateProcedureStatement implements IExtensionStatement {
     private final FunctionSignature signature;
     private final String functionBody;
     private final List<String> paramList;
+    private final CallExpr period;
+    private String duration = "";
 
     public FunctionSignature getaAterixFunction() {
         return signature;
@@ -74,14 +85,15 @@ public class CreateProcedureStatement implements IExtensionStatement {
         return functionBody;
     }
 
-    public CreateProcedureStatement(FunctionSignature signature, List<VarIdentifier> parameterList,
-            String functionBody) {
+    public CreateProcedureStatement(FunctionSignature signature, List<VarIdentifier> parameterList, String functionBody,
+            Expression period) {
         this.signature = signature;
         this.functionBody = functionBody;
         this.paramList = new ArrayList<String>();
         for (VarIdentifier varId : parameterList) {
             this.paramList.add(varId.getValue());
         }
+        this.period = (CallExpr) period;
     }
 
     @Override
@@ -102,9 +114,28 @@ public class CreateProcedureStatement implements IExtensionStatement {
         return Category.DDL;
     }
 
+    public Expression getPeriod() {
+        return period;
+    }
+
     @Override
     public <R, T> R accept(ILangVisitor<R, T> visitor, T arg) throws AsterixException {
         return null;
+    }
+
+    private void initialize() throws MetadataException, HyracksDataException {
+        if (period == null) {
+            return;
+        }
+        if (!period.getFunctionSignature().getName().equals("duration")) {
+            throw new MetadataException(
+                    "Expected argument period as a duration, but got " + period.getFunctionSignature().getName() + ".");
+        }
+        duration = ((StringLiteral) ((LiteralExpr) period.getExprList().get(0)).getValue()).getValue();
+        IValueParser durationParser = ADurationParserFactory.INSTANCE.createValueParser();
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        DataOutputStream outputStream = new DataOutputStream(bos);
+        durationParser.parse(duration.toCharArray(), 0, duration.toCharArray().length, outputStream);
     }
 
     private JobSpecification createProcedureJob(String body, IStatementExecutor statementExecutor,
@@ -136,6 +167,8 @@ public class CreateProcedureStatement implements IExtensionStatement {
             IHyracksClientConnection hcc, IHyracksDataset hdc, ResultDelivery resultDelivery, Stats stats,
             int resultSetIdCounter) throws HyracksDataException, AlgebricksException {
 
+        initialize();
+
         String dataverse =
                 ((QueryTranslator) statementExecutor).getActiveDataverse(new Identifier(signature.getNamespace()));
 
@@ -163,7 +196,7 @@ public class CreateProcedureStatement implements IExtensionStatement {
             }
 
             procedure = new Procedure(dataverse, signature.getName(), signature.getArity(), getParamList(),
-                    Function.RETURNTYPE_VOID, getFunctionBody(), Function.LANGUAGE_AQL);
+                    Function.RETURNTYPE_VOID, getFunctionBody(), Function.LANGUAGE_AQL, duration);
 
             // Now we subscribe
             if (listener == null) {
@@ -175,10 +208,10 @@ public class CreateProcedureStatement implements IExtensionStatement {
 
 
             //Create Procedure Internal Job
-            JobSpecification channeljobSpec =
+            JobSpecification procedureJobSpec =
                     createProcedureJob(getFunctionBody(), statementExecutor, metadataProvider, hcc, hdc, stats);
 
-            setupDistributedJob(entityId, channeljobSpec, hcc, listener);
+            setupDistributedJob(entityId, procedureJobSpec, hcc, listener);
 
             eventSubscriber.assertEvent(ActiveLifecycleEvent.ACTIVE_JOB_STARTED);
 
