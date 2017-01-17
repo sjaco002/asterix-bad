@@ -28,6 +28,7 @@ import org.apache.asterix.bad.lang.BADLangExtension;
 import org.apache.asterix.bad.metadata.Broker;
 import org.apache.asterix.bad.metadata.Channel;
 import org.apache.asterix.common.exceptions.AsterixException;
+import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.common.functions.FunctionSignature;
 import org.apache.asterix.lang.aql.expression.FLWOGRExpression;
 import org.apache.asterix.lang.common.base.Clause;
@@ -120,7 +121,7 @@ public class ChannelSubscribeStatement implements IExtensionStatement {
     }
 
     @Override
-    public <R, T> R accept(ILangVisitor<R, T> visitor, T arg) throws AsterixException {
+    public <R, T> R accept(ILangVisitor<R, T> visitor, T arg) throws CompilationException {
         return null;
     }
 
@@ -196,20 +197,18 @@ public class ChannelSubscribeStatement implements IExtensionStatement {
                 VariableExpr useResultVar = new VariableExpr(new VarIdentifier("$result", 0));
                 useResultVar.setIsNewVar(false);
                 useSubscriptionVar.setIsNewVar(false);
-                Query returnQuery = new Query(false);
                 List<Clause> clauseList = new ArrayList<>();
                 LetClause let = new LetClause(subscriptionVar,
                         new FieldAccessor(useResultVar, new Identifier(BADConstants.SubscriptionId)));
                 clauseList.add(let);
                 FLWOGRExpression body = new FLWOGRExpression(clauseList, useSubscriptionVar);
-                returnQuery.setBody(body);
 
                 metadataProvider.setResultSetId(new ResultSetId(resultSetIdCounter++));
                 metadataProvider.setResultAsyncMode(
                         resultDelivery == ResultDelivery.ASYNC || resultDelivery == ResultDelivery.DEFERRED);
                 InsertStatement insert = new InsertStatement(new Identifier(dataverse),
                         new Identifier(subscriptionsDatasetName), subscriptionTuple, varCounter, resultVar,
-                        returnQuery);
+ body);
                 ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider, insert, hcc, hdc,
                         resultDelivery, stats, false);
             } else {

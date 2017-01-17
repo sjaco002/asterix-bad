@@ -25,7 +25,7 @@ import org.apache.asterix.algebra.extension.IExtensionStatement;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.lang.BADLangExtension;
 import org.apache.asterix.bad.metadata.Broker;
-import org.apache.asterix.common.exceptions.AsterixException;
+import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.lang.common.struct.Identifier;
 import org.apache.asterix.lang.common.visitor.base.ILangVisitor;
 import org.apache.asterix.metadata.MetadataManager;
@@ -75,7 +75,7 @@ public class CreateBrokerStatement implements IExtensionStatement {
     }
 
     @Override
-    public <R, T> R accept(ILangVisitor<R, T> visitor, T arg) throws AsterixException {
+    public <R, T> R accept(ILangVisitor<R, T> visitor, T arg) throws CompilationException {
         return null;
     }
 
