@@ -30,7 +30,7 @@ import org.apache.asterix.bad.ChannelJobService;
 import org.apache.asterix.bad.lang.BADLangExtension;
 import org.apache.asterix.bad.metadata.ChannelEventsListener;
 import org.apache.asterix.bad.metadata.Procedure;
-import org.apache.asterix.common.exceptions.AsterixException;
+import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber;
 import org.apache.asterix.external.feed.management.ActiveLifecycleEventSubscriber;
 import org.apache.asterix.lang.common.struct.Identifier;
@@ -83,7 +83,7 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
     }
 
     @Override
-    public <R, T> R accept(ILangVisitor<R, T> visitor, T arg) throws AsterixException {
+    public <R, T> R accept(ILangVisitor<R, T> visitor, T arg) throws CompilationException {
         return null;
     }
 
