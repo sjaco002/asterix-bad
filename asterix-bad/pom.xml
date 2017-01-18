@@ -246,11 +246,6 @@
       <version>0.2.18-SNAPSHOT</version>
     </dependency>
     <dependency>
-      <groupId>org.apache.hyracks</groupId>
-      <artifactId>hyracks-dataflow-std</artifactId>
-      <version>0.2.18-SNAPSHOT</version>
-    </dependency>
-    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <version>4.12</version>

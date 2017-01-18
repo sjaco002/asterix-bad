@@ -43,11 +43,13 @@ import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber;
 import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber.ActiveLifecycleEvent;
 import org.apache.asterix.external.feed.management.ActiveLifecycleEventSubscriber;
 import org.apache.asterix.lang.aql.parser.AQLParserFactory;
+import org.apache.asterix.lang.aql.visitor.AqlDeleteRewriteVisitor;
 import org.apache.asterix.lang.common.base.Expression;
 import org.apache.asterix.lang.common.base.Statement;
 import org.apache.asterix.lang.common.expression.CallExpr;
 import org.apache.asterix.lang.common.expression.LiteralExpr;
 import org.apache.asterix.lang.common.literal.StringLiteral;
+import org.apache.asterix.lang.common.statement.Query;
 import org.apache.asterix.lang.common.struct.Identifier;
 import org.apache.asterix.lang.common.struct.VarIdentifier;
 import org.apache.asterix.lang.common.visitor.base.ILangVisitor;
@@ -148,10 +150,25 @@ public class CreateProcedureStatement implements IExtensionStatement {
         AQLParserFactory aqlFact = new AQLParserFactory();
         List<Statement> fStatements = aqlFact.createParser(new StringReader(builder.toString())).parse();
         if (fStatements.size() > 1) {
-            throw new Exception("Procedure can only execute a single statement");
+            throw new CompilationException("Procedure can only execute a single statement");
         }
-        return ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider, fStatements.get(0),
+        if (fStatements.get(0).getKind() == Statement.Kind.INSERT) {
+            return ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider,
+                    fStatements.get(0),
                 hcc, hdc, ResultDelivery.ASYNC, stats, true);
+        } else if (fStatements.get(0).getKind() == Statement.Kind.QUERY) {
+            return ((QueryTranslator) statementExecutor).rewriteCompileQuery(hcc, metadataProvider,
+                    (Query) fStatements.get(0),
+                    null);
+        } else if (fStatements.get(0).getKind() == Statement.Kind.DELETE) {
+            AqlDeleteRewriteVisitor visitor = new AqlDeleteRewriteVisitor();
+            fStatements.get(0).accept(visitor, null);
+            return ((QueryTranslator) statementExecutor).handleDeleteStatement(metadataProvider, fStatements.get(0),
+                    hcc, true);
+        }else{
+            throw new CompilationException("Procedure can only execute a single delete, insert, or query");
+        }
+        
     }
 
     private void setupDistributedJob(EntityId entityId, JobSpecification jobSpec, IHyracksClientConnection hcc,
