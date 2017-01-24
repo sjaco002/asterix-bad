@@ -7,3 +7,5 @@ git.properties
 .DS_Store
 *.swp
 build
+*.iml
+.idea/*
