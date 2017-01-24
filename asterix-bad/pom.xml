@@ -247,14 +247,11 @@
       <version>${hyracks.version}</version>
     </dependency>
     <dependency>
-<<<<<<< HEAD
-=======
       <groupId>org.apache.hyracks</groupId>
       <artifactId>hyracks-dataflow-std</artifactId>
       <version>${hyracks.version}</version>
     </dependency>
     <dependency>
->>>>>>> master
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <version>4.12</version>
