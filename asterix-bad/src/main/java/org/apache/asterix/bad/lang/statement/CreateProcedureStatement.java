@@ -30,6 +30,7 @@ import org.apache.asterix.active.ActiveJobNotificationHandler;
 import org.apache.asterix.active.ActivityState;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.algebra.extension.IExtensionStatement;
+import org.apache.asterix.app.result.ResultHandle;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
 import org.apache.asterix.bad.DistributedJobInfo;
@@ -65,6 +66,7 @@ import org.apache.asterix.translator.IStatementExecutor.Stats;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.dataset.IHyracksDataset;
+import org.apache.hyracks.api.dataset.ResultSetId;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.job.JobId;
 import org.apache.hyracks.api.job.JobSpecification;
@@ -171,13 +173,14 @@ public class CreateProcedureStatement implements IExtensionStatement {
         
     }
 
-    private void setupDistributedJob(EntityId entityId, JobSpecification jobSpec, IHyracksClientConnection hcc,
-            ChannelEventsListener listener) throws Exception {
+    private ResultHandle setupDistributedJob(EntityId entityId, JobSpecification jobSpec, IHyracksClientConnection hcc,
+            ChannelEventsListener listener, MetadataProvider metadataProvider) throws Exception {
         DistributedJobInfo distributedJobInfo = new DistributedJobInfo(entityId, null, ActivityState.ACTIVE, jobSpec);
         jobSpec.setProperty(ActiveJobNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, distributedJobInfo);
         JobId jobId = hcc.distributeJob(jobSpec);
         listener.storeDistributedInfo(jobId, null);
         ActiveJobNotificationHandler.INSTANCE.monitorJob(jobId, distributedJobInfo);
+        return new ResultHandle(jobId, metadataProvider.getResultSetId());
     }
 
     @Override
@@ -224,12 +227,13 @@ public class CreateProcedureStatement implements IExtensionStatement {
             listener.registerEventSubscriber(eventSubscriber);
             subscriberRegistered = true;
 
+            metadataProvider.setResultSetId(new ResultSetId(0));
 
             //Create Procedure Internal Job
             JobSpecification procedureJobSpec =
                     createProcedureJob(getFunctionBody(), statementExecutor, metadataProvider, hcc, hdc, stats);
 
-            setupDistributedJob(entityId, procedureJobSpec, hcc, listener);
+            ResultHandle hand = setupDistributedJob(entityId, procedureJobSpec, hcc, listener, metadataProvider);
 
             eventSubscriber.assertEvent(ActiveLifecycleEvent.ACTIVE_JOB_STARTED);
 

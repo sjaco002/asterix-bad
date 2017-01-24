@@ -24,6 +24,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import org.apache.asterix.active.ActiveJobNotificationHandler;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.algebra.extension.IExtensionStatement;
+import org.apache.asterix.app.result.ResultReader;
+import org.apache.asterix.app.result.ResultUtil;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
 import org.apache.asterix.bad.ChannelJobService;
@@ -44,6 +46,7 @@ import org.apache.asterix.translator.IStatementExecutor.Stats;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.dataset.IHyracksDataset;
+import org.apache.hyracks.api.dataset.ResultSetId;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.job.JobFlag;
 import org.apache.hyracks.api.job.JobId;
@@ -113,7 +116,18 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
 
             JobId hyracksJobId = listener.getHyracksJobId();
             if (procedure.getDuration().equals("")) {
+                metadataProvider.setResultSetId(new ResultSetId(resultSetIdCounter++));
                 hcc.startJob(hyracksJobId);
+
+                hcc.waitForCompletion(hyracksJobId);
+                ResultReader resultReader = new ResultReader(hdc);
+
+                resultReader.open(hyracksJobId, metadataProvider.getResultSetId());
+                // SessionConfig sessionConfig = RESTAPIServlet.initResponse(request, response);
+                //ResultUtil.printResults(resultReader, sessionConfig, new Stats(), null);
+                ResultUtil.printResults(resultReader, ((QueryTranslator) statementExecutor).getSessionConfig(), stats,
+                        null);
+
             } else {
                 ScheduledExecutorService ses = ChannelJobService.startJob(null, EnumSet.noneOf(JobFlag.class),
                         hyracksJobId, hcc, ChannelJobService.findPeriod(procedure.getDuration()));
