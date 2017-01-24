@@ -25,7 +25,8 @@
   </parent>
   <artifactId>asterix-bad</artifactId>
     <properties>
-    <asterix.version>0.8.9-SNAPSHOT</asterix.version>
+    <asterix.version>0.9.1-SNAPSHOT</asterix.version>
+    <hyracks.version>0.3.1-SNAPSHOT</hyracks.version>
   </properties>
     <build>
     <plugins>
@@ -218,17 +219,17 @@
     <dependency>
       <groupId>org.apache.hyracks</groupId>
       <artifactId>algebricks-common</artifactId>
-      <version>0.2.18-SNAPSHOT</version>
+      <version>${hyracks.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.hyracks</groupId>
       <artifactId>hyracks-dataflow-common</artifactId>
-      <version>0.2.18-SNAPSHOT</version>
+      <version>${hyracks.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.asterix</groupId>
       <artifactId>asterix-lang-aql</artifactId>
-      <version>0.8.9-SNAPSHOT</version>
+      <version>${asterix.version}</version>
     </dependency>
     <dependency>
       <groupId>log4j</groupId>
@@ -243,9 +244,17 @@
     <dependency>
       <groupId>org.apache.hyracks</groupId>
       <artifactId>algebricks-core</artifactId>
-      <version>0.2.18-SNAPSHOT</version>
+      <version>${hyracks.version}</version>
     </dependency>
     <dependency>
+<<<<<<< HEAD
+=======
+      <groupId>org.apache.hyracks</groupId>
+      <artifactId>hyracks-dataflow-std</artifactId>
+      <version>${hyracks.version}</version>
+    </dependency>
+    <dependency>
+>>>>>>> master
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <version>4.12</version>
@@ -253,32 +262,32 @@
     <dependency>
       <groupId>org.apache.hyracks</groupId>
       <artifactId>hyracks-data-std</artifactId>
-      <version>0.2.18-SNAPSHOT</version>
+      <version>${hyracks.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.hyracks</groupId>
       <artifactId>algebricks-runtime</artifactId>
-      <version>0.2.18-SNAPSHOT</version>
+      <version>${hyracks.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.asterix</groupId>
       <artifactId>asterix-lang-common</artifactId>
-      <version>0.8.9-SNAPSHOT</version>
+      <version>${asterix.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.asterix</groupId>
       <artifactId>asterix-metadata</artifactId>
-      <version>0.8.9-SNAPSHOT</version>
+      <version>${asterix.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.asterix</groupId>
       <artifactId>asterix-external-data</artifactId>
-      <version>0.8.9-SNAPSHOT</version>
+      <version>${asterix.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.hyracks</groupId>
       <artifactId>hyracks-api</artifactId>
-      <version>0.2.18-SNAPSHOT</version>
+      <version>${hyracks.version}</version>
     </dependency>
   </dependencies>
 </project>
