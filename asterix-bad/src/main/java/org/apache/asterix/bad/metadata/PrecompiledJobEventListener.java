@@ -35,7 +35,10 @@ import org.apache.asterix.bad.DistributedJobInfo;
 import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber;
 import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber.ActiveLifecycleEvent;
 import org.apache.asterix.external.feed.management.FeedConnectionId;
+import org.apache.asterix.om.types.ARecordType;
 import org.apache.asterix.runtime.util.AppContextInfo;
+import org.apache.asterix.translator.IStatementExecutor.Stats;
+import org.apache.asterix.translator.SessionConfig;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.dataset.ResultSetId;
 import org.apache.hyracks.api.job.JobId;
@@ -55,6 +58,9 @@ public class PrecompiledJobEventListener implements IActiveEntityEventsListener 
     private boolean active;
     public ResultReader resultReader;
     public ResultSetId resultSetId;
+    public SessionConfig sessionConfig;
+    public Stats stats;
+    public ARecordType aRecordType;
 
 
     public enum PrecompiledType {
@@ -102,11 +108,14 @@ public class PrecompiledJobEventListener implements IActiveEntityEventsListener 
     }
 
     public void storeDistributedInfo(JobId jobId, ScheduledExecutorService ses, ResultReader resultReader,
-            ResultSetId resultSetId) {
+            ResultSetId resultSetId, SessionConfig sessionConfig, Stats stats, ARecordType aRecordType) {
         this.hyracksJobId = jobId;
         this.executorService = ses;
         this.resultReader = resultReader;
         this.resultSetId = resultSetId;
+        this.sessionConfig = sessionConfig;
+        this.stats = stats;
+        this.aRecordType = aRecordType;
     }
 
     public ScheduledExecutorService getExecutorService() {

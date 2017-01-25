@@ -64,6 +64,7 @@ import org.apache.asterix.om.base.temporal.ADurationParserFactory;
 import org.apache.asterix.translator.IStatementExecutor;
 import org.apache.asterix.translator.IStatementExecutor.ResultDelivery;
 import org.apache.asterix.translator.IStatementExecutor.Stats;
+import org.apache.asterix.translator.SessionConfig;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.algebricks.common.utils.Pair;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
@@ -174,13 +175,13 @@ public class CreateProcedureStatement implements IExtensionStatement {
     }
 
     private void setupDistributedJob(EntityId entityId, JobSpecification jobSpec, IHyracksClientConnection hcc,
-            PrecompiledJobEventListener listener, MetadataProvider metadataProvider, int resultSetIdCounter,
-            IHyracksDataset hdc) throws Exception {
-        metadataProvider.setResultSetId(new ResultSetId(resultSetIdCounter++));
+            PrecompiledJobEventListener listener, MetadataProvider metadataProvider,
+            IHyracksDataset hdc, SessionConfig sessionConfig, Stats stats) throws Exception {
         DistributedJobInfo distributedJobInfo = new DistributedJobInfo(entityId, null, ActivityState.ACTIVE, jobSpec);
         jobSpec.setProperty(ActiveJobNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, distributedJobInfo);
         JobId jobId = hcc.distributeJob(jobSpec);
-        listener.storeDistributedInfo(jobId, null, new ResultReader(hdc), metadataProvider.getResultSetId());
+        listener.storeDistributedInfo(jobId, null, new ResultReader(hdc), metadataProvider.getResultSetId(),
+                sessionConfig, stats, metadataProvider.findOutputRecordType());
         ActiveJobNotificationHandler.INSTANCE.monitorJob(jobId, distributedJobInfo);
     }
 
@@ -233,9 +234,10 @@ public class CreateProcedureStatement implements IExtensionStatement {
             subscriberRegistered = true;
 
             metadataProvider.setResultSetId(new ResultSetId(0));
+            metadataProvider.setResultSetId(new ResultSetId(resultSetIdCounter++));
 
             setupDistributedJob(entityId, procedureJobSpec.first, hcc, listener, metadataProvider,
-                    resultSetIdCounter, hdc);
+                    hdc, ((QueryTranslator) statementExecutor).getSessionConfig(), stats);
 
             eventSubscriber.assertEvent(ActiveLifecycleEvent.ACTIVE_JOB_STARTED);
 

@@ -47,7 +47,6 @@ import org.apache.asterix.translator.IStatementExecutor.Stats;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.dataset.IHyracksDataset;
-import org.apache.hyracks.api.dataset.ResultSetId;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.job.JobFlag;
 import org.apache.hyracks.api.job.JobId;
@@ -118,7 +117,6 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
 
             JobId hyracksJobId = listener.getHyracksJobId();
             if (procedure.getDuration().equals("")) {
-                metadataProvider.setResultSetId(new ResultSetId(resultSetIdCounter++));
                 hcc.startJob(hyracksJobId);
 
                 if (listener.getType() == PrecompiledType.QUERY) {
@@ -132,7 +130,8 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
             } else {
                 ScheduledExecutorService ses = ChannelJobService.startJob(null, EnumSet.noneOf(JobFlag.class),
                         hyracksJobId, hcc, ChannelJobService.findPeriod(procedure.getDuration()));
-                listener.storeDistributedInfo(hyracksJobId, ses, listener.resultReader, listener.resultSetId);
+                listener.storeDistributedInfo(hyracksJobId, ses, listener.resultReader, listener.resultSetId,
+                        listener.sessionConfig, listener.stats, listener.aRecordType);
             }
 
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
