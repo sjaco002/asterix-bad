@@ -64,7 +64,7 @@ Statement DropStatement() throws ParseException:
       }
               | "procedure" funcSig = FunctionSignature() ifExists = IfExists()
       {
-        stmt = new ProcedureDropStatement(funcSig, ifExists);	
+        stmt = new ProcedureDropStatement(funcSig, ifExists);
       }
       )
   {
@@ -96,7 +96,6 @@ CreateChannelStatement ChannelSpecification() throws ParseException:
       return ccs;
     }
 }
-
 
 @new
 CreateProcedureStatement ProcedureSpecification() throws ParseException:
@@ -159,10 +158,6 @@ ExecuteProcedureStatement ProcedureExecution() throws ParseException:
       return new ExecuteProcedureStatement(funcName.dataverse, fqFunctionName, arity);
     }
 }
-
-
-
-
 
 @new
 CreateBrokerStatement BrokerSpecification() throws ParseException:

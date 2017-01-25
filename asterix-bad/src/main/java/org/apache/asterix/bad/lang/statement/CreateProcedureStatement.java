@@ -171,7 +171,6 @@ public class CreateProcedureStatement implements IExtensionStatement {
         }else{
             throw new CompilationException("Procedure can only execute a single delete, insert, or query");
         }
-        
     }
 
     private void setupDistributedJob(EntityId entityId, JobSpecification jobSpec, IHyracksClientConnection hcc,
