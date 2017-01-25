@@ -30,12 +30,13 @@ import org.apache.asterix.active.ActiveJobNotificationHandler;
 import org.apache.asterix.active.ActivityState;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.algebra.extension.IExtensionStatement;
-import org.apache.asterix.app.result.ResultHandle;
+import org.apache.asterix.app.result.ResultReader;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
 import org.apache.asterix.bad.DistributedJobInfo;
 import org.apache.asterix.bad.lang.BADLangExtension;
-import org.apache.asterix.bad.metadata.ChannelEventsListener;
+import org.apache.asterix.bad.metadata.PrecompiledJobEventListener;
+import org.apache.asterix.bad.metadata.PrecompiledJobEventListener.PrecompiledType;
 import org.apache.asterix.bad.metadata.Procedure;
 import org.apache.asterix.common.exceptions.AsterixException;
 import org.apache.asterix.common.exceptions.CompilationException;
@@ -64,6 +65,7 @@ import org.apache.asterix.translator.IStatementExecutor;
 import org.apache.asterix.translator.IStatementExecutor.ResultDelivery;
 import org.apache.asterix.translator.IStatementExecutor.Stats;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
+import org.apache.hyracks.algebricks.common.utils.Pair;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.dataset.IHyracksDataset;
 import org.apache.hyracks.api.dataset.ResultSetId;
@@ -143,7 +145,8 @@ public class CreateProcedureStatement implements IExtensionStatement {
         durationParser.parse(duration.toCharArray(), 0, duration.toCharArray().length, outputStream);
     }
 
-    private JobSpecification createProcedureJob(String body, IStatementExecutor statementExecutor,
+    private Pair<JobSpecification, PrecompiledType> createProcedureJob(String body,
+            IStatementExecutor statementExecutor,
             MetadataProvider metadataProvider, IHyracksClientConnection hcc, IHyracksDataset hdc, Stats stats)
                     throws Exception {
         StringBuilder builder = new StringBuilder();
@@ -155,32 +158,31 @@ public class CreateProcedureStatement implements IExtensionStatement {
             throw new CompilationException("Procedure can only execute a single statement");
         }
         if (fStatements.get(0).getKind() == Statement.Kind.INSERT) {
-            return ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider,
-                    fStatements.get(0),
-                hcc, hdc, ResultDelivery.ASYNC, stats, true);
+            return new Pair<>(((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider,
+                    fStatements.get(0), hcc, hdc, ResultDelivery.ASYNC, stats, true), PrecompiledType.INSERT);
         } else if (fStatements.get(0).getKind() == Statement.Kind.QUERY) {
-            return ((QueryTranslator) statementExecutor).rewriteCompileQuery(hcc, metadataProvider,
-                    (Query) fStatements.get(0),
-                    null);
+            return new Pair<>(((QueryTranslator) statementExecutor).rewriteCompileQuery(hcc, metadataProvider,
+                    (Query) fStatements.get(0), null), PrecompiledType.QUERY);
         } else if (fStatements.get(0).getKind() == Statement.Kind.DELETE) {
             AqlDeleteRewriteVisitor visitor = new AqlDeleteRewriteVisitor();
             fStatements.get(0).accept(visitor, null);
-            return ((QueryTranslator) statementExecutor).handleDeleteStatement(metadataProvider, fStatements.get(0),
-                    hcc, true);
+            return new Pair<>(((QueryTranslator) statementExecutor).handleDeleteStatement(metadataProvider,
+                    fStatements.get(0), hcc, true), PrecompiledType.DELETE);
         }else{
             throw new CompilationException("Procedure can only execute a single delete, insert, or query");
         }
         
     }
 
-    private ResultHandle setupDistributedJob(EntityId entityId, JobSpecification jobSpec, IHyracksClientConnection hcc,
-            ChannelEventsListener listener, MetadataProvider metadataProvider) throws Exception {
+    private void setupDistributedJob(EntityId entityId, JobSpecification jobSpec, IHyracksClientConnection hcc,
+            PrecompiledJobEventListener listener, MetadataProvider metadataProvider, int resultSetIdCounter,
+            IHyracksDataset hdc) throws Exception {
+        metadataProvider.setResultSetId(new ResultSetId(resultSetIdCounter++));
         DistributedJobInfo distributedJobInfo = new DistributedJobInfo(entityId, null, ActivityState.ACTIVE, jobSpec);
         jobSpec.setProperty(ActiveJobNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, distributedJobInfo);
         JobId jobId = hcc.distributeJob(jobSpec);
-        listener.storeDistributedInfo(jobId, null);
+        listener.storeDistributedInfo(jobId, null, new ResultReader(hdc), metadataProvider.getResultSetId());
         ActiveJobNotificationHandler.INSTANCE.monitorJob(jobId, distributedJobInfo);
-        return new ResultHandle(jobId, metadataProvider.getResultSetId());
     }
 
     @Override
@@ -194,8 +196,8 @@ public class CreateProcedureStatement implements IExtensionStatement {
                 ((QueryTranslator) statementExecutor).getActiveDataverse(new Identifier(signature.getNamespace()));
 
         EntityId entityId = new EntityId(BADConstants.PROCEDURE_KEYWORD, dataverse, signature.getName());
-        ChannelEventsListener listener =
-                (ChannelEventsListener) ActiveJobNotificationHandler.INSTANCE.getActiveEntityListener(entityId);
+        PrecompiledJobEventListener listener =
+                (PrecompiledJobEventListener) ActiveJobNotificationHandler.INSTANCE.getActiveEntityListener(entityId);
         IActiveLifecycleEventSubscriber eventSubscriber = new ActiveLifecycleEventSubscriber();
         boolean subscriberRegistered = false;
         Procedure procedure = null;
@@ -219,9 +221,13 @@ public class CreateProcedureStatement implements IExtensionStatement {
             procedure = new Procedure(dataverse, signature.getName(), signature.getArity(), getParamList(),
                     Function.RETURNTYPE_VOID, getFunctionBody(), Function.LANGUAGE_AQL, duration);
 
+            //Create Procedure Internal Job
+            Pair<JobSpecification, PrecompiledType> procedureJobSpec =
+                    createProcedureJob(getFunctionBody(), statementExecutor, metadataProvider, hcc, hdc, stats);
+
             // Now we subscribe
             if (listener == null) {
-                listener = new ChannelEventsListener(entityId);
+                listener = new PrecompiledJobEventListener(entityId, procedureJobSpec.second);
                 ActiveJobNotificationHandler.INSTANCE.registerListener(listener);
             }
             listener.registerEventSubscriber(eventSubscriber);
@@ -229,11 +235,8 @@ public class CreateProcedureStatement implements IExtensionStatement {
 
             metadataProvider.setResultSetId(new ResultSetId(0));
 
-            //Create Procedure Internal Job
-            JobSpecification procedureJobSpec =
-                    createProcedureJob(getFunctionBody(), statementExecutor, metadataProvider, hcc, hdc, stats);
-
-            ResultHandle hand = setupDistributedJob(entityId, procedureJobSpec, hcc, listener, metadataProvider);
+            setupDistributedJob(entityId, procedureJobSpec.first, hcc, listener, metadataProvider,
+                    resultSetIdCounter, hdc);
 
             eventSubscriber.assertEvent(ActiveLifecycleEvent.ACTIVE_JOB_STARTED);
 

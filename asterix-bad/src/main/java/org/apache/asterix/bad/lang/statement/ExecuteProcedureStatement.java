@@ -30,7 +30,8 @@ import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
 import org.apache.asterix.bad.ChannelJobService;
 import org.apache.asterix.bad.lang.BADLangExtension;
-import org.apache.asterix.bad.metadata.ChannelEventsListener;
+import org.apache.asterix.bad.metadata.PrecompiledJobEventListener;
+import org.apache.asterix.bad.metadata.PrecompiledJobEventListener.PrecompiledType;
 import org.apache.asterix.bad.metadata.Procedure;
 import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber;
@@ -95,10 +96,11 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
             IHyracksClientConnection hcc, IHyracksDataset hdc, ResultDelivery resultDelivery, Stats stats,
             int resultSetIdCounter) throws HyracksDataException, AlgebricksException {
 
+
         String dataverse = ((QueryTranslator) statementExecutor).getActiveDataverse(new Identifier(dataverseName));
         boolean txnActive = false;
         EntityId entityId = new EntityId(BADConstants.PROCEDURE_KEYWORD, dataverse, procedureName);
-        ChannelEventsListener listener = (ChannelEventsListener) ActiveJobNotificationHandler.INSTANCE
+        PrecompiledJobEventListener listener = (PrecompiledJobEventListener) ActiveJobNotificationHandler.INSTANCE
                 .getActiveEntityListener(entityId);
         IActiveLifecycleEventSubscriber eventSubscriber = new ActiveLifecycleEventSubscriber();
         boolean subscriberRegistered = false;
@@ -119,19 +121,18 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
                 metadataProvider.setResultSetId(new ResultSetId(resultSetIdCounter++));
                 hcc.startJob(hyracksJobId);
 
-                hcc.waitForCompletion(hyracksJobId);
-                ResultReader resultReader = new ResultReader(hdc);
-
-                resultReader.open(hyracksJobId, metadataProvider.getResultSetId());
-                // SessionConfig sessionConfig = RESTAPIServlet.initResponse(request, response);
-                //ResultUtil.printResults(resultReader, sessionConfig, new Stats(), null);
-                ResultUtil.printResults(resultReader, ((QueryTranslator) statementExecutor).getSessionConfig(), stats,
-                        null);
+                if (listener.getType() == PrecompiledType.QUERY) {
+                    hcc.waitForCompletion(hyracksJobId);
+                    ResultReader resultReader = listener.resultReader;
+                    resultReader.open(hyracksJobId, listener.resultSetId);
+                    ResultUtil.printResults(resultReader, ((QueryTranslator) statementExecutor).getSessionConfig(),
+                            new Stats(), null);
+                }
 
             } else {
                 ScheduledExecutorService ses = ChannelJobService.startJob(null, EnumSet.noneOf(JobFlag.class),
                         hyracksJobId, hcc, ChannelJobService.findPeriod(procedure.getDuration()));
-                listener.storeDistributedInfo(hyracksJobId, ses);
+                listener.storeDistributedInfo(hyracksJobId, ses, listener.resultReader, listener.resultSetId);
             }
 
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);

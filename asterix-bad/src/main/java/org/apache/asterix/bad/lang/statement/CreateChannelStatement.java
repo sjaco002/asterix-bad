@@ -35,11 +35,12 @@ import org.apache.asterix.active.EntityId;
 import org.apache.asterix.algebra.extension.IExtensionStatement;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
-import org.apache.asterix.bad.DistributedJobInfo;
 import org.apache.asterix.bad.ChannelJobService;
+import org.apache.asterix.bad.DistributedJobInfo;
 import org.apache.asterix.bad.lang.BADLangExtension;
 import org.apache.asterix.bad.metadata.Channel;
-import org.apache.asterix.bad.metadata.ChannelEventsListener;
+import org.apache.asterix.bad.metadata.PrecompiledJobEventListener;
+import org.apache.asterix.bad.metadata.PrecompiledJobEventListener.PrecompiledType;
 import org.apache.asterix.common.config.DatasetConfig.DatasetType;
 import org.apache.asterix.common.exceptions.AsterixException;
 import org.apache.asterix.common.exceptions.CompilationException;
@@ -238,7 +239,7 @@ public class CreateChannelStatement implements IExtensionStatement {
     }
 
     private void setupExecutorJob(EntityId entityId, JobSpecification channeljobSpec, IHyracksClientConnection hcc,
-            ChannelEventsListener listener, boolean predistributed)
+            PrecompiledJobEventListener listener, boolean predistributed)
             throws Exception {
         DistributedJobInfo channelJobInfo = new DistributedJobInfo(entityId, null, ActivityState.ACTIVE, channeljobSpec);
         channeljobSpec.setProperty(ActiveJobNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, channelJobInfo);
@@ -248,7 +249,7 @@ public class CreateChannelStatement implements IExtensionStatement {
         }
         ScheduledExecutorService ses = ChannelJobService.startJob(channeljobSpec, EnumSet.noneOf(JobFlag.class), jobId,
                 hcc, ChannelJobService.findPeriod(duration));
-        listener.storeDistributedInfo(jobId, ses);
+        listener.storeDistributedInfo(jobId, ses, null, null);
         ActiveJobNotificationHandler.INSTANCE.monitorJob(jobId, channelJobInfo);
     }
 
@@ -271,7 +272,7 @@ public class CreateChannelStatement implements IExtensionStatement {
         Identifier subscriptionsName = new Identifier(channelName + BADConstants.subscriptionEnding);
         Identifier resultsName = new Identifier(channelName + BADConstants.resultsEnding);
         EntityId entityId = new EntityId(BADConstants.CHANNEL_EXTENSION_NAME, dataverse, channelName.getValue());
-        ChannelEventsListener listener = (ChannelEventsListener) ActiveJobNotificationHandler.INSTANCE
+        PrecompiledJobEventListener listener = (PrecompiledJobEventListener) ActiveJobNotificationHandler.INSTANCE
                 .getActiveEntityListener(entityId);
         IActiveLifecycleEventSubscriber eventSubscriber = new ActiveLifecycleEventSubscriber();
         boolean subscriberRegistered = false;
@@ -305,7 +306,7 @@ public class CreateChannelStatement implements IExtensionStatement {
 
             // Now we subscribe
             if (listener == null) {
-                listener = new ChannelEventsListener(entityId);
+                listener = new PrecompiledJobEventListener(entityId, PrecompiledType.CHANNEL);
                 ActiveJobNotificationHandler.INSTANCE.registerListener(listener);
             }
             listener.registerEventSubscriber(eventSubscriber);

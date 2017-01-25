@@ -1,0 +1,11 @@
+/*
+* Description  : Simple Query Procedure
+* Expected Res : Success
+* Date         : Jan 2017
+* Author       : Steven Jacobs
+*/
+
+use dataverse channels;
+insert into dataset UserLocations([
+  {"timeStamp":current-datetime(), "roomNumber":225}]
+)

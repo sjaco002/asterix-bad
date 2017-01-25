@@ -29,6 +29,7 @@ import org.apache.asterix.active.ActiveJob;
 import org.apache.asterix.active.ActivityState;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.active.IActiveEntityEventsListener;
+import org.apache.asterix.app.result.ResultReader;
 import org.apache.asterix.bad.BADConstants;
 import org.apache.asterix.bad.DistributedJobInfo;
 import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber;
@@ -36,14 +37,15 @@ import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber.Acti
 import org.apache.asterix.external.feed.management.FeedConnectionId;
 import org.apache.asterix.runtime.util.AppContextInfo;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
+import org.apache.hyracks.api.dataset.ResultSetId;
 import org.apache.hyracks.api.job.JobId;
 import org.apache.hyracks.api.job.JobInfo;
 import org.apache.hyracks.api.job.JobSpecification;
 import org.apache.hyracks.api.job.JobStatus;
 import org.apache.log4j.Logger;
 
-public class ChannelEventsListener implements IActiveEntityEventsListener {
-    private static final Logger LOGGER = Logger.getLogger(ChannelEventsListener.class);
+public class PrecompiledJobEventListener implements IActiveEntityEventsListener {
+    private static final Logger LOGGER = Logger.getLogger(PrecompiledJobEventListener.class);
     private final List<IActiveLifecycleEventSubscriber> subscribers;
     private final Map<Long, ActiveJob> jobs;
     private final Map<EntityId, DistributedJobInfo> jobInfos;
@@ -51,13 +53,30 @@ public class ChannelEventsListener implements IActiveEntityEventsListener {
     private JobId hyracksJobId;
     private ScheduledExecutorService executorService = null;
     private boolean active;
+    public ResultReader resultReader;
+    public ResultSetId resultSetId;
 
-    public ChannelEventsListener(EntityId entityId) {
+
+    public enum PrecompiledType {
+        CHANNEL,
+        QUERY,
+        INSERT,
+        DELETE
+    }
+
+    private final PrecompiledType type;
+
+    public PrecompiledJobEventListener(EntityId entityId, PrecompiledType type) {
         this.entityId = entityId;
         subscribers = new ArrayList<>();
         jobs = new HashMap<>();
         jobInfos = new HashMap<>();
         active = false;
+        this.type = type;
+    }
+
+    public PrecompiledType getType() {
+        return type;
     }
 
     @Override
@@ -82,9 +101,12 @@ public class ChannelEventsListener implements IActiveEntityEventsListener {
         }
     }
 
-    public void storeDistributedInfo(JobId jobId, ScheduledExecutorService ses) {
+    public void storeDistributedInfo(JobId jobId, ScheduledExecutorService ses, ResultReader resultReader,
+            ResultSetId resultSetId) {
         this.hyracksJobId = jobId;
         this.executorService = ses;
+        this.resultReader = resultReader;
+        this.resultSetId = resultSetId;
     }
 
     public ScheduledExecutorService getExecutorService() {

@@ -19,6 +19,11 @@
         </compilation-unit>
     </test-case>
     <test-case FilePath="procedure">
+        <compilation-unit name="query_procedure">
+            <output-dir compare="Text">query_procedure</output-dir>
+        </compilation-unit>
+    </test-case>
+    <test-case FilePath="procedure">
         <compilation-unit name="repetitive_insert_procedure">
             <output-dir compare="Text">repetitive_insert_procedure</output-dir>
         </compilation-unit>
