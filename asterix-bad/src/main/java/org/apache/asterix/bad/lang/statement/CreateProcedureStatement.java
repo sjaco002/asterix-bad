@@ -180,8 +180,7 @@ public class CreateProcedureStatement implements IExtensionStatement {
         DistributedJobInfo distributedJobInfo = new DistributedJobInfo(entityId, null, ActivityState.ACTIVE, jobSpec);
         jobSpec.setProperty(ActiveJobNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, distributedJobInfo);
         JobId jobId = hcc.distributeJob(jobSpec);
-        listener.storeDistributedInfo(jobId, null, new ResultReader(hdc), metadataProvider.getResultSetId(),
-                sessionConfig, stats, metadataProvider.findOutputRecordType());
+        listener.storeDistributedInfo(jobId, null, new ResultReader(hdc), metadataProvider.getResultSetId());
         ActiveJobNotificationHandler.INSTANCE.monitorJob(jobId, distributedJobInfo);
     }
 
@@ -221,6 +220,9 @@ public class CreateProcedureStatement implements IExtensionStatement {
             procedure = new Procedure(dataverse, signature.getName(), signature.getArity(), getParamList(),
                     Function.RETURNTYPE_VOID, getFunctionBody(), Function.LANGUAGE_AQL, duration);
 
+            metadataProvider.setResultSetId(new ResultSetId(0));
+            metadataProvider.setResultSetId(new ResultSetId(resultSetIdCounter++));
+
             //Create Procedure Internal Job
             Pair<JobSpecification, PrecompiledType> procedureJobSpec =
                     createProcedureJob(getFunctionBody(), statementExecutor, metadataProvider, hcc, hdc, stats);
@@ -232,9 +234,6 @@ public class CreateProcedureStatement implements IExtensionStatement {
             }
             listener.registerEventSubscriber(eventSubscriber);
             subscriberRegistered = true;
-
-            metadataProvider.setResultSetId(new ResultSetId(0));
-            metadataProvider.setResultSetId(new ResultSetId(resultSetIdCounter++));
 
             setupDistributedJob(entityId, procedureJobSpec.first, hcc, listener, metadataProvider,
                     hdc, ((QueryTranslator) statementExecutor).getSessionConfig(), stats);
