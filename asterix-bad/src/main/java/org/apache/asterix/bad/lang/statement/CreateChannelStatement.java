@@ -239,18 +239,24 @@ public class CreateChannelStatement implements IExtensionStatement {
     }
 
     private void setupExecutorJob(EntityId entityId, JobSpecification channeljobSpec, IHyracksClientConnection hcc,
-            PrecompiledJobEventListener listener, boolean predistributed)
+            PrecompiledJobEventListener listener, boolean predistributed,
+            IActiveLifecycleEventSubscriber eventSubscriber)
             throws Exception {
         DistributedJobInfo channelJobInfo = new DistributedJobInfo(entityId, null, ActivityState.ACTIVE, channeljobSpec);
-        channeljobSpec.setProperty(ActiveJobNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, channelJobInfo);
-        JobId jobId = null;
-        if (predistributed) {
-            jobId = hcc.distributeJob(channeljobSpec);
+        if (channeljobSpec != null) {
+            //TODO: Find a way to fix optimizer tests so we don't need this check
+            channeljobSpec.setProperty(ActiveJobNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, channelJobInfo);
+            JobId jobId = null;
+            if (predistributed) {
+                jobId = hcc.distributeJob(channeljobSpec);
+            }
+            ScheduledExecutorService ses = ChannelJobService.startJob(channeljobSpec, EnumSet.noneOf(JobFlag.class),
+                    jobId, hcc, ChannelJobService.findPeriod(duration));
+            listener.storeDistributedInfo(jobId, ses, null, null);
+            ActiveJobNotificationHandler.INSTANCE.monitorJob(jobId, channelJobInfo);
+            eventSubscriber.assertEvent(ActiveLifecycleEvent.ACTIVE_JOB_STARTED);
         }
-        ScheduledExecutorService ses = ChannelJobService.startJob(channeljobSpec, EnumSet.noneOf(JobFlag.class), jobId,
-                hcc, ChannelJobService.findPeriod(duration));
-        listener.storeDistributedInfo(jobId, ses, null, null);
-        ActiveJobNotificationHandler.INSTANCE.monitorJob(jobId, channelJobInfo);
+
     }
 
     @Override
@@ -321,11 +327,10 @@ public class CreateChannelStatement implements IExtensionStatement {
                     metadataProvider, hcc, hdc, stats, dataverse);
 
             if (distributed) {
-                setupExecutorJob(entityId, channeljobSpec, hcc, listener, true);
+                setupExecutorJob(entityId, channeljobSpec, hcc, listener, true, eventSubscriber);
             } else {
-                setupExecutorJob(entityId, channeljobSpec, hcc, listener, false);
+                setupExecutorJob(entityId, channeljobSpec, hcc, listener, false, eventSubscriber);
             }
-            eventSubscriber.assertEvent(ActiveLifecycleEvent.ACTIVE_JOB_STARTED);
 
             MetadataManager.INSTANCE.addEntity(mdTxnCtx, channel);
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
