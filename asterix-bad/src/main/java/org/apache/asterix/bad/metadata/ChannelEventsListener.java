@@ -35,7 +35,7 @@ import org.apache.asterix.bad.runtime.RepetitiveChannelOperatorDescriptor;
 import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber;
 import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber.ActiveLifecycleEvent;
 import org.apache.asterix.external.feed.management.FeedConnectionId;
-import org.apache.asterix.runtime.util.AppContextInfo;
+import org.apache.asterix.runtime.utils.AppContextInfo;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.dataflow.IOperatorDescriptor;
 import org.apache.hyracks.api.dataflow.OperatorDescriptorId;

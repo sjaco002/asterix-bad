@@ -25,6 +25,7 @@ import org.apache.asterix.bad.lang.statement.BrokerDropStatement;
 import org.apache.asterix.bad.lang.statement.ChannelDropStatement;
 import org.apache.asterix.bad.metadata.Broker;
 import org.apache.asterix.bad.metadata.Channel;
+import org.apache.asterix.common.context.IStorageComponentProvider;
 import org.apache.asterix.compiler.provider.ILangCompilationProvider;
 import org.apache.asterix.lang.common.base.Statement;
 import org.apache.asterix.lang.common.statement.DataverseDropStatement;
@@ -38,8 +39,8 @@ import org.apache.hyracks.api.client.IHyracksClientConnection;
 public class BADStatementExecutor extends QueryTranslator {
 
     public BADStatementExecutor(List<Statement> aqlStatements, SessionConfig conf,
-            ILangCompilationProvider compliationProvider) {
-        super(aqlStatements, conf, compliationProvider);
+            ILangCompilationProvider compliationProvider, IStorageComponentProvider storageComponentProvider) {
+        super(aqlStatements, conf, compliationProvider, storageComponentProvider);
     }
 
 
