@@ -28,15 +28,16 @@ import org.apache.asterix.common.exceptions.ACIDException;
 import org.apache.asterix.metadata.MetadataManager;
 import org.apache.asterix.metadata.MetadataTransactionContext;
 import org.apache.asterix.metadata.api.ExtensionMetadataDataset;
-import org.apache.asterix.metadata.api.IMetadataEntity;
 import org.apache.asterix.metadata.api.IMetadataExtension;
 import org.apache.asterix.metadata.api.IMetadataIndex;
 import org.apache.asterix.metadata.bootstrap.MetadataBootstrap;
 import org.apache.asterix.metadata.entities.Datatype;
 import org.apache.asterix.metadata.entities.Dataverse;
 import org.apache.asterix.metadata.entitytupletranslators.MetadataTupleTranslatorProvider;
+import org.apache.asterix.metadata.utils.MetadataUtil;
 import org.apache.asterix.runtime.formats.NonTaggedDataFormat;
 import org.apache.hyracks.algebricks.common.utils.Pair;
+import org.apache.hyracks.api.application.INCApplicationContext;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
 public class BADMetadataExtension implements IMetadataExtension {
@@ -44,7 +45,7 @@ public class BADMetadataExtension implements IMetadataExtension {
     public static final ExtensionId BAD_METADATA_EXTENSION_ID = new ExtensionId(
             BADConstants.BAD_METADATA_EXTENSION_NAME, 0);
     public static final Dataverse BAD_DATAVERSE = new Dataverse(BADConstants.BAD_DATAVERSE_NAME,
-            NonTaggedDataFormat.class.getName(), IMetadataEntity.PENDING_NO_OP);
+            NonTaggedDataFormat.class.getName(), MetadataUtil.PENDING_NO_OP);
 
     public static final Datatype BAD_SUBSCRIPTION_DATATYPE = new Datatype(BADConstants.BAD_DATAVERSE_NAME,
             BADConstants.ChannelSubscriptionsType, BADMetadataRecordTypes.channelSubscriptionsType, false);
@@ -88,11 +89,12 @@ public class BADMetadataExtension implements IMetadataExtension {
     }
 
     @Override
-    public void initializeMetadata() throws HyracksDataException, RemoteException, ACIDException {
+    public void initializeMetadata(INCApplicationContext appCtx)
+            throws HyracksDataException, RemoteException, ACIDException {
         // enlist datasets
-        MetadataBootstrap.enlistMetadataDataset(BADMetadataIndexes.CHANNEL_DATASET);
-        MetadataBootstrap.enlistMetadataDataset(BADMetadataIndexes.BROKER_DATASET);
-        MetadataBootstrap.enlistMetadataDataset(BADMetadataIndexes.PROCEDURE_DATASET);
+        MetadataBootstrap.enlistMetadataDataset(appCtx, BADMetadataIndexes.CHANNEL_DATASET);
+        MetadataBootstrap.enlistMetadataDataset(appCtx, BADMetadataIndexes.BROKER_DATASET);
+        MetadataBootstrap.enlistMetadataDataset(appCtx, BADMetadataIndexes.PROCEDURE_DATASET);
         if (MetadataBootstrap.isNewUniverse()) {
             MetadataTransactionContext mdTxnCtx = MetadataManager.INSTANCE.beginTransaction();
             try {

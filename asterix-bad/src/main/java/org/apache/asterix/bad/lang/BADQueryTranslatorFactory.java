@@ -22,6 +22,7 @@ import java.util.List;
 
 import org.apache.asterix.app.translator.DefaultStatementExecutorFactory;
 import org.apache.asterix.app.translator.QueryTranslator;
+import org.apache.asterix.common.context.IStorageComponentProvider;
 import org.apache.asterix.compiler.provider.ILangCompilationProvider;
 import org.apache.asterix.lang.common.base.Statement;
 import org.apache.asterix.translator.SessionConfig;
@@ -30,7 +31,7 @@ public class BADQueryTranslatorFactory extends DefaultStatementExecutorFactory {
 
     @Override
     public QueryTranslator create(List<Statement> statements, SessionConfig conf,
-            ILangCompilationProvider compilationProvider) {
-        return new BADStatementExecutor(statements, conf, compilationProvider);
+            ILangCompilationProvider compilationProvider, IStorageComponentProvider storageComponentProvider) {
+        return new BADStatementExecutor(statements, conf, compilationProvider, storageComponentProvider);
     }
 }
