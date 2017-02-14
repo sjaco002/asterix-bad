@@ -45,9 +45,6 @@ import org.apache.asterix.common.config.DatasetConfig.DatasetType;
 import org.apache.asterix.common.exceptions.AsterixException;
 import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.common.functions.FunctionSignature;
-import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber;
-import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber.ActiveLifecycleEvent;
-import org.apache.asterix.external.feed.management.ActiveLifecycleEventSubscriber;
 import org.apache.asterix.lang.aql.parser.AQLParserFactory;
 import org.apache.asterix.lang.common.base.Expression;
 import org.apache.asterix.lang.common.base.Statement;
@@ -239,8 +236,7 @@ public class CreateChannelStatement implements IExtensionStatement {
     }
 
     private void setupExecutorJob(EntityId entityId, JobSpecification channeljobSpec, IHyracksClientConnection hcc,
-            PrecompiledJobEventListener listener, boolean predistributed,
-            IActiveLifecycleEventSubscriber eventSubscriber)
+            PrecompiledJobEventListener listener, boolean predistributed)
             throws Exception {
         DistributedJobInfo channelJobInfo = new DistributedJobInfo(entityId, null, ActivityState.ACTIVE, channeljobSpec);
         if (channeljobSpec != null) {
@@ -253,8 +249,6 @@ public class CreateChannelStatement implements IExtensionStatement {
             ScheduledExecutorService ses = ChannelJobService.startJob(channeljobSpec, EnumSet.noneOf(JobFlag.class),
                     jobId, hcc, ChannelJobService.findPeriod(duration));
             listener.storeDistributedInfo(jobId, ses, null, null);
-            ActiveJobNotificationHandler.INSTANCE.monitorJob(jobId, channelJobInfo);
-            eventSubscriber.assertEvent(ActiveLifecycleEvent.ACTIVE_JOB_STARTED);
         }
 
     }
@@ -280,8 +274,7 @@ public class CreateChannelStatement implements IExtensionStatement {
         EntityId entityId = new EntityId(BADConstants.CHANNEL_EXTENSION_NAME, dataverse, channelName.getValue());
         PrecompiledJobEventListener listener = (PrecompiledJobEventListener) ActiveJobNotificationHandler.INSTANCE
                 .getActiveEntityListener(entityId);
-        IActiveLifecycleEventSubscriber eventSubscriber = new ActiveLifecycleEventSubscriber();
-        boolean subscriberRegistered = false;
+        boolean alreadyActive = false;
         Channel channel = null;
 
         MetadataTransactionContext mdTxnCtx = null;
@@ -293,9 +286,9 @@ public class CreateChannelStatement implements IExtensionStatement {
                 throw new AlgebricksException("A channel with this name " + channelName + " already exists.");
             }
             if (listener != null) {
-                subscriberRegistered = listener.isChannelActive(entityId, eventSubscriber);
+                alreadyActive = listener.isEntityActive();
             }
-            if (subscriberRegistered) {
+            if (alreadyActive) {
                 throw new AsterixException("Channel " + channelName + " is already running");
             }
             initialize(mdTxnCtx, subscriptionsName.getValue(), resultsName.getValue());
@@ -315,8 +308,6 @@ public class CreateChannelStatement implements IExtensionStatement {
                 listener = new PrecompiledJobEventListener(entityId, PrecompiledType.CHANNEL);
                 ActiveJobNotificationHandler.INSTANCE.registerListener(listener);
             }
-            listener.registerEventSubscriber(eventSubscriber);
-            subscriberRegistered = true;
 
             //Create Channel Datasets
             createDatasets(statementExecutor, subscriptionsName, resultsName, metadataProvider, hcc, hdc, stats,
@@ -327,9 +318,9 @@ public class CreateChannelStatement implements IExtensionStatement {
                     metadataProvider, hcc, hdc, stats, dataverse);
 
             if (distributed) {
-                setupExecutorJob(entityId, channeljobSpec, hcc, listener, true, eventSubscriber);
+                setupExecutorJob(entityId, channeljobSpec, hcc, listener, true);
             } else {
-                setupExecutorJob(entityId, channeljobSpec, hcc, listener, false, eventSubscriber);
+                setupExecutorJob(entityId, channeljobSpec, hcc, listener, false);
             }
 
             MetadataManager.INSTANCE.addEntity(mdTxnCtx, channel);

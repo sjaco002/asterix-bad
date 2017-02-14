@@ -41,9 +41,6 @@ import org.apache.asterix.bad.metadata.Procedure;
 import org.apache.asterix.common.exceptions.AsterixException;
 import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.common.functions.FunctionSignature;
-import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber;
-import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber.ActiveLifecycleEvent;
-import org.apache.asterix.external.feed.management.ActiveLifecycleEventSubscriber;
 import org.apache.asterix.lang.aql.parser.AQLParserFactory;
 import org.apache.asterix.lang.aql.visitor.AqlDeleteRewriteVisitor;
 import org.apache.asterix.lang.common.base.Expression;
@@ -181,7 +178,6 @@ public class CreateProcedureStatement implements IExtensionStatement {
         jobSpec.setProperty(ActiveJobNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, distributedJobInfo);
         JobId jobId = hcc.distributeJob(jobSpec);
         listener.storeDistributedInfo(jobId, null, new ResultReader(hdc), metadataProvider.getResultSetId());
-        ActiveJobNotificationHandler.INSTANCE.monitorJob(jobId, distributedJobInfo);
     }
 
     @Override
@@ -197,8 +193,7 @@ public class CreateProcedureStatement implements IExtensionStatement {
         EntityId entityId = new EntityId(BADConstants.PROCEDURE_KEYWORD, dataverse, signature.getName());
         PrecompiledJobEventListener listener =
                 (PrecompiledJobEventListener) ActiveJobNotificationHandler.INSTANCE.getActiveEntityListener(entityId);
-        IActiveLifecycleEventSubscriber eventSubscriber = new ActiveLifecycleEventSubscriber();
-        boolean subscriberRegistered = false;
+        boolean alreadyActive = false;
         Procedure procedure = null;
 
         MetadataTransactionContext mdTxnCtx = null;
@@ -211,9 +206,9 @@ public class CreateProcedureStatement implements IExtensionStatement {
                 throw new AlgebricksException("A procedure with this name " + signature.getName() + " already exists.");
             }
             if (listener != null) {
-                subscriberRegistered = listener.isChannelActive(entityId, eventSubscriber);
+                alreadyActive = listener.isEntityActive();
             }
-            if (subscriberRegistered) {
+            if (alreadyActive) {
                 throw new AsterixException("Procedure " + signature.getName() + " is already running");
             }
 
@@ -232,13 +227,9 @@ public class CreateProcedureStatement implements IExtensionStatement {
                 listener = new PrecompiledJobEventListener(entityId, procedureJobSpec.second);
                 ActiveJobNotificationHandler.INSTANCE.registerListener(listener);
             }
-            listener.registerEventSubscriber(eventSubscriber);
-            subscriberRegistered = true;
 
             setupDistributedJob(entityId, procedureJobSpec.first, hcc, listener, metadataProvider,
                     hdc, ((QueryTranslator) statementExecutor).getSessionConfig(), stats);
-
-            eventSubscriber.assertEvent(ActiveLifecycleEvent.ACTIVE_JOB_STARTED);
 
             MetadataManager.INSTANCE.addEntity(mdTxnCtx, procedure);
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);

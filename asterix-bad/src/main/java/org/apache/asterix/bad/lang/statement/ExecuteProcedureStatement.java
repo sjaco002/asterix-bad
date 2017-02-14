@@ -34,8 +34,6 @@ import org.apache.asterix.bad.metadata.PrecompiledJobEventListener;
 import org.apache.asterix.bad.metadata.PrecompiledJobEventListener.PrecompiledType;
 import org.apache.asterix.bad.metadata.Procedure;
 import org.apache.asterix.common.exceptions.CompilationException;
-import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber;
-import org.apache.asterix.external.feed.management.ActiveLifecycleEventSubscriber;
 import org.apache.asterix.lang.common.struct.Identifier;
 import org.apache.asterix.lang.common.visitor.base.ILangVisitor;
 import org.apache.asterix.metadata.MetadataManager;
@@ -101,8 +99,6 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
         EntityId entityId = new EntityId(BADConstants.PROCEDURE_KEYWORD, dataverse, procedureName);
         PrecompiledJobEventListener listener = (PrecompiledJobEventListener) ActiveJobNotificationHandler.INSTANCE
                 .getActiveEntityListener(entityId);
-        IActiveLifecycleEventSubscriber eventSubscriber = new ActiveLifecycleEventSubscriber();
-        boolean subscriberRegistered = false;
         Procedure procedure = null;
 
         MetadataTransactionContext mdTxnCtx = null;
@@ -121,8 +117,8 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
 
                 if (listener.getType() == PrecompiledType.QUERY) {
                     hcc.waitForCompletion(hyracksJobId);
-                    ResultReader resultReader = listener.resultReader;
-                    resultReader.open(hyracksJobId, listener.resultSetId);
+                    ResultReader resultReader = listener.getResultReader();
+                    resultReader.open(hyracksJobId, listener.getResultSetId());
                     ResultUtil.printResults(resultReader, ((QueryTranslator) statementExecutor).getSessionConfig(),
                             new Stats(), null);
                 }
@@ -130,7 +126,7 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
             } else {
                 ScheduledExecutorService ses = ChannelJobService.startJob(null, EnumSet.noneOf(JobFlag.class),
                         hyracksJobId, hcc, ChannelJobService.findPeriod(procedure.getDuration()));
-                listener.storeDistributedInfo(hyracksJobId, ses, listener.resultReader, listener.resultSetId);
+                listener.storeDistributedInfo(hyracksJobId, ses, listener.getResultReader(), listener.getResultSetId());
             }
 
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);

@@ -19,7 +19,6 @@
 package org.apache.asterix.bad.lang.statement;
 
 import org.apache.asterix.active.ActiveJobNotificationHandler;
-import org.apache.asterix.active.ActiveLifecycleListener;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.algebra.extension.IExtensionStatement;
 import org.apache.asterix.app.translator.QueryTranslator;
@@ -28,8 +27,6 @@ import org.apache.asterix.bad.lang.BADLangExtension;
 import org.apache.asterix.bad.metadata.Channel;
 import org.apache.asterix.bad.metadata.PrecompiledJobEventListener;
 import org.apache.asterix.common.exceptions.CompilationException;
-import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber;
-import org.apache.asterix.external.feed.management.ActiveLifecycleEventSubscriber;
 import org.apache.asterix.lang.common.statement.DropDatasetStatement;
 import org.apache.asterix.lang.common.struct.Identifier;
 import org.apache.asterix.lang.common.visitor.base.ILangVisitor;
@@ -94,8 +91,6 @@ public class ChannelDropStatement implements IExtensionStatement {
         EntityId entityId = new EntityId(BADConstants.CHANNEL_EXTENSION_NAME, dataverse, channelName.getValue());
         PrecompiledJobEventListener listener = (PrecompiledJobEventListener) ActiveJobNotificationHandler.INSTANCE
                 .getActiveEntityListener(entityId);
-        IActiveLifecycleEventSubscriber eventSubscriber = new ActiveLifecycleEventSubscriber();
-        boolean subscriberRegistered = false;
         Channel channel = null;
 
         MetadataTransactionContext mdTxnCtx = null;
@@ -115,11 +110,11 @@ public class ChannelDropStatement implements IExtensionStatement {
 
             listener.getExecutorService().shutdownNow();
             JobId hyracksJobId = listener.getHyracksJobId();
+            listener.deActivate();
+            ActiveJobNotificationHandler.INSTANCE.removeJob(hyracksJobId, listener);
             if (hyracksJobId != null) {
                 hcc.destroyJob(hyracksJobId);
             }
-            listener.deActivate();
-            ActiveLifecycleListener.INSTANCE.notifyJobFinish(hyracksJobId);
 
             //Drop the Channel Datasets
             //TODO: Need to find some way to handle if this fails.

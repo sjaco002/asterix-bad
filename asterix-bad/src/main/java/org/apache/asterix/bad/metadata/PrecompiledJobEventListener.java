@@ -34,7 +34,6 @@ import org.apache.asterix.bad.BADConstants;
 import org.apache.asterix.bad.DistributedJobInfo;
 import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber;
 import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber.ActiveLifecycleEvent;
-import org.apache.asterix.external.feed.management.FeedConnectionId;
 import org.apache.asterix.runtime.utils.AppContextInfo;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.dataset.ResultSetId;
@@ -53,8 +52,8 @@ public class PrecompiledJobEventListener implements IActiveEntityEventsListener 
     private JobId hyracksJobId;
     private ScheduledExecutorService executorService = null;
     private boolean active;
-    public ResultReader resultReader;
-    public ResultSetId resultSetId;
+    private ResultReader resultReader;
+    private ResultSetId resultSetId;
 
     public enum PrecompiledType {
         CHANNEL,
@@ -72,6 +71,14 @@ public class PrecompiledJobEventListener implements IActiveEntityEventsListener 
         jobInfos = new HashMap<>();
         active = false;
         this.type = type;
+    }
+
+    public ResultReader getResultReader() {
+        return resultReader;
+    }
+
+    public ResultSetId getResultSetId() {
+        return resultSetId;
     }
 
     public PrecompiledType getType() {
@@ -189,30 +196,6 @@ public class PrecompiledJobEventListener implements IActiveEntityEventsListener 
 
         notifyEventSubscribers(ActiveLifecycleEvent.ACTIVE_JOB_STARTED);
 
-    }
-
-    public JobSpecification getJobSpecification(EntityId activeJobId) {
-        return jobInfos.get(activeJobId).getSpec();
-    }
-
-    public DistributedJobInfo getJobInfo(EntityId activeJobId) {
-        return jobInfos.get(activeJobId);
-    }
-
-    public synchronized void registerEventSubscriber(IActiveLifecycleEventSubscriber subscriber) {
-        subscribers.add(subscriber);
-    }
-
-    public void deregisterEventSubscriber(IActiveLifecycleEventSubscriber subscriber) {
-        subscribers.remove(subscriber);
-    }
-
-    public synchronized boolean isChannelActive(EntityId activeJobId, IActiveLifecycleEventSubscriber eventSubscriber) {
-        return isEntityActive();
-    }
-
-    public FeedConnectionId[] getConnections() {
-        return jobInfos.keySet().toArray(new FeedConnectionId[jobInfos.size()]);
     }
 
     @Override

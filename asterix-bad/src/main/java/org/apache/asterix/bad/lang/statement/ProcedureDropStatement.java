@@ -19,7 +19,6 @@
 package org.apache.asterix.bad.lang.statement;
 
 import org.apache.asterix.active.ActiveJobNotificationHandler;
-import org.apache.asterix.active.ActiveLifecycleListener;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.algebra.extension.IExtensionStatement;
 import org.apache.asterix.app.translator.QueryTranslator;
@@ -111,11 +110,11 @@ public class ProcedureDropStatement implements IExtensionStatement {
                 listener.getExecutorService().shutdownNow();
             }
             JobId hyracksJobId = listener.getHyracksJobId();
+            listener.deActivate();
+            ActiveJobNotificationHandler.INSTANCE.removeJob(hyracksJobId, listener);
             if (hyracksJobId != null) {
                 hcc.destroyJob(hyracksJobId);
             }
-            listener.deActivate();
-            ActiveLifecycleListener.INSTANCE.notifyJobFinish(hyracksJobId);
 
             //Remove the Channel Metadata
             MetadataManager.INSTANCE.deleteEntity(mdTxnCtx, procedure);
