@@ -19,6 +19,7 @@
 package org.apache.asterix.bad.lang;
 
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.lang.statement.BrokerDropStatement;
@@ -42,8 +43,9 @@ import org.apache.hyracks.api.client.IHyracksClientConnection;
 public class BADStatementExecutor extends QueryTranslator {
 
     public BADStatementExecutor(List<Statement> aqlStatements, SessionConfig conf,
-            ILangCompilationProvider compliationProvider, IStorageComponentProvider storageComponentProvider) {
-        super(aqlStatements, conf, compliationProvider, storageComponentProvider);
+            ILangCompilationProvider compliationProvider, IStorageComponentProvider storageComponentProvider,
+            ExecutorService executorService) {
+        super(aqlStatements, conf, compliationProvider, storageComponentProvider, executorService);
     }
 
 
