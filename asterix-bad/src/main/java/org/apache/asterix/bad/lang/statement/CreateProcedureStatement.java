@@ -61,7 +61,6 @@ import org.apache.asterix.om.base.temporal.ADurationParserFactory;
 import org.apache.asterix.translator.IStatementExecutor;
 import org.apache.asterix.translator.IStatementExecutor.ResultDelivery;
 import org.apache.asterix.translator.IStatementExecutor.Stats;
-import org.apache.asterix.translator.SessionConfig;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.algebricks.common.utils.Pair;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
@@ -172,8 +171,8 @@ public class CreateProcedureStatement implements IExtensionStatement {
     }
 
     private void setupDistributedJob(EntityId entityId, JobSpecification jobSpec, IHyracksClientConnection hcc,
-            PrecompiledJobEventListener listener, MetadataProvider metadataProvider,
-            IHyracksDataset hdc, SessionConfig sessionConfig, Stats stats) throws Exception {
+            PrecompiledJobEventListener listener, MetadataProvider metadataProvider, IHyracksDataset hdc, Stats stats)
+                    throws Exception {
         DistributedJobInfo distributedJobInfo = new DistributedJobInfo(entityId, null, ActivityState.ACTIVE, jobSpec);
         jobSpec.setProperty(ActiveJobNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, distributedJobInfo);
         JobId jobId = hcc.distributeJob(jobSpec);
@@ -228,8 +227,7 @@ public class CreateProcedureStatement implements IExtensionStatement {
                 ActiveJobNotificationHandler.INSTANCE.registerListener(listener);
             }
 
-            setupDistributedJob(entityId, procedureJobSpec.first, hcc, listener, metadataProvider,
-                    hdc, ((QueryTranslator) statementExecutor).getSessionConfig(), stats);
+            setupDistributedJob(entityId, procedureJobSpec.first, hcc, listener, metadataProvider, hdc, stats);
 
             MetadataManager.INSTANCE.addEntity(mdTxnCtx, procedure);
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
