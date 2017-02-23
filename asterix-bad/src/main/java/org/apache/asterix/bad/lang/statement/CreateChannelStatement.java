@@ -30,13 +30,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.asterix.active.ActiveJobNotificationHandler;
-import org.apache.asterix.active.ActivityState;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.algebra.extension.IExtensionStatement;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
 import org.apache.asterix.bad.ChannelJobService;
-import org.apache.asterix.bad.DistributedJobInfo;
 import org.apache.asterix.bad.lang.BADLangExtension;
 import org.apache.asterix.bad.metadata.Channel;
 import org.apache.asterix.bad.metadata.PrecompiledJobEventListener;
@@ -45,6 +43,7 @@ import org.apache.asterix.common.config.DatasetConfig.DatasetType;
 import org.apache.asterix.common.exceptions.AsterixException;
 import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.common.functions.FunctionSignature;
+import org.apache.asterix.common.metadata.IDataset;
 import org.apache.asterix.lang.aql.parser.AQLParserFactory;
 import org.apache.asterix.lang.common.base.Expression;
 import org.apache.asterix.lang.common.base.Statement;
@@ -238,10 +237,8 @@ public class CreateChannelStatement implements IExtensionStatement {
     private void setupExecutorJob(EntityId entityId, JobSpecification channeljobSpec, IHyracksClientConnection hcc,
             PrecompiledJobEventListener listener, boolean predistributed)
             throws Exception {
-        DistributedJobInfo channelJobInfo = new DistributedJobInfo(entityId, null, ActivityState.ACTIVE, channeljobSpec);
         if (channeljobSpec != null) {
             //TODO: Find a way to fix optimizer tests so we don't need this check
-            channeljobSpec.setProperty(ActiveJobNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, channelJobInfo);
             JobId jobId = null;
             if (predistributed) {
                 jobId = hcc.distributeJob(channeljobSpec);
@@ -303,12 +300,6 @@ public class CreateChannelStatement implements IExtensionStatement {
                 throw new AsterixException("The channel name:" + channelName + " is not available.");
             }
 
-            // Now we subscribe
-            if (listener == null) {
-                listener = new PrecompiledJobEventListener(entityId, PrecompiledType.CHANNEL);
-                ActiveJobNotificationHandler.INSTANCE.registerListener(listener);
-            }
-
             //Create Channel Datasets
             createDatasets(statementExecutor, subscriptionsName, resultsName, metadataProvider, hcc, hdc, stats,
                     dataverse);
@@ -316,6 +307,16 @@ public class CreateChannelStatement implements IExtensionStatement {
             //Create Channel Internal Job
             JobSpecification channeljobSpec = createChannelJob(statementExecutor, subscriptionsName, resultsName,
                     metadataProvider, hcc, hdc, stats, dataverse);
+
+            // Now we subscribe
+            if (listener == null) {
+                List<IDataset> datasets = new ArrayList<>();
+                datasets.add(MetadataManager.INSTANCE.getDataset(mdTxnCtx, dataverse, subscriptionsName.getValue()));
+                datasets.add(MetadataManager.INSTANCE.getDataset(mdTxnCtx, dataverse, resultsName.getValue()));
+                //TODO: Add datasets used by channel function
+                listener = new PrecompiledJobEventListener(entityId, PrecompiledType.CHANNEL, datasets);
+                ActiveJobNotificationHandler.INSTANCE.registerListener(listener);
+            }
 
             if (distributed) {
                 setupExecutorJob(entityId, channeljobSpec, hcc, listener, true);

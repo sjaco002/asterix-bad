@@ -109,7 +109,7 @@ public class ProcedureDropStatement implements IExtensionStatement {
             if (listener.getExecutorService() != null) {
                 listener.getExecutorService().shutdownNow();
             }
-            JobId hyracksJobId = listener.getHyracksJobId();
+            JobId hyracksJobId = listener.getJobId();
             listener.deActivate();
             ActiveJobNotificationHandler.INSTANCE.removeJob(hyracksJobId, listener);
             if (hyracksJobId != null) {

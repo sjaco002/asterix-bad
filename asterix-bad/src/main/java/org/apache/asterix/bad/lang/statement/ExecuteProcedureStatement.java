@@ -111,7 +111,7 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
                 throw new AlgebricksException("There is no procedure with this name " + procedureName + ".");
             }
 
-            JobId hyracksJobId = listener.getHyracksJobId();
+            JobId hyracksJobId = listener.getJobId();
             if (procedure.getDuration().equals("")) {
                 hcc.startJob(hyracksJobId);
 

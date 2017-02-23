@@ -27,13 +27,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.asterix.active.ActiveJobNotificationHandler;
-import org.apache.asterix.active.ActivityState;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.algebra.extension.IExtensionStatement;
 import org.apache.asterix.app.result.ResultReader;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
-import org.apache.asterix.bad.DistributedJobInfo;
 import org.apache.asterix.bad.lang.BADLangExtension;
 import org.apache.asterix.bad.metadata.PrecompiledJobEventListener;
 import org.apache.asterix.bad.metadata.PrecompiledJobEventListener.PrecompiledType;
@@ -173,8 +171,6 @@ public class CreateProcedureStatement implements IExtensionStatement {
     private void setupDistributedJob(EntityId entityId, JobSpecification jobSpec, IHyracksClientConnection hcc,
             PrecompiledJobEventListener listener, MetadataProvider metadataProvider, IHyracksDataset hdc, Stats stats)
                     throws Exception {
-        DistributedJobInfo distributedJobInfo = new DistributedJobInfo(entityId, null, ActivityState.ACTIVE, jobSpec);
-        jobSpec.setProperty(ActiveJobNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, distributedJobInfo);
         JobId jobId = hcc.distributeJob(jobSpec);
         listener.storeDistributedInfo(jobId, null, new ResultReader(hdc), metadataProvider.getResultSetId());
     }
@@ -223,7 +219,8 @@ public class CreateProcedureStatement implements IExtensionStatement {
 
             // Now we subscribe
             if (listener == null) {
-                listener = new PrecompiledJobEventListener(entityId, procedureJobSpec.second);
+                //TODO: Add datasets used by channel function
+                listener = new PrecompiledJobEventListener(entityId, procedureJobSpec.second, new ArrayList<>());
                 ActiveJobNotificationHandler.INSTANCE.registerListener(listener);
             }
 

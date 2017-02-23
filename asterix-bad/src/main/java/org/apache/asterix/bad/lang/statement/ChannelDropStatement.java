@@ -109,7 +109,7 @@ public class ChannelDropStatement implements IExtensionStatement {
             }
 
             listener.getExecutorService().shutdownNow();
-            JobId hyracksJobId = listener.getHyracksJobId();
+            JobId hyracksJobId = listener.getJobId();
             listener.deActivate();
             ActiveJobNotificationHandler.INSTANCE.removeJob(hyracksJobId, listener);
             if (hyracksJobId != null) {
