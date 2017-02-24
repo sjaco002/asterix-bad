@@ -1,0 +1,9 @@
+/*
+* Description  : Simple Query Procedure
+* Expected Res : 222,225
+* Date         : Jan 2017
+* Author       : Steven Jacobs
+*/
+
+use dataverse channels;
+execute findMe();

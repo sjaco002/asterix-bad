@@ -1,0 +1,10 @@
+/*
+* Description  : Simple Insert Procedure
+* Expected Res : 3
+* Date         : Jan 2017
+* Author       : Steven Jacobs
+*/
+
+use dataverse channels;
+count(for $i in dataset UserLocations
+return $i);

@@ -18,16 +18,22 @@
  */
 package org.apache.asterix.bad.lang.statement;
 
+import java.util.EnumSet;
+import java.util.concurrent.ScheduledExecutorService;
+
 import org.apache.asterix.active.ActiveJobNotificationHandler;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.algebra.extension.IExtensionStatement;
+import org.apache.asterix.app.result.ResultReader;
+import org.apache.asterix.app.result.ResultUtil;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
+import org.apache.asterix.bad.ChannelJobService;
 import org.apache.asterix.bad.lang.BADLangExtension;
-import org.apache.asterix.bad.metadata.Channel;
 import org.apache.asterix.bad.metadata.PrecompiledJobEventListener;
+import org.apache.asterix.bad.metadata.PrecompiledJobEventListener.PrecompiledType;
+import org.apache.asterix.bad.metadata.Procedure;
 import org.apache.asterix.common.exceptions.CompilationException;
-import org.apache.asterix.lang.common.statement.DropDatasetStatement;
 import org.apache.asterix.lang.common.struct.Identifier;
 import org.apache.asterix.lang.common.visitor.base.ILangVisitor;
 import org.apache.asterix.metadata.MetadataManager;
@@ -40,30 +46,31 @@ import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.dataset.IHyracksDataset;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.api.job.JobFlag;
 import org.apache.hyracks.api.job.JobId;
 
-public class ChannelDropStatement implements IExtensionStatement {
+public class ExecuteProcedureStatement implements IExtensionStatement {
 
-    private final Identifier dataverseName;
-    private final Identifier channelName;
-    private boolean ifExists;
+    private final String dataverseName;
+    private final String procedureName;
+    private final int arity;
 
-    public ChannelDropStatement(Identifier dataverseName, Identifier channelName, boolean ifExists) {
+    public ExecuteProcedureStatement(String dataverseName, String procedureName, int arity) {
         this.dataverseName = dataverseName;
-        this.channelName = channelName;
-        this.ifExists = ifExists;
+        this.procedureName = procedureName;
+        this.arity = arity;
     }
 
-    public Identifier getDataverseName() {
+    public String getDataverseName() {
         return dataverseName;
     }
 
-    public Identifier getChannelName() {
-        return channelName;
+    public String getProcedureName() {
+        return procedureName;
     }
 
-    public boolean getIfExists() {
-        return ifExists;
+    public int getArity() {
+        return arity;
     }
 
     @Override
@@ -73,7 +80,7 @@ public class ChannelDropStatement implements IExtensionStatement {
 
     @Override
     public byte getCategory() {
-        return Category.DDL;
+        return Category.UPDATE;
     }
 
     @Override
@@ -86,51 +93,44 @@ public class ChannelDropStatement implements IExtensionStatement {
             IHyracksClientConnection hcc, IHyracksDataset hdc, ResultDelivery resultDelivery, Stats stats,
             int resultSetIdCounter) throws HyracksDataException, AlgebricksException {
 
-        String dataverse = ((QueryTranslator) statementExecutor).getActiveDataverse(dataverseName);
+
+        String dataverse = ((QueryTranslator) statementExecutor).getActiveDataverse(new Identifier(dataverseName));
         boolean txnActive = false;
-        EntityId entityId = new EntityId(BADConstants.CHANNEL_EXTENSION_NAME, dataverse, channelName.getValue());
+        EntityId entityId = new EntityId(BADConstants.PROCEDURE_KEYWORD, dataverse, procedureName);
         PrecompiledJobEventListener listener = (PrecompiledJobEventListener) ActiveJobNotificationHandler.INSTANCE
                 .getActiveEntityListener(entityId);
-        Channel channel = null;
+        Procedure procedure = null;
 
         MetadataTransactionContext mdTxnCtx = null;
         try {
             mdTxnCtx = MetadataManager.INSTANCE.beginTransaction();
             txnActive = true;
-            channel = BADLangExtension.getChannel(mdTxnCtx, dataverse, channelName.getValue());
-            txnActive = false;
-            if (channel == null) {
-                if (ifExists) {
-                    MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
-                    return;
-                } else {
-                    throw new AlgebricksException("There is no channel with this name " + channelName + ".");
-                }
+            procedure = BADLangExtension.getProcedure(mdTxnCtx, dataverse, procedureName,
+                    Integer.toString(getArity()));
+            if (procedure == null) {
+                throw new AlgebricksException("There is no procedure with this name " + procedureName + ".");
             }
 
-            listener.getExecutorService().shutdownNow();
             JobId hyracksJobId = listener.getJobId();
-            listener.deActivate();
-            ActiveJobNotificationHandler.INSTANCE.removeListener(listener);
-            if (hyracksJobId != null) {
-                hcc.destroyJob(hyracksJobId);
+            if (procedure.getDuration().equals("")) {
+                hcc.startJob(hyracksJobId);
+
+                if (listener.getType() == PrecompiledType.QUERY) {
+                    hcc.waitForCompletion(hyracksJobId);
+                    ResultReader resultReader = listener.getResultReader();
+                    resultReader.open(hyracksJobId, listener.getResultSetId());
+                    ResultUtil.printResults(resultReader, ((QueryTranslator) statementExecutor).getSessionConfig(),
+                            new Stats(), null);
+                }
+
+            } else {
+                ScheduledExecutorService ses = ChannelJobService.startJob(null, EnumSet.noneOf(JobFlag.class),
+                        hyracksJobId, hcc, ChannelJobService.findPeriod(procedure.getDuration()));
+                listener.storeDistributedInfo(hyracksJobId, ses, listener.getResultReader(), listener.getResultSetId());
             }
 
-            //Drop the Channel Datasets
-            //TODO: Need to find some way to handle if this fails.
-            //TODO: Prevent datasets for Channels from being dropped elsewhere
-            DropDatasetStatement dropStmt = new DropDatasetStatement(new Identifier(dataverse),
-                    new Identifier(channel.getResultsDatasetName()), true);
-            ((QueryTranslator) statementExecutor).handleDatasetDropStatement(metadataProvider, dropStmt, hcc);
-
-            dropStmt = new DropDatasetStatement(new Identifier(dataverse),
-                    new Identifier(channel.getSubscriptionsDataset()), true);
-            ((QueryTranslator) statementExecutor).handleDatasetDropStatement(metadataProvider, dropStmt, hcc);
-
-
-            //Remove the Channel Metadata
-            MetadataManager.INSTANCE.deleteEntity(mdTxnCtx, channel);
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
+            txnActive = false;
         } catch (Exception e) {
             e.printStackTrace();
             if (txnActive) {

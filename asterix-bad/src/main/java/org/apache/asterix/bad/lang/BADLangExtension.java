@@ -27,6 +27,7 @@ import org.apache.asterix.bad.metadata.Channel;
 import org.apache.asterix.bad.metadata.ChannelSearchKey;
 import org.apache.asterix.bad.metadata.DataverseBrokersSearchKey;
 import org.apache.asterix.bad.metadata.DataverseChannelsSearchKey;
+import org.apache.asterix.bad.metadata.DataverseProceduresSearchKey;
 import org.apache.asterix.bad.metadata.Procedure;
 import org.apache.asterix.bad.metadata.ProcedureSearchKey;
 import org.apache.asterix.common.api.ExtensionId;
@@ -117,6 +118,12 @@ public class BADLangExtension implements ILangExtension {
             throws AlgebricksException {
         DataverseChannelsSearchKey channelSearchKey = new DataverseChannelsSearchKey(dataverseName);
         return MetadataManager.INSTANCE.getEntities(mdTxnCtx, channelSearchKey);
+    }
+
+    public static List<Procedure> getProcedures(MetadataTransactionContext mdTxnCtx, String dataverseName)
+            throws AlgebricksException {
+        DataverseProceduresSearchKey proceduresSearchKey = new DataverseProceduresSearchKey(dataverseName);
+        return MetadataManager.INSTANCE.getEntities(mdTxnCtx, proceduresSearchKey);
     }
 
 }

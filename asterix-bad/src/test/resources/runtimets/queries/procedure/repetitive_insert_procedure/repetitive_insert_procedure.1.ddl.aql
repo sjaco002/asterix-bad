@@ -1,0 +1,25 @@
+/*
+* Description  : Simple Insert Procedure
+* Expected Res : Success
+* Date         : Jan 2017
+* Author       : Steven Jacobs
+*/
+
+drop dataverse channels if exists;
+create dataverse channels;
+use dataverse channels;
+
+create type myLocation as {
+  timeStamp: datetime,
+  roomNumber: int
+}
+
+
+create dataset UserLocations(myLocation)
+primary key timeStamp;
+
+create procedure findMe() {
+  insert into dataset UserLocations([
+    {"timeStamp":current-datetime(), "roomNumber":222}]
+  )
+} period duration("PT5S");

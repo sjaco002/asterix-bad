@@ -80,7 +80,8 @@ public class BADMetadataExtension implements IMetadataExtension {
     @Override
     public List<ExtensionMetadataDataset> getExtensionIndexes() {
         try {
-            return Arrays.asList(BADMetadataIndexes.CHANNEL_DATASET, BADMetadataIndexes.BROKER_DATASET);
+            return Arrays.asList(BADMetadataIndexes.CHANNEL_DATASET, BADMetadataIndexes.BROKER_DATASET,
+                    BADMetadataIndexes.PROCEDURE_DATASET);
         } catch (Throwable th) {
             th.printStackTrace();
             throw th;

@@ -19,13 +19,17 @@
 package org.apache.asterix.bad.lang;
 
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.lang.statement.BrokerDropStatement;
 import org.apache.asterix.bad.lang.statement.ChannelDropStatement;
+import org.apache.asterix.bad.lang.statement.ProcedureDropStatement;
 import org.apache.asterix.bad.metadata.Broker;
 import org.apache.asterix.bad.metadata.Channel;
+import org.apache.asterix.bad.metadata.Procedure;
 import org.apache.asterix.common.context.IStorageComponentProvider;
+import org.apache.asterix.common.functions.FunctionSignature;
 import org.apache.asterix.compiler.provider.ILangCompilationProvider;
 import org.apache.asterix.lang.common.base.Statement;
 import org.apache.asterix.lang.common.statement.DataverseDropStatement;
@@ -39,8 +43,9 @@ import org.apache.hyracks.api.client.IHyracksClientConnection;
 public class BADStatementExecutor extends QueryTranslator {
 
     public BADStatementExecutor(List<Statement> aqlStatements, SessionConfig conf,
-            ILangCompilationProvider compliationProvider, IStorageComponentProvider storageComponentProvider) {
-        super(aqlStatements, conf, compliationProvider, storageComponentProvider);
+            ILangCompilationProvider compliationProvider, IStorageComponentProvider storageComponentProvider,
+            ExecutorService executorService) {
+        super(aqlStatements, conf, compliationProvider, storageComponentProvider, executorService);
     }
 
 
@@ -62,6 +67,12 @@ public class BADStatementExecutor extends QueryTranslator {
         for (Channel channel : channels) {
             ChannelDropStatement drop = new ChannelDropStatement(dvId,
                     new Identifier(channel.getChannelId().getEntityName()), false);
+            drop.handle(this, metadataProvider, hcc, null, null, null, 0);
+        }
+        List<Procedure> procedures = BADLangExtension.getProcedures(mdTxnCtx, dvId.getValue());
+        for (Procedure procedure : procedures) {
+            ProcedureDropStatement drop = new ProcedureDropStatement(new FunctionSignature(dvId.getValue(),
+                    procedure.getEntityId().getEntityName(), procedure.getArity()), false);
             drop.handle(this, metadataProvider, hcc, null, null, null, 0);
         }
         MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);

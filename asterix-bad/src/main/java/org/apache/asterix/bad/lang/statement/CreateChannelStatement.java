@@ -22,35 +22,28 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.StringReader;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.asterix.active.ActiveJobNotificationHandler;
-import org.apache.asterix.active.ActivityState;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.algebra.extension.IExtensionStatement;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
-import org.apache.asterix.bad.ChannelJobInfo;
 import org.apache.asterix.bad.ChannelJobService;
 import org.apache.asterix.bad.lang.BADLangExtension;
 import org.apache.asterix.bad.metadata.Channel;
-import org.apache.asterix.bad.metadata.ChannelEventsListener;
-import org.apache.asterix.bad.runtime.RepetitiveChannelOperatorDescriptor;
+import org.apache.asterix.bad.metadata.PrecompiledJobEventListener;
+import org.apache.asterix.bad.metadata.PrecompiledJobEventListener.PrecompiledType;
 import org.apache.asterix.common.config.DatasetConfig.DatasetType;
 import org.apache.asterix.common.exceptions.AsterixException;
 import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.common.functions.FunctionSignature;
-import org.apache.asterix.common.utils.JobUtils;
-import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber;
-import org.apache.asterix.external.feed.api.IActiveLifecycleEventSubscriber.ActiveLifecycleEvent;
-import org.apache.asterix.external.feed.management.ActiveLifecycleEventSubscriber;
+import org.apache.asterix.common.metadata.IDataset;
 import org.apache.asterix.lang.aql.parser.AQLParserFactory;
 import org.apache.asterix.lang.common.base.Expression;
 import org.apache.asterix.lang.common.base.Statement;
@@ -69,21 +62,11 @@ import org.apache.asterix.metadata.MetadataTransactionContext;
 import org.apache.asterix.metadata.declared.MetadataProvider;
 import org.apache.asterix.metadata.entities.Function;
 import org.apache.asterix.om.base.temporal.ADurationParserFactory;
-import org.apache.asterix.runtime.utils.AppContextInfo;
-import org.apache.asterix.runtime.utils.ClusterStateManager;
-import org.apache.asterix.runtime.utils.RuntimeUtils;
 import org.apache.asterix.translator.IStatementExecutor;
 import org.apache.asterix.translator.IStatementExecutor.ResultDelivery;
 import org.apache.asterix.translator.IStatementExecutor.Stats;
-import org.apache.hyracks.algebricks.common.constraints.AlgebricksAbsolutePartitionConstraint;
-import org.apache.hyracks.algebricks.common.constraints.AlgebricksPartitionConstraint;
-import org.apache.hyracks.algebricks.common.constraints.AlgebricksPartitionConstraintHelper;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
-import org.apache.hyracks.algebricks.common.utils.Pair;
-import org.apache.hyracks.api.application.ICCApplicationContext;
-import org.apache.hyracks.api.client.ClusterControllerInfo;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
-import org.apache.hyracks.api.dataflow.IOperatorDescriptor;
 import org.apache.hyracks.api.dataset.IHyracksDataset;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.job.JobFlag;
@@ -183,36 +166,6 @@ public class CreateChannelStatement implements IExtensionStatement {
         return Kind.EXTENSION;
     }
 
-    public Pair<JobSpecification, AlgebricksAbsolutePartitionConstraint> buildChannelJobSpec(String dataverse,
-            String channelName, String duration, MetadataProvider metadataProvider, JobSpecification channeljobSpec,
-            String strIP, int port) throws Exception {
-        JobSpecification spec = RuntimeUtils.createJobSpecification();
-        IOperatorDescriptor channelQueryExecuter;
-        AlgebricksPartitionConstraint executerPc;
-
-        Pair<IOperatorDescriptor, AlgebricksAbsolutePartitionConstraint> p = buildChannelRuntime(spec, dataverse,
-                channelName, duration, channeljobSpec, strIP, port);
-        channelQueryExecuter = p.first;
-        executerPc = p.second;
-        AlgebricksPartitionConstraintHelper.setPartitionConstraintInJobSpec(spec, channelQueryExecuter, executerPc);
-        spec.addRoot(channelQueryExecuter);
-        return new Pair<>(spec, p.second);
-
-    }
-
-    public Pair<IOperatorDescriptor, AlgebricksAbsolutePartitionConstraint> buildChannelRuntime(
-            JobSpecification jobSpec, String dataverse, String channelName, String duration,
-            JobSpecification channeljobSpec, String strIP, int port) throws Exception {
-        RepetitiveChannelOperatorDescriptor channelOp = new RepetitiveChannelOperatorDescriptor(jobSpec, dataverse,
-                channelName, duration, channeljobSpec, strIP, port);
-
-        String partition = ClusterStateManager.INSTANCE.getClusterLocations().getLocations()[0];
-        Set<String> ncs = new HashSet<>(Arrays.asList(partition));
-        AlgebricksAbsolutePartitionConstraint partitionConstraint = new AlgebricksAbsolutePartitionConstraint(
-                ncs.toArray(new String[ncs.size()]));
-        return new Pair<IOperatorDescriptor, AlgebricksAbsolutePartitionConstraint>(channelOp, partitionConstraint);
-    }
-
     private void createDatasets(IStatementExecutor statementExecutor, Identifier subscriptionsName,
             Identifier resultsName, MetadataProvider metadataProvider, IHyracksClientConnection hcc,
             IHyracksDataset hdc, Stats stats, String dataverse) throws AsterixException, Exception {
@@ -281,28 +234,20 @@ public class CreateChannelStatement implements IExtensionStatement {
                 hcc, hdc, ResultDelivery.ASYNC, stats, true);
     }
 
-    private void setupCompiledJob(MetadataProvider metadataProvider, String dataverse, EntityId entityId,
-            JobSpecification channeljobSpec, IHyracksClientConnection hcc) throws Exception {
-        ICCApplicationContext iCCApp = AppContextInfo.INSTANCE.getCCApplicationContext();
-        ClusterControllerInfo ccInfo = iCCApp.getCCContext().getClusterControllerInfo();
-        String strIP = ccInfo.getClientNetAddress();
-        int port = ccInfo.getClientNetPort();
-        //Create Channel Operator
-        Pair<JobSpecification, AlgebricksAbsolutePartitionConstraint> alteredJobSpec = buildChannelJobSpec(dataverse,
-                channelName.getValue(), duration, metadataProvider, channeljobSpec, strIP, port);
-
-        ChannelJobInfo channelJobInfo = new ChannelJobInfo(entityId, null, ActivityState.ACTIVE, alteredJobSpec.first);
-        alteredJobSpec.first.setProperty(ActiveJobNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, channelJobInfo);
-        JobUtils.runJob(hcc, alteredJobSpec.first, false);
-    }
-
-    private void setupDistributedJob(EntityId entityId, JobSpecification channeljobSpec, IHyracksClientConnection hcc)
+    private void setupExecutorJob(EntityId entityId, JobSpecification channeljobSpec, IHyracksClientConnection hcc,
+            PrecompiledJobEventListener listener, boolean predistributed)
             throws Exception {
-        ChannelJobInfo channelJobInfo = new ChannelJobInfo(entityId, null, ActivityState.ACTIVE, channeljobSpec);
-        channeljobSpec.setProperty(ActiveJobNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, channelJobInfo);
-        JobId jobId = hcc.startJob(channeljobSpec, EnumSet.of(JobFlag.STORE_JOB));
-        ChannelJobService.startJob(channeljobSpec, EnumSet.of(JobFlag.STORE_JOB), jobId, hcc,
-                ChannelJobService.findPeriod(duration));
+        if (channeljobSpec != null) {
+            //TODO: Find a way to fix optimizer tests so we don't need this check
+            JobId jobId = null;
+            if (predistributed) {
+                jobId = hcc.distributeJob(channeljobSpec);
+            }
+            ScheduledExecutorService ses = ChannelJobService.startJob(channeljobSpec, EnumSet.noneOf(JobFlag.class),
+                    jobId, hcc, ChannelJobService.findPeriod(duration));
+            listener.storeDistributedInfo(jobId, ses, null, null);
+        }
+
     }
 
     @Override
@@ -324,10 +269,9 @@ public class CreateChannelStatement implements IExtensionStatement {
         Identifier subscriptionsName = new Identifier(channelName + BADConstants.subscriptionEnding);
         Identifier resultsName = new Identifier(channelName + BADConstants.resultsEnding);
         EntityId entityId = new EntityId(BADConstants.CHANNEL_EXTENSION_NAME, dataverse, channelName.getValue());
-        ChannelEventsListener listener = (ChannelEventsListener) ActiveJobNotificationHandler.INSTANCE
+        PrecompiledJobEventListener listener = (PrecompiledJobEventListener) ActiveJobNotificationHandler.INSTANCE
                 .getActiveEntityListener(entityId);
-        IActiveLifecycleEventSubscriber eventSubscriber = new ActiveLifecycleEventSubscriber();
-        boolean subscriberRegistered = false;
+        boolean alreadyActive = false;
         Channel channel = null;
 
         MetadataTransactionContext mdTxnCtx = null;
@@ -339,9 +283,9 @@ public class CreateChannelStatement implements IExtensionStatement {
                 throw new AlgebricksException("A channel with this name " + channelName + " already exists.");
             }
             if (listener != null) {
-                subscriberRegistered = listener.isChannelActive(entityId, eventSubscriber);
+                alreadyActive = listener.isEntityActive();
             }
-            if (subscriberRegistered) {
+            if (alreadyActive) {
                 throw new AsterixException("Channel " + channelName + " is already running");
             }
             initialize(mdTxnCtx, subscriptionsName.getValue(), resultsName.getValue());
@@ -356,14 +300,6 @@ public class CreateChannelStatement implements IExtensionStatement {
                 throw new AsterixException("The channel name:" + channelName + " is not available.");
             }
 
-            // Now we subscribe
-            if (listener == null) {
-                listener = new ChannelEventsListener(entityId);
-                ActiveJobNotificationHandler.INSTANCE.registerListener(listener);
-            }
-            listener.registerEventSubscriber(eventSubscriber);
-            subscriberRegistered = true;
-
             //Create Channel Datasets
             createDatasets(statementExecutor, subscriptionsName, resultsName, metadataProvider, hcc, hdc, stats,
                     dataverse);
@@ -372,12 +308,21 @@ public class CreateChannelStatement implements IExtensionStatement {
             JobSpecification channeljobSpec = createChannelJob(statementExecutor, subscriptionsName, resultsName,
                     metadataProvider, hcc, hdc, stats, dataverse);
 
-            if (distributed) {
-                setupDistributedJob(entityId, channeljobSpec, hcc);
-            } else {
-                setupCompiledJob(metadataProvider, dataverse, entityId, channeljobSpec, hcc);
+            // Now we subscribe
+            if (listener == null) {
+                List<IDataset> datasets = new ArrayList<>();
+                datasets.add(MetadataManager.INSTANCE.getDataset(mdTxnCtx, dataverse, subscriptionsName.getValue()));
+                datasets.add(MetadataManager.INSTANCE.getDataset(mdTxnCtx, dataverse, resultsName.getValue()));
+                //TODO: Add datasets used by channel function
+                listener = new PrecompiledJobEventListener(entityId, PrecompiledType.CHANNEL, datasets);
+                ActiveJobNotificationHandler.INSTANCE.registerListener(listener);
             }
-            eventSubscriber.assertEvent(ActiveLifecycleEvent.ACTIVE_JOB_STARTED);
+
+            if (distributed) {
+                setupExecutorJob(entityId, channeljobSpec, hcc, listener, true);
+            } else {
+                setupExecutorJob(entityId, channeljobSpec, hcc, listener, false);
+            }
 
             MetadataManager.INSTANCE.addEntity(mdTxnCtx, channel);
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);

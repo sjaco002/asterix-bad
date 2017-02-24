@@ -156,7 +156,7 @@ public class ChannelUnsubscribeStatement implements IExtensionStatement {
             AqlDeleteRewriteVisitor visitor = new AqlDeleteRewriteVisitor();
             delete.accept(visitor, null);
 
-            ((QueryTranslator) statementExecutor).handleDeleteStatement(metadataProvider, delete, hcc);
+            ((QueryTranslator) statementExecutor).handleDeleteStatement(metadataProvider, delete, hcc, false);
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
         } catch (Exception e) {
             QueryTranslator.abort(e, e, mdTxnCtx);

@@ -8,6 +8,26 @@
             <output-dir compare="Text">room_occupants</output-dir>
         </compilation-unit>
     </test-case>
+    <test-case FilePath="procedure">
+        <compilation-unit name="insert_procedure">
+            <output-dir compare="Text">insert_procedure</output-dir>
+        </compilation-unit>
+    </test-case>
+    <test-case FilePath="procedure">
+        <compilation-unit name="delete_procedure">
+            <output-dir compare="Text">delete_procedure</output-dir>
+        </compilation-unit>
+    </test-case>
+    <test-case FilePath="procedure">
+        <compilation-unit name="query_procedure">
+            <output-dir compare="Text">query_procedure</output-dir>
+        </compilation-unit>
+    </test-case>
+    <test-case FilePath="procedure">
+        <compilation-unit name="repetitive_insert_procedure">
+            <output-dir compare="Text">repetitive_insert_procedure</output-dir>
+        </compilation-unit>
+    </test-case>
     <test-case FilePath="channel">
         <compilation-unit name="create_channel_check_datasets">
             <output-dir compare="Text">create_channel_check_datasets</output-dir>

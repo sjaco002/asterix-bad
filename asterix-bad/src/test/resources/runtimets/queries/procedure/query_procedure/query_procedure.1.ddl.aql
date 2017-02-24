@@ -1,0 +1,25 @@
+/*
+* Description  : Simple Query Procedure
+* Expected Res : Success
+* Date         : Jan 2017
+* Author       : Steven Jacobs
+*/
+
+drop dataverse channels if exists;
+create dataverse channels;
+use dataverse channels;
+
+create type myLocation as {
+  timeStamp: datetime,
+  roomNumber: int
+}
+
+
+create dataset UserLocations(myLocation)
+primary key timeStamp;
+
+create procedure findMe() {
+for $i in dataset UserLocations
+order by $i.timeStamp
+return $i.roomNumber
+};
