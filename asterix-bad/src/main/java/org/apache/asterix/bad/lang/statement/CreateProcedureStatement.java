@@ -172,7 +172,7 @@ public class CreateProcedureStatement implements IExtensionStatement {
             PrecompiledJobEventListener listener, MetadataProvider metadataProvider, IHyracksDataset hdc, Stats stats)
                     throws Exception {
         JobId jobId = hcc.distributeJob(jobSpec);
-        listener.storeDistributedInfo(jobId, null, new ResultReader(hdc), metadataProvider.getResultSetId());
+        listener.storeDistributedInfo(jobId, null, new ResultReader(hdc, jobId, metadataProvider.getResultSetId()));
     }
 
     @Override

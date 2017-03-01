@@ -144,6 +144,9 @@
             <usedDependencies>
               <usedDependency>org.apache.hadoop:hadoop-minicluster</usedDependency>
             </usedDependencies>
+            <ignoredUnusedDeclaredDependencies>
+              <ignoredUnusedDeclaredDependency>org.apache.asterix:asterix-common</ignoredUnusedDeclaredDependency>
+            </ignoredUnusedDeclaredDependencies>
           </configuration>
         </plugin>
       </plugins>

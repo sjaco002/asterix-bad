@@ -118,7 +118,6 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
                 if (listener.getType() == PrecompiledType.QUERY) {
                     hcc.waitForCompletion(hyracksJobId);
                     ResultReader resultReader = listener.getResultReader();
-                    resultReader.open(hyracksJobId, listener.getResultSetId());
                     ResultUtil.printResults(resultReader, ((QueryTranslator) statementExecutor).getSessionConfig(),
                             new Stats(), null);
                 }
@@ -126,7 +125,7 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
             } else {
                 ScheduledExecutorService ses = ChannelJobService.startJob(null, EnumSet.noneOf(JobFlag.class),
                         hyracksJobId, hcc, ChannelJobService.findPeriod(procedure.getDuration()));
-                listener.storeDistributedInfo(hyracksJobId, ses, listener.getResultReader(), listener.getResultSetId());
+                listener.storeDistributedInfo(hyracksJobId, ses, listener.getResultReader());
             }
 
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);

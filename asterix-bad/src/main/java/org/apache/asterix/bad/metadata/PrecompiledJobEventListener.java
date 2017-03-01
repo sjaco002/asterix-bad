@@ -28,7 +28,6 @@ import org.apache.asterix.active.IActiveEventSubscriber;
 import org.apache.asterix.app.result.ResultReader;
 import org.apache.asterix.common.metadata.IDataset;
 import org.apache.asterix.external.feed.management.ActiveEntityEventsListener;
-import org.apache.hyracks.api.dataset.ResultSetId;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.job.JobId;
 import org.apache.log4j.Logger;
@@ -38,7 +37,6 @@ public class PrecompiledJobEventListener extends ActiveEntityEventsListener {
 
     private ScheduledExecutorService executorService = null;
     private ResultReader resultReader;
-    private ResultSetId resultSetId;
 
     public enum PrecompiledType {
         CHANNEL,
@@ -60,20 +58,14 @@ public class PrecompiledJobEventListener extends ActiveEntityEventsListener {
         return resultReader;
     }
 
-    public ResultSetId getResultSetId() {
-        return resultSetId;
-    }
-
     public PrecompiledType getType() {
         return type;
     }
 
-    public void storeDistributedInfo(JobId jobId, ScheduledExecutorService ses, ResultReader resultReader,
-            ResultSetId resultSetId) {
+    public void storeDistributedInfo(JobId jobId, ScheduledExecutorService ses, ResultReader resultReader) {
         this.jobId = jobId;
         this.executorService = ses;
         this.resultReader = resultReader;
-        this.resultSetId = resultSetId;
     }
 
     public ScheduledExecutorService getExecutorService() {
