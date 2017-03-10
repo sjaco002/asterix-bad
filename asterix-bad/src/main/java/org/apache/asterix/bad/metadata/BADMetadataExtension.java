@@ -37,7 +37,7 @@ import org.apache.asterix.metadata.entitytupletranslators.MetadataTupleTranslato
 import org.apache.asterix.metadata.utils.MetadataUtil;
 import org.apache.asterix.runtime.formats.NonTaggedDataFormat;
 import org.apache.hyracks.algebricks.common.utils.Pair;
-import org.apache.hyracks.api.application.INCApplicationContext;
+import org.apache.hyracks.api.application.INCServiceContext;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
 public class BADMetadataExtension implements IMetadataExtension {
@@ -89,7 +89,7 @@ public class BADMetadataExtension implements IMetadataExtension {
     }
 
     @Override
-    public void initializeMetadata(INCApplicationContext appCtx)
+    public void initializeMetadata(INCServiceContext appCtx)
             throws HyracksDataException, RemoteException, ACIDException {
         // enlist datasets
         MetadataBootstrap.enlistMetadataDataset(appCtx, BADMetadataIndexes.CHANNEL_DATASET);

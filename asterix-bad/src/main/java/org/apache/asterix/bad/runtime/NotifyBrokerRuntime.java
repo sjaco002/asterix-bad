@@ -70,8 +70,8 @@ public class NotifyBrokerRuntime extends AbstractOneInputOneOutputOneFramePushRu
         eval0 = brokerEvalFactory.createScalarEvaluator(ctx);
         eval1 = subEvalFactory.createScalarEvaluator(ctx);
         eval2 = channelExecutionEvalFactory.createScalarEvaluator(ctx);
-        this.activeManager = (ActiveManager) ((IAppRuntimeContext) ctx.getJobletContext().getApplicationContext()
-                .getApplicationObject()).getActiveManager();
+        this.activeManager = (ActiveManager) ((IAppRuntimeContext) ctx.getJobletContext().getServiceContext()
+                .getApplicationContext()).getActiveManager();
         this.entityId = activeJobId;
     }
 
