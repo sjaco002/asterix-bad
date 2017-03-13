@@ -210,12 +210,12 @@ public class ChannelSubscribeStatement implements IExtensionStatement {
                         new Identifier(subscriptionsDatasetName), subscriptionTuple, varCounter, resultVar,
  body);
                 ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider, insert, hcc, hdc,
-                        resultDelivery, stats, false);
+                        resultDelivery, stats, false, null, null);
             } else {
                 UpsertStatement upsert = new UpsertStatement(new Identifier(dataverse),
                         new Identifier(subscriptionsDatasetName), subscriptionTuple, varCounter, null, null);
                 ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider, upsert, hcc, hdc,
-                        resultDelivery, stats, false);
+                        resultDelivery, stats, false, null, null);
             }
 
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);

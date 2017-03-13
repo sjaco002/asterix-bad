@@ -231,7 +231,7 @@ public class CreateChannelStatement implements IExtensionStatement {
         AQLParserFactory aqlFact = new AQLParserFactory();
         List<Statement> fStatements = aqlFact.createParser(new StringReader(builder.toString())).parse();
         return ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider, fStatements.get(0),
-                hcc, hdc, ResultDelivery.ASYNC, stats, true);
+                hcc, hdc, ResultDelivery.ASYNC, stats, true, null, null);
     }
 
     private void setupExecutorJob(EntityId entityId, JobSpecification channeljobSpec, IHyracksClientConnection hcc,

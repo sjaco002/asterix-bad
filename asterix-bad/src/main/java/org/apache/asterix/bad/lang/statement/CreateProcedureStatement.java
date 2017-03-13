@@ -154,7 +154,8 @@ public class CreateProcedureStatement implements IExtensionStatement {
         }
         if (fStatements.get(0).getKind() == Statement.Kind.INSERT) {
             return new Pair<>(((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider,
-                    fStatements.get(0), hcc, hdc, ResultDelivery.ASYNC, stats, true), PrecompiledType.INSERT);
+                            fStatements.get(0), hcc, hdc, ResultDelivery.ASYNC, stats, true, null, null),
+                    PrecompiledType.INSERT);
         } else if (fStatements.get(0).getKind() == Statement.Kind.QUERY) {
             return new Pair<>(((QueryTranslator) statementExecutor).rewriteCompileQuery(hcc, metadataProvider,
                     (Query) fStatements.get(0), null), PrecompiledType.QUERY);
