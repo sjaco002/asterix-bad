@@ -27,12 +27,12 @@ public class BADParserFactory implements IParserFactory {
 
     @Override
     public IParser createParser(String query) {
-        return new BADAQLParser(query);
+        return new BADParser(query);
     }
 
     @Override
     public IParser createParser(Reader reader) {
-        return new BADAQLParser(reader);
+        return new BADParser(reader);
     }
 
 }

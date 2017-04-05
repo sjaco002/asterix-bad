@@ -21,12 +21,12 @@ package org.apache.asterix.bad.lang;
 import org.apache.asterix.algebra.base.ILangExpressionToPlanTranslatorFactory;
 import org.apache.asterix.compiler.provider.ILangCompilationProvider;
 import org.apache.asterix.compiler.provider.IRuleSetFactory;
-import org.apache.asterix.lang.aql.rewrites.AQLRewriterFactory;
-import org.apache.asterix.lang.aql.visitor.AQLAstPrintVisitorFactory;
 import org.apache.asterix.lang.common.base.IAstPrintVisitorFactory;
 import org.apache.asterix.lang.common.base.IParserFactory;
 import org.apache.asterix.lang.common.base.IRewriterFactory;
-import org.apache.asterix.translator.AqlExpressionToPlanTranslatorFactory;
+import org.apache.asterix.lang.sqlpp.rewrites.SqlppRewriterFactory;
+import org.apache.asterix.lang.sqlpp.visitor.SqlppAstPrintVisitorFactory;
+import org.apache.asterix.translator.SqlppExpressionToPlanTranslatorFactory;
 
 public class BADCompilationProvider implements ILangCompilationProvider {
 
@@ -37,17 +37,17 @@ public class BADCompilationProvider implements ILangCompilationProvider {
 
     @Override
     public IRewriterFactory getRewriterFactory() {
-        return new AQLRewriterFactory();
+        return new SqlppRewriterFactory();
     }
 
     @Override
     public IAstPrintVisitorFactory getAstPrintVisitorFactory() {
-        return new AQLAstPrintVisitorFactory();
+        return new SqlppAstPrintVisitorFactory();
     }
 
     @Override
     public ILangExpressionToPlanTranslatorFactory getExpressionToPlanTranslatorFactory() {
-        return new AqlExpressionToPlanTranslatorFactory();
+        return new SqlppExpressionToPlanTranslatorFactory();
     }
 
     @Override

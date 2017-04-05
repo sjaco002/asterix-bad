@@ -42,10 +42,10 @@ import org.apache.hyracks.api.client.IHyracksClientConnection;
 
 public class BADStatementExecutor extends QueryTranslator {
 
-    public BADStatementExecutor(List<Statement> aqlStatements, SessionConfig conf,
+    public BADStatementExecutor(List<Statement> statements, SessionConfig conf,
             ILangCompilationProvider compliationProvider, IStorageComponentProvider storageComponentProvider,
             ExecutorService executorService) {
-        super(aqlStatements, conf, compliationProvider, storageComponentProvider, executorService);
+        super(statements, conf, compliationProvider, storageComponentProvider, executorService);
     }
 
 

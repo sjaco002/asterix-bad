@@ -33,14 +33,13 @@ import org.apache.asterix.app.result.ResultReader;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
 import org.apache.asterix.bad.lang.BADLangExtension;
+import org.apache.asterix.bad.lang.BADParserFactory;
 import org.apache.asterix.bad.metadata.PrecompiledJobEventListener;
 import org.apache.asterix.bad.metadata.PrecompiledJobEventListener.PrecompiledType;
 import org.apache.asterix.bad.metadata.Procedure;
 import org.apache.asterix.common.exceptions.AsterixException;
 import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.common.functions.FunctionSignature;
-import org.apache.asterix.lang.aql.parser.AQLParserFactory;
-import org.apache.asterix.lang.aql.visitor.AqlDeleteRewriteVisitor;
 import org.apache.asterix.lang.common.base.Expression;
 import org.apache.asterix.lang.common.base.Statement;
 import org.apache.asterix.lang.common.expression.CallExpr;
@@ -50,6 +49,7 @@ import org.apache.asterix.lang.common.statement.Query;
 import org.apache.asterix.lang.common.struct.Identifier;
 import org.apache.asterix.lang.common.struct.VarIdentifier;
 import org.apache.asterix.lang.common.visitor.base.ILangVisitor;
+import org.apache.asterix.lang.sqlpp.visitor.SqlppDeleteRewriteVisitor;
 import org.apache.asterix.metadata.MetadataException;
 import org.apache.asterix.metadata.MetadataManager;
 import org.apache.asterix.metadata.MetadataTransactionContext;
@@ -166,8 +166,8 @@ public class CreateProcedureStatement implements IExtensionStatement {
         StringBuilder builder = new StringBuilder();
         builder.append(body);
         builder.append(";");
-        AQLParserFactory aqlFact = new AQLParserFactory();
-        List<Statement> fStatements = aqlFact.createParser(new StringReader(builder.toString())).parse();
+        BADParserFactory factory = new BADParserFactory();
+        List<Statement> fStatements = factory.createParser(new StringReader(builder.toString())).parse();
         if (fStatements.size() > 1) {
             throw new CompilationException("Procedure can only execute a single statement");
         }
@@ -182,7 +182,7 @@ public class CreateProcedureStatement implements IExtensionStatement {
             metadataProvider.getLocks().unlock();
             return pair;
         } else if (fStatements.get(0).getKind() == Statement.Kind.DELETE) {
-            AqlDeleteRewriteVisitor visitor = new AqlDeleteRewriteVisitor();
+            SqlppDeleteRewriteVisitor visitor = new SqlppDeleteRewriteVisitor();
             fStatements.get(0).accept(visitor, null);
             return new Pair<>(((QueryTranslator) statementExecutor).handleDeleteStatement(metadataProvider,
                     fStatements.get(0), hcc, true), PrecompiledType.DELETE);

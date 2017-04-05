@@ -29,7 +29,6 @@ import org.apache.asterix.bad.metadata.Channel;
 import org.apache.asterix.common.exceptions.AsterixException;
 import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.common.functions.FunctionSignature;
-import org.apache.asterix.lang.aql.visitor.AqlDeleteRewriteVisitor;
 import org.apache.asterix.lang.common.base.Expression;
 import org.apache.asterix.lang.common.expression.CallExpr;
 import org.apache.asterix.lang.common.expression.FieldAccessor;
@@ -40,6 +39,7 @@ import org.apache.asterix.lang.common.literal.StringLiteral;
 import org.apache.asterix.lang.common.statement.DeleteStatement;
 import org.apache.asterix.lang.common.struct.Identifier;
 import org.apache.asterix.lang.common.visitor.base.ILangVisitor;
+import org.apache.asterix.lang.sqlpp.visitor.SqlppDeleteRewriteVisitor;
 import org.apache.asterix.metadata.MetadataManager;
 import org.apache.asterix.metadata.MetadataTransactionContext;
 import org.apache.asterix.metadata.declared.MetadataProvider;
@@ -141,7 +141,7 @@ public class ChannelUnsubscribeStatement implements IExtensionStatement {
 
             DeleteStatement delete = new DeleteStatement(vars, new Identifier(dataverse),
                     new Identifier(subscriptionsDatasetName), condition, varCounter);
-            AqlDeleteRewriteVisitor visitor = new AqlDeleteRewriteVisitor();
+            SqlppDeleteRewriteVisitor visitor = new SqlppDeleteRewriteVisitor();
             delete.accept(visitor, null);
             MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getDefaultDataverse(),
                     metadataProvider.getStorageComponentProvider());
