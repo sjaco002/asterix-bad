@@ -197,6 +197,7 @@ public class CreateChannelStatement implements IExtensionStatement {
         //Run both statements to create datasets
         ((QueryTranslator) statementExecutor).handleCreateDatasetStatement(metadataProvider, createSubscriptionsDataset,
                 hcc);
+        metadataProvider.getLocks().reset();
         ((QueryTranslator) statementExecutor).handleCreateDatasetStatement(metadataProvider, createResultsDataset, hcc);
 
     }
@@ -299,14 +300,16 @@ public class CreateChannelStatement implements IExtensionStatement {
             if (MetadataManager.INSTANCE.getDataset(mdTxnCtx, dataverse, resultsName.getValue()) != null) {
                 throw new AsterixException("The channel name:" + channelName + " is not available.");
             }
-
+            MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getDefaultDataverse(),
+                    metadataProvider.getStorageComponentProvider());
+            tempMdProvider.setConfig(metadataProvider.getConfig());
             //Create Channel Datasets
-            createDatasets(statementExecutor, subscriptionsName, resultsName, metadataProvider, hcc, hdc, stats,
+            createDatasets(statementExecutor, subscriptionsName, resultsName, tempMdProvider, hcc, hdc, stats,
                     dataverse);
-
+            tempMdProvider.getLocks().reset();
             //Create Channel Internal Job
             JobSpecification channeljobSpec = createChannelJob(statementExecutor, subscriptionsName, resultsName,
-                    metadataProvider, hcc, hdc, stats, dataverse);
+                    tempMdProvider, hcc, hdc, stats, dataverse);
 
             // Now we subscribe
             if (listener == null) {
@@ -332,6 +335,8 @@ public class CreateChannelStatement implements IExtensionStatement {
             }
             LOGGER.log(Level.WARNING, "Failed creating a channel", e);
             throw new HyracksDataException(e);
+        } finally {
+            metadataProvider.getLocks().unlock();
         }
 
     }

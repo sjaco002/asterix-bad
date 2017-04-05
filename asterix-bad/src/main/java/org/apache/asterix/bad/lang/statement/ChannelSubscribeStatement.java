@@ -189,8 +189,12 @@ public class ChannelSubscribeStatement implements IExtensionStatement {
 
             subscriptionTuple.setVarCounter(varCounter);
 
-            if (subscriptionId == null) {
+            MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getDefaultDataverse(),
+                    metadataProvider.getStorageComponentProvider());
+            tempMdProvider.setConfig(metadataProvider.getConfig());
 
+            if (subscriptionId == null) {
+                //To create a new subscription
                 VariableExpr subscriptionVar = new VariableExpr(new VarIdentifier("$sub", 1));
                 VariableExpr useSubscriptionVar = new VariableExpr(new VarIdentifier("$sub", 1));
                 VariableExpr resultVar = new VariableExpr(new VarIdentifier("$result", 0));
@@ -204,17 +208,25 @@ public class ChannelSubscribeStatement implements IExtensionStatement {
                 FLWOGRExpression body = new FLWOGRExpression(clauseList, useSubscriptionVar);
 
                 metadataProvider.setResultSetId(new ResultSetId(resultSetIdCounter++));
-                metadataProvider.setResultAsyncMode(
-                        resultDelivery == ResultDelivery.ASYNC || resultDelivery == ResultDelivery.DEFERRED);
+                boolean resultsAsync =
+                        resultDelivery == ResultDelivery.ASYNC || resultDelivery == ResultDelivery.DEFERRED;
+                metadataProvider.setResultAsyncMode(resultsAsync);
+                tempMdProvider.setResultSetId(metadataProvider.getResultSetId());
+                tempMdProvider.setResultAsyncMode(resultsAsync);
+                tempMdProvider.setWriterFactory(metadataProvider.getWriterFactory());
+                tempMdProvider
+                        .setResultSerializerFactoryProvider(metadataProvider.getResultSerializerFactoryProvider());
+                tempMdProvider.setOutputFile(metadataProvider.getOutputFile());
+
                 InsertStatement insert = new InsertStatement(new Identifier(dataverse),
-                        new Identifier(subscriptionsDatasetName), subscriptionTuple, varCounter, resultVar,
- body);
-                ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider, insert, hcc, hdc,
+                        new Identifier(subscriptionsDatasetName), subscriptionTuple, varCounter, resultVar, body);
+                ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(tempMdProvider, insert, hcc, hdc,
                         resultDelivery, stats, false, null, null);
             } else {
+                //To update an existing subscription
                 UpsertStatement upsert = new UpsertStatement(new Identifier(dataverse),
                         new Identifier(subscriptionsDatasetName), subscriptionTuple, varCounter, null, null);
-                ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider, upsert, hcc, hdc,
+                ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(tempMdProvider, upsert, hcc, hdc,
                         resultDelivery, stats, false, null, null);
             }
 
@@ -222,6 +234,8 @@ public class ChannelSubscribeStatement implements IExtensionStatement {
         } catch (Exception e) {
             QueryTranslator.abort(e, e, mdTxnCtx);
             throw new HyracksDataException(e);
+        } finally {
+            metadataProvider.getLocks().unlock();
         }
 
     }

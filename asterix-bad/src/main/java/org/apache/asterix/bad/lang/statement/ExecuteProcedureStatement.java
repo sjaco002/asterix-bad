@@ -136,6 +136,8 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
                 QueryTranslator.abort(e, e, mdTxnCtx);
             }
             throw new HyracksDataException(e);
+        } finally {
+            metadataProvider.getLocks().unlock();
         }
     }
 

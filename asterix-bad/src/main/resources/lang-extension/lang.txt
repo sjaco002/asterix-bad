@@ -226,19 +226,12 @@ Statement ChannelSubscriptionStatement() throws ParseException:
    }
    | "unsubscribe" id = StringLiteral() <FROM> nameComponents = QualifiedName()
       {
-        setDataverses(new ArrayList<String>());
-        setDatasets(new ArrayList<String>());
         VariableExpr varExp = new VariableExpr();
         VarIdentifier var = new VarIdentifier();
         varExp.setVar(var);
         var.setValue("$subscriptionPlaceholder");
         getCurrentScope().addNewVarSymbolToScope(varExp.getVar());
-        List<String> dataverses = getDataverses();
-        List<String> datasets = getDatasets();
-        // we remove the pointer to the dataverses and datasets
-        setDataverses(null);
-        setDatasets(null);
-        stmt = new ChannelUnsubscribeStatement(varExp, nameComponents.first, nameComponents.second, id, getVarCounter(), dataverses, datasets);
+        stmt = new ChannelUnsubscribeStatement(varExp, nameComponents.first, nameComponents.second, id, getVarCounter());
       }
      | "change" "subscription" subscriptionId = StringLiteral()  <ON> nameComponents = QualifiedName()
        <LEFTPAREN> (tmp = Expression()

@@ -59,21 +59,27 @@ public class BADStatementExecutor extends QueryTranslator {
         metadataProvider.setMetadataTxnContext(mdTxnCtx);
         Identifier dvId = ((DataverseDropStatement) stmt).getDataverseName();
         List<Broker> brokers = BADLangExtension.getBrokers(mdTxnCtx, dvId.getValue());
+        MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getDefaultDataverse(),
+                metadataProvider.getStorageComponentProvider());
+        tempMdProvider.setConfig(metadataProvider.getConfig());
         for (Broker broker : brokers) {
+            tempMdProvider.getLocks().reset();
             BrokerDropStatement drop = new BrokerDropStatement(dvId, new Identifier(broker.getBrokerName()), false);
-            drop.handle(this, metadataProvider, hcc, null, null, null, 0);
+            drop.handle(this, tempMdProvider, hcc, null, null, null, 0);
         }
         List<Channel> channels = BADLangExtension.getChannels(mdTxnCtx, dvId.getValue());
         for (Channel channel : channels) {
+            tempMdProvider.getLocks().reset();
             ChannelDropStatement drop = new ChannelDropStatement(dvId,
                     new Identifier(channel.getChannelId().getEntityName()), false);
-            drop.handle(this, metadataProvider, hcc, null, null, null, 0);
+            drop.handle(this, tempMdProvider, hcc, null, null, null, 0);
         }
         List<Procedure> procedures = BADLangExtension.getProcedures(mdTxnCtx, dvId.getValue());
         for (Procedure procedure : procedures) {
+            tempMdProvider.getLocks().reset();
             ProcedureDropStatement drop = new ProcedureDropStatement(new FunctionSignature(dvId.getValue(),
                     procedure.getEntityId().getEntityName(), procedure.getArity()), false);
-            drop.handle(this, metadataProvider, hcc, null, null, null, 0);
+            drop.handle(this, tempMdProvider, hcc, null, null, null, 0);
         }
         MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
     }

@@ -94,6 +94,8 @@ public class BrokerDropStatement implements IExtensionStatement {
         } catch (Exception e) {
             QueryTranslator.abort(e, e, mdTxnCtx);
             throw new HyracksDataException(e);
+        } finally {
+            metadataProvider.getLocks().unlock();
         }
     }
 

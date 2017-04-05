@@ -101,6 +101,8 @@ public class CreateBrokerStatement implements IExtensionStatement {
             }
             LOGGER.log(Level.WARNING, "Failed creating a broker", e);
             throw new HyracksDataException(e);
+        } finally {
+            metadataProvider.getLocks().unlock();
         }
     }
 }

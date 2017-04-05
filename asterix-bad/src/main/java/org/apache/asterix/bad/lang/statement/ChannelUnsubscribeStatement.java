@@ -60,18 +60,14 @@ public class ChannelUnsubscribeStatement implements IExtensionStatement {
     private final String subscriptionId;
     private final int varCounter;
     private VariableExpr vars;
-    private List<String> dataverses;
-    private List<String> datasets;
 
     public ChannelUnsubscribeStatement(VariableExpr vars, Identifier dataverseName, Identifier channelName,
-            String subscriptionId, int varCounter, List<String> dataverses, List<String> datasets) {
+            String subscriptionId, int varCounter) {
         this.vars = vars;
         this.channelName = channelName;
         this.dataverseName = dataverseName;
         this.subscriptionId = subscriptionId;
         this.varCounter = varCounter;
-        this.dataverses = dataverses;
-        this.datasets = datasets;
     }
 
     public Identifier getDataverseName() {
@@ -88,14 +84,6 @@ public class ChannelUnsubscribeStatement implements IExtensionStatement {
 
     public String getsubScriptionId() {
         return subscriptionId;
-    }
-
-    public List<String> getDataverses() {
-        return dataverses;
-    }
-
-    public List<String> getDatasets() {
-        return datasets;
     }
 
     public int getVarCounter() {
@@ -152,15 +140,19 @@ public class ChannelUnsubscribeStatement implements IExtensionStatement {
             condition.addOperand(UUIDCall);
 
             DeleteStatement delete = new DeleteStatement(vars, new Identifier(dataverse),
-                    new Identifier(subscriptionsDatasetName), condition, varCounter, dataverses, datasets);
+                    new Identifier(subscriptionsDatasetName), condition, varCounter);
             AqlDeleteRewriteVisitor visitor = new AqlDeleteRewriteVisitor();
             delete.accept(visitor, null);
-
-            ((QueryTranslator) statementExecutor).handleDeleteStatement(metadataProvider, delete, hcc, false);
+            MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getDefaultDataverse(),
+                    metadataProvider.getStorageComponentProvider());
+            tempMdProvider.setConfig(metadataProvider.getConfig());
+            ((QueryTranslator) statementExecutor).handleDeleteStatement(tempMdProvider, delete, hcc, false);
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
         } catch (Exception e) {
             QueryTranslator.abort(e, e, mdTxnCtx);
             throw new HyracksDataException(e);
+        } finally {
+            metadataProvider.getLocks().unlock();
         }
     }
 }

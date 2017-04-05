@@ -140,10 +140,29 @@ public class CreateProcedureStatement implements IExtensionStatement {
         durationParser.parse(duration.toCharArray(), 0, duration.toCharArray().length, outputStream);
     }
 
+    private JobSpecification compileQueryJob(IStatementExecutor statementExecutor, MetadataProvider metadataProvider,
+            IHyracksClientConnection hcc, Query q) throws Exception {
+        MetadataTransactionContext mdTxnCtx = MetadataManager.INSTANCE.beginTransaction();
+        boolean bActiveTxn = true;
+        metadataProvider.setMetadataTxnContext(mdTxnCtx);
+        JobSpecification jobSpec = null;
+        try {
+            jobSpec = ((QueryTranslator) statementExecutor).rewriteCompileQuery(hcc, metadataProvider, q, null);
+            MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
+            bActiveTxn = false;
+        } catch (Exception e) {
+            LOGGER.log(Level.INFO, e.getMessage(), e);
+            if (bActiveTxn) {
+                ((QueryTranslator) statementExecutor).abort(e, e, mdTxnCtx);
+            }
+            throw e;
+        }
+        return jobSpec;
+    }
+
     private Pair<JobSpecification, PrecompiledType> createProcedureJob(String body,
-            IStatementExecutor statementExecutor,
-            MetadataProvider metadataProvider, IHyracksClientConnection hcc, IHyracksDataset hdc, Stats stats)
-                    throws Exception {
+            IStatementExecutor statementExecutor, MetadataProvider metadataProvider, IHyracksClientConnection hcc,
+            IHyracksDataset hdc, Stats stats) throws Exception {
         StringBuilder builder = new StringBuilder();
         builder.append(body);
         builder.append(";");
@@ -157,8 +176,11 @@ public class CreateProcedureStatement implements IExtensionStatement {
                             fStatements.get(0), hcc, hdc, ResultDelivery.ASYNC, stats, true, null, null),
                     PrecompiledType.INSERT);
         } else if (fStatements.get(0).getKind() == Statement.Kind.QUERY) {
-            return new Pair<>(((QueryTranslator) statementExecutor).rewriteCompileQuery(hcc, metadataProvider,
-                    (Query) fStatements.get(0), null), PrecompiledType.QUERY);
+            Pair<JobSpecification, PrecompiledType> pair =
+                    new Pair<>(compileQueryJob(statementExecutor, metadataProvider, hcc, (Query) fStatements.get(0)),
+                            PrecompiledType.QUERY);
+            metadataProvider.getLocks().unlock();
+            return pair;
         } else if (fStatements.get(0).getKind() == Statement.Kind.DELETE) {
             AqlDeleteRewriteVisitor visitor = new AqlDeleteRewriteVisitor();
             fStatements.get(0).accept(visitor, null);
@@ -170,10 +192,10 @@ public class CreateProcedureStatement implements IExtensionStatement {
     }
 
     private void setupDistributedJob(EntityId entityId, JobSpecification jobSpec, IHyracksClientConnection hcc,
-            PrecompiledJobEventListener listener, MetadataProvider metadataProvider, IHyracksDataset hdc, Stats stats)
+            PrecompiledJobEventListener listener, ResultSetId resultSetId, IHyracksDataset hdc, Stats stats)
                     throws Exception {
         JobId jobId = hcc.distributeJob(jobSpec);
-        listener.storeDistributedInfo(jobId, null, new ResultReader(hdc, jobId, metadataProvider.getResultSetId()));
+        listener.storeDistributedInfo(jobId, null, new ResultReader(hdc, jobId, resultSetId));
     }
 
     @Override
@@ -211,12 +233,22 @@ public class CreateProcedureStatement implements IExtensionStatement {
             procedure = new Procedure(dataverse, signature.getName(), signature.getArity(), getParamList(),
                     Function.RETURNTYPE_VOID, getFunctionBody(), Function.LANGUAGE_AQL, duration);
 
-            metadataProvider.setResultSetId(new ResultSetId(0));
+            MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getDefaultDataverse(),
+                    metadataProvider.getStorageComponentProvider());
+            tempMdProvider.setConfig(metadataProvider.getConfig());
+
             metadataProvider.setResultSetId(new ResultSetId(resultSetIdCounter++));
+            boolean resultsAsync = resultDelivery == ResultDelivery.ASYNC || resultDelivery == ResultDelivery.DEFERRED;
+            metadataProvider.setResultAsyncMode(resultsAsync);
+            tempMdProvider.setResultSetId(metadataProvider.getResultSetId());
+            tempMdProvider.setResultAsyncMode(resultsAsync);
+            tempMdProvider.setWriterFactory(metadataProvider.getWriterFactory());
+            tempMdProvider.setResultSerializerFactoryProvider(metadataProvider.getResultSerializerFactoryProvider());
+            tempMdProvider.setOutputFile(metadataProvider.getOutputFile());
 
             //Create Procedure Internal Job
             Pair<JobSpecification, PrecompiledType> procedureJobSpec =
-                    createProcedureJob(getFunctionBody(), statementExecutor, metadataProvider, hcc, hdc, stats);
+                    createProcedureJob(getFunctionBody(), statementExecutor, tempMdProvider, hcc, hdc, stats);
 
             // Now we subscribe
             if (listener == null) {
@@ -224,8 +256,8 @@ public class CreateProcedureStatement implements IExtensionStatement {
                 listener = new PrecompiledJobEventListener(entityId, procedureJobSpec.second, new ArrayList<>());
                 ActiveJobNotificationHandler.INSTANCE.registerListener(listener);
             }
-
-            setupDistributedJob(entityId, procedureJobSpec.first, hcc, listener, metadataProvider, hdc, stats);
+            setupDistributedJob(entityId, procedureJobSpec.first, hcc, listener, tempMdProvider.getResultSetId(), hdc,
+                    stats);
 
             MetadataManager.INSTANCE.addEntity(mdTxnCtx, procedure);
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
@@ -235,6 +267,8 @@ public class CreateProcedureStatement implements IExtensionStatement {
             }
             LOGGER.log(Level.WARNING, "Failed creating a procedure", e);
             throw new HyracksDataException(e);
+        } finally {
+            metadataProvider.getLocks().unlock();
         }
 
     }

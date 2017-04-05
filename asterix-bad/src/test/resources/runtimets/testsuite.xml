@@ -66,9 +66,14 @@
             <output-dir compare="Text">drop_channel_check_metadata</output-dir>
         </compilation-unit>
     </test-case>
-            <test-case FilePath="channel">
+    <test-case FilePath="channel">
         <compilation-unit name="subscribe_channel_check_subscriptions">
             <output-dir compare="Text">subscribe_channel_check_subscriptions</output-dir>
+        </compilation-unit>
+    </test-case>
+    <test-case FilePath="channel">
+        <compilation-unit name="ten_minute_channel">
+            <output-dir compare="Text">ten_minute_channel</output-dir>
         </compilation-unit>
     </test-case>
   </test-group>
