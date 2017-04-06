@@ -79,10 +79,6 @@ public class CreateProcedureStatement implements IExtensionStatement {
     private final CallExpr period;
     private String duration = "";
 
-    public FunctionSignature getaAterixFunction() {
-        return signature;
-    }
-
     public String getFunctionBody() {
         return functionBody;
     }
