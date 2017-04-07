@@ -20,7 +20,6 @@ package org.apache.asterix.bad.lang.statement;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
-import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
@@ -39,13 +38,17 @@ import org.apache.asterix.bad.metadata.Procedure;
 import org.apache.asterix.common.exceptions.AsterixException;
 import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.common.functions.FunctionSignature;
-import org.apache.asterix.lang.aql.parser.AQLParserFactory;
+import org.apache.asterix.lang.aql.expression.FLWOGRExpression;
 import org.apache.asterix.lang.aql.visitor.AqlDeleteRewriteVisitor;
 import org.apache.asterix.lang.common.base.Expression;
 import org.apache.asterix.lang.common.base.Statement;
+import org.apache.asterix.lang.common.clause.LetClause;
 import org.apache.asterix.lang.common.expression.CallExpr;
 import org.apache.asterix.lang.common.expression.LiteralExpr;
+import org.apache.asterix.lang.common.expression.VariableExpr;
+import org.apache.asterix.lang.common.literal.IntegerLiteral;
 import org.apache.asterix.lang.common.literal.StringLiteral;
+import org.apache.asterix.lang.common.statement.DeleteStatement;
 import org.apache.asterix.lang.common.statement.Query;
 import org.apache.asterix.lang.common.struct.Identifier;
 import org.apache.asterix.lang.common.struct.VarIdentifier;
@@ -74,24 +77,34 @@ public class CreateProcedureStatement implements IExtensionStatement {
     private static final Logger LOGGER = Logger.getLogger(CreateProcedureStatement.class.getName());
 
     private final FunctionSignature signature;
-    private final String functionBody;
+    private final String procedureBody;
+    private final Statement procedureBodyStatement;
     private final List<String> paramList;
+    private final List<VariableExpr> varList;
     private final CallExpr period;
     private String duration = "";
 
-    public String getFunctionBody() {
-        return functionBody;
-    }
 
-    public CreateProcedureStatement(FunctionSignature signature, List<VarIdentifier> parameterList, String functionBody,
-            Expression period) {
+    public CreateProcedureStatement(FunctionSignature signature, List<VarIdentifier> parameterList,
+            List<Integer> paramIds, String functionBody, Statement procedureBodyStatement, Expression period) {
         this.signature = signature;
-        this.functionBody = functionBody;
-        this.paramList = new ArrayList<String>();
-        for (VarIdentifier varId : parameterList) {
-            this.paramList.add(varId.getValue());
+        this.procedureBody = functionBody;
+        this.procedureBodyStatement = procedureBodyStatement;
+        this.paramList = new ArrayList<>();
+        this.varList = new ArrayList<>();
+        for (int i = 0; i < parameterList.size(); i++) {
+            this.paramList.add(parameterList.get(i).getValue());
+            this.varList.add(new VariableExpr(new VarIdentifier(parameterList.get(i).toString(), paramIds.get(i))));
         }
         this.period = (CallExpr) period;
+    }
+
+    public String getProcedureBody() {
+        return procedureBody;
+    }
+
+    public Statement getProcedureBodyStatement() {
+        return procedureBodyStatement;
     }
 
     @Override
@@ -101,6 +114,10 @@ public class CreateProcedureStatement implements IExtensionStatement {
 
     public List<String> getParamList() {
         return paramList;
+    }
+
+    public List<VariableExpr> getVarList() {
+        return varList;
     }
 
     public FunctionSignature getSignature() {
@@ -156,33 +173,33 @@ public class CreateProcedureStatement implements IExtensionStatement {
         return jobSpec;
     }
 
-    private Pair<JobSpecification, PrecompiledType> createProcedureJob(String body,
-            IStatementExecutor statementExecutor, MetadataProvider metadataProvider, IHyracksClientConnection hcc,
-            IHyracksDataset hdc, Stats stats) throws Exception {
-        StringBuilder builder = new StringBuilder();
-        builder.append(body);
-        builder.append(";");
-        AQLParserFactory aqlFact = new AQLParserFactory();
-        List<Statement> fStatements = aqlFact.createParser(new StringReader(builder.toString())).parse();
-        if (fStatements.size() > 1) {
-            throw new CompilationException("Procedure can only execute a single statement");
-        }
-        if (fStatements.get(0).getKind() == Statement.Kind.INSERT) {
-            return new Pair<>(((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider,
-                            fStatements.get(0), hcc, hdc, ResultDelivery.ASYNC, stats, true, null, null),
+    private Pair<JobSpecification, PrecompiledType> createProcedureJob(IStatementExecutor statementExecutor,
+            MetadataProvider metadataProvider, IHyracksClientConnection hcc, IHyracksDataset hdc, Stats stats)
+                    throws Exception {
+        if (getProcedureBodyStatement().getKind() == Statement.Kind.INSERT) {
+            return new Pair<>(
+                    ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider,
+                            getProcedureBodyStatement(), hcc, hdc, ResultDelivery.ASYNC, stats, true, null, null),
                     PrecompiledType.INSERT);
-        } else if (fStatements.get(0).getKind() == Statement.Kind.QUERY) {
-            Pair<JobSpecification, PrecompiledType> pair =
-                    new Pair<>(compileQueryJob(statementExecutor, metadataProvider, hcc, (Query) fStatements.get(0)),
-                            PrecompiledType.QUERY);
+        } else if (getProcedureBodyStatement().getKind() == Statement.Kind.QUERY) {
+            Pair<JobSpecification, PrecompiledType> pair = new Pair<>(
+                    compileQueryJob(statementExecutor, metadataProvider, hcc, (Query) getProcedureBodyStatement()),
+                    PrecompiledType.QUERY);
             metadataProvider.getLocks().unlock();
             return pair;
-        } else if (fStatements.get(0).getKind() == Statement.Kind.DELETE) {
+        } else if (getProcedureBodyStatement().getKind() == Statement.Kind.DELETE) {
             AqlDeleteRewriteVisitor visitor = new AqlDeleteRewriteVisitor();
-            fStatements.get(0).accept(visitor, null);
+            getProcedureBodyStatement().accept(visitor, null);
+            DeleteStatement delete = (DeleteStatement) getProcedureBodyStatement();
+            FLWOGRExpression flwogr = (FLWOGRExpression)delete.getQuery().getBody();
+            for (VariableExpr var : varList){
+                Expression con = new LiteralExpr(new IntegerLiteral(var.getVar().getId()));
+                LetClause let = new LetClause(var, con);
+                flwogr.getClauseList().add(0, let);
+            }
             return new Pair<>(((QueryTranslator) statementExecutor).handleDeleteStatement(metadataProvider,
-                    fStatements.get(0), hcc, true), PrecompiledType.DELETE);
-        }else{
+                    getProcedureBodyStatement(), hcc, true), PrecompiledType.DELETE);
+        } else {
             throw new CompilationException("Procedure can only execute a single delete, insert, or query");
         }
     }
@@ -227,7 +244,7 @@ public class CreateProcedureStatement implements IExtensionStatement {
             }
 
             procedure = new Procedure(dataverse, signature.getName(), signature.getArity(), getParamList(),
-                    Function.RETURNTYPE_VOID, getFunctionBody(), Function.LANGUAGE_AQL, duration);
+                    Function.RETURNTYPE_VOID, getProcedureBody(), Function.LANGUAGE_AQL, duration);
 
             MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getDefaultDataverse(),
                     metadataProvider.getStorageComponentProvider());
@@ -244,7 +261,7 @@ public class CreateProcedureStatement implements IExtensionStatement {
 
             //Create Procedure Internal Job
             Pair<JobSpecification, PrecompiledType> procedureJobSpec =
-                    createProcedureJob(getFunctionBody(), statementExecutor, tempMdProvider, hcc, hdc, stats);
+                    createProcedureJob(statementExecutor, tempMdProvider, hcc, hdc, stats);
 
             // Now we subscribe
             if (listener == null) {
