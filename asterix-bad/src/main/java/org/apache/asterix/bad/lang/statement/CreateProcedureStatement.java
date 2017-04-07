@@ -45,8 +45,8 @@ import org.apache.asterix.lang.common.base.Statement;
 import org.apache.asterix.lang.common.clause.LetClause;
 import org.apache.asterix.lang.common.expression.CallExpr;
 import org.apache.asterix.lang.common.expression.LiteralExpr;
+import org.apache.asterix.lang.common.expression.RuntimeContextVarExpr;
 import org.apache.asterix.lang.common.expression.VariableExpr;
-import org.apache.asterix.lang.common.literal.IntegerLiteral;
 import org.apache.asterix.lang.common.literal.StringLiteral;
 import org.apache.asterix.lang.common.statement.DeleteStatement;
 import org.apache.asterix.lang.common.statement.Query;
@@ -193,7 +193,8 @@ public class CreateProcedureStatement implements IExtensionStatement {
             DeleteStatement delete = (DeleteStatement) getProcedureBodyStatement();
             FLWOGRExpression flwogr = (FLWOGRExpression)delete.getQuery().getBody();
             for (VariableExpr var : varList){
-                Expression con = new LiteralExpr(new IntegerLiteral(var.getVar().getId()));
+                //Expression con = new LiteralExpr(new IntegerLiteral(var.getVar().getId()));
+                Expression con = new RuntimeContextVarExpr(var.getVar().getValue());
                 LetClause let = new LetClause(var, con);
                 flwogr.getClauseList().add(0, let);
             }
