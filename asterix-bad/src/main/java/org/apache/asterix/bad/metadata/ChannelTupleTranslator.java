@@ -18,7 +18,6 @@ package org.apache.asterix.bad.metadata;
 import java.io.ByteArrayInputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
-import java.io.IOException;
 
 import org.apache.asterix.common.functions.FunctionSignature;
 import org.apache.asterix.formats.nontagged.SerializerDeserializerProvider;
@@ -27,6 +26,7 @@ import org.apache.asterix.metadata.entitytupletranslators.AbstractTupleTranslato
 import org.apache.asterix.om.base.ARecord;
 import org.apache.asterix.om.base.AString;
 import org.apache.hyracks.api.dataflow.value.ISerializerDeserializer;
+import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.common.data.accessors.ITupleReference;
 
 /**
@@ -52,7 +52,7 @@ public class ChannelTupleTranslator extends AbstractTupleTranslator<Channel> {
     }
 
     @Override
-    public Channel getMetadataEntityFromTuple(ITupleReference frameTuple) throws IOException {
+    public Channel getMetadataEntityFromTuple(ITupleReference frameTuple) throws HyracksDataException {
         byte[] serRecord = frameTuple.getFieldData(CHANNEL_PAYLOAD_TUPLE_FIELD_INDEX);
         int recordStartOffset = frameTuple.getFieldStart(CHANNEL_PAYLOAD_TUPLE_FIELD_INDEX);
         int recordLength = frameTuple.getFieldLength(CHANNEL_PAYLOAD_TUPLE_FIELD_INDEX);
@@ -66,16 +66,20 @@ public class ChannelTupleTranslator extends AbstractTupleTranslator<Channel> {
         Channel channel = null;
         String dataverseName = ((AString) channelRecord
                 .getValueByPos(BADMetadataRecordTypes.CHANNEL_ARECORD_DATAVERSE_NAME_FIELD_INDEX)).getStringValue();
-        String channelName = ((AString) channelRecord
-                .getValueByPos(BADMetadataRecordTypes.CHANNEL_ARECORD_CHANNEL_NAME_FIELD_INDEX)).getStringValue();
+        String channelName =
+                ((AString) channelRecord.getValueByPos(BADMetadataRecordTypes.CHANNEL_ARECORD_CHANNEL_NAME_FIELD_INDEX))
+                        .getStringValue();
         String subscriptionsName = ((AString) channelRecord
                 .getValueByPos(BADMetadataRecordTypes.CHANNEL_ARECORD_SUBSCRIPTIONS_NAME_FIELD_INDEX)).getStringValue();
-        String resultsName = ((AString) channelRecord
-                .getValueByPos(BADMetadataRecordTypes.CHANNEL_ARECORD_RESULTS_NAME_FIELD_INDEX)).getStringValue();
-        String fName = ((AString) channelRecord
-                .getValueByPos(BADMetadataRecordTypes.CHANNEL_ARECORD_FUNCTION_FIELD_INDEX)).getStringValue();
-        String duration = ((AString) channelRecord
-                .getValueByPos(BADMetadataRecordTypes.CHANNEL_ARECORD_DURATION_FIELD_INDEX)).getStringValue();
+        String resultsName =
+                ((AString) channelRecord.getValueByPos(BADMetadataRecordTypes.CHANNEL_ARECORD_RESULTS_NAME_FIELD_INDEX))
+                        .getStringValue();
+        String fName =
+                ((AString) channelRecord.getValueByPos(BADMetadataRecordTypes.CHANNEL_ARECORD_FUNCTION_FIELD_INDEX))
+                        .getStringValue();
+        String duration =
+                ((AString) channelRecord.getValueByPos(BADMetadataRecordTypes.CHANNEL_ARECORD_DURATION_FIELD_INDEX))
+                        .getStringValue();
 
         FunctionSignature signature = null;
 
@@ -98,7 +102,7 @@ public class ChannelTupleTranslator extends AbstractTupleTranslator<Channel> {
     }
 
     @Override
-    public ITupleReference getTupleFromMetadataEntity(Channel channel) throws IOException, MetadataException {
+    public ITupleReference getTupleFromMetadataEntity(Channel channel) throws HyracksDataException, MetadataException {
         // write the key in the first fields of the tuple
 
         tupleBuilder.reset();
