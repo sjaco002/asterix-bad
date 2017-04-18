@@ -22,7 +22,6 @@ package org.apache.asterix.bad.metadata;
 import java.io.ByteArrayInputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,6 +35,7 @@ import org.apache.asterix.om.base.AString;
 import org.apache.asterix.om.base.IACursor;
 import org.apache.asterix.om.types.AOrderedListType;
 import org.apache.hyracks.api.dataflow.value.ISerializerDeserializer;
+import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.data.std.util.ArrayBackedValueStorage;
 import org.apache.hyracks.dataflow.common.data.accessors.ITupleReference;
 
@@ -63,7 +63,7 @@ public class ProcedureTupleTranslator extends AbstractTupleTranslator<Procedure>
     }
 
     @Override
-    public Procedure getMetadataEntityFromTuple(ITupleReference frameTuple) throws IOException {
+    public Procedure getMetadataEntityFromTuple(ITupleReference frameTuple) throws HyracksDataException {
         byte[] serRecord = frameTuple.getFieldData(PROCEDURE_PAYLOAD_TUPLE_FIELD_INDEX);
         int recordStartOffset = frameTuple.getFieldStart(PROCEDURE_PAYLOAD_TUPLE_FIELD_INDEX);
         int recordLength = frameTuple.getFieldLength(PROCEDURE_PAYLOAD_TUPLE_FIELD_INDEX);
@@ -74,20 +74,16 @@ public class ProcedureTupleTranslator extends AbstractTupleTranslator<Procedure>
     }
 
     private Procedure createProcedureFromARecord(ARecord procedureRecord) {
-        String dataverseName =
- ((AString) procedureRecord
-                .getValueByPos(BADMetadataRecordTypes.PROCEDURE_ARECORD_DATAVERSENAME_FIELD_INDEX))
-                        .getStringValue();
-        String procedureName =
- ((AString) procedureRecord
-                .getValueByPos(BADMetadataRecordTypes.PROCEDURE_ARECORD_PROCEDURE_NAME_FIELD_INDEX))
-                        .getStringValue();
+        String dataverseName = ((AString) procedureRecord
+                .getValueByPos(BADMetadataRecordTypes.PROCEDURE_ARECORD_DATAVERSENAME_FIELD_INDEX)).getStringValue();
+        String procedureName = ((AString) procedureRecord
+                .getValueByPos(BADMetadataRecordTypes.PROCEDURE_ARECORD_PROCEDURE_NAME_FIELD_INDEX)).getStringValue();
         String arity = ((AString) procedureRecord
                 .getValueByPos(BADMetadataRecordTypes.PROCEDURE_ARECORD_PROCEDURE_ARITY_FIELD_INDEX)).getStringValue();
 
         IACursor cursor = ((AOrderedList) procedureRecord
                 .getValueByPos(BADMetadataRecordTypes.PROCEDURE_ARECORD_PROCEDURE_PARAM_LIST_FIELD_INDEX)).getCursor();
-        List<String> params = new ArrayList<String>();
+        List<String> params = new ArrayList<>();
         while (cursor.next()) {
             params.add(((AString) cursor.get()).getStringValue());
         }
@@ -114,7 +110,8 @@ public class ProcedureTupleTranslator extends AbstractTupleTranslator<Procedure>
     }
 
     @Override
-    public ITupleReference getTupleFromMetadataEntity(Procedure procedure) throws IOException, MetadataException {
+    public ITupleReference getTupleFromMetadataEntity(Procedure procedure)
+            throws HyracksDataException, MetadataException {
         // write the key in the first 2 fields of the tuple
         tupleBuilder.reset();
         aString.setValue(procedure.getEntityId().getDataverse());
