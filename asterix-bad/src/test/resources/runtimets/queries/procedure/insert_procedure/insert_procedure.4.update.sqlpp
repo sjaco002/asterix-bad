@@ -24,4 +24,4 @@
 */
 
 use channels;
-execute findMe();
+execute addMe();

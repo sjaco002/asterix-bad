@@ -36,8 +36,8 @@ create type myLocation as {
 create dataset UserLocations(myLocation)
 primary key timeStamp;
 
-create dataverse procedure findMe() {
+create procedure addMe() {
   insert into UserLocations([
-    {"timeStamp":current-datetime(), "roomNumber":222}]
+    {"timeStamp":current_datetime(), "roomNumber":222}]
   )
 } period duration("PT5S");

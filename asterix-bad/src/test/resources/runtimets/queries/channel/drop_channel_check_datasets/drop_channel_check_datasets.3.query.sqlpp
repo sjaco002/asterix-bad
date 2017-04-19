@@ -18,9 +18,8 @@
  */
 use channels;
 
-for $result in dataset Metadata.Channel
-for $x in dataset Metadata.Dataset
-where $x.DatasetName = $result.SubscriptionsDatasetName
-or $x.DatasetName = $result.ResultsDatasetName
-order by $x.DatasetName
-return $x;
+select value x
+from Metadata.`Channel` result, Metadata.`Dataset` x
+where x.DatasetName = result.SubscriptionsDatasetName
+or x.DatasetName = result.ResultsDatasetName
+order by x.DatasetName

@@ -16,8 +16,15 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+/*
+* Description  : Room Occupants Test
+* Expected Res : Success
+* Date         : Sep 2016
+* Author       : Steven Jacobs
+*/
+
 use channels;
 
-select value x
-from Metadata.`Channel` x
-order by x.ChannelName;
+select test.BrokerName, test.param0
+from roomRecordsSubscriptions test
+order by test.BrokerName

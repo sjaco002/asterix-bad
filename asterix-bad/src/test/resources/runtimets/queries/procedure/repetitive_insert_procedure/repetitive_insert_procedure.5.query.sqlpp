@@ -24,5 +24,4 @@
 */
 
 use channels;
-count(for $i in dataset UserLocations
-return $i);
+select value count(location) from UserLocations location;

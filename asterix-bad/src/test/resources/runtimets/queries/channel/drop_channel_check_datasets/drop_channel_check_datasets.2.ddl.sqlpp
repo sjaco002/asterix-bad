@@ -18,4 +18,4 @@
  */
 use channels;
 
-drop dataverse channel nearbyTweetChannel2;
+drop channel nearbyTweetChannel2;

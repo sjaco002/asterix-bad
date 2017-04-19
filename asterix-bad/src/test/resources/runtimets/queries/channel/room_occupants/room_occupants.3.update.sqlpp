@@ -23,11 +23,7 @@
 * Author       : Steven Jacobs
 */
 
+
 use channels;
 
-from $test in dataset roomRecordsSubscriptions
-order by $test.BrokerName
-select {
-"broker":$test.BrokerName,
-"parameter":$test.param0
-}
+subscribe to roomRecords (350) on brokerB;

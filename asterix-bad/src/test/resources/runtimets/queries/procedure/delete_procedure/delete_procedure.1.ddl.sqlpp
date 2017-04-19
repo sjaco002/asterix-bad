@@ -37,9 +37,9 @@ create dataset UserLocations(myLocation)
 primary key timeStamp;
 
 insert into UserLocations([
-  {"timeStamp":current-datetime(), "roomNumber":222}]
+  {"timeStamp":current_datetime(), "roomNumber":222}]
 );
 
-create dataverse procedure deleteAll() {
-delete $i from dataset UserLocations
+create procedure deleteAll() {
+delete from UserLocations
 };

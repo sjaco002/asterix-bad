@@ -27,4 +27,3 @@
 use channels;
 
 subscribe to roomRecords (123) on brokerA;
-subscribe to roomRecords (350) on brokerB;

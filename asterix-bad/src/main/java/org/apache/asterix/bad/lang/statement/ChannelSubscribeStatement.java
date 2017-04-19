@@ -192,17 +192,10 @@ public class ChannelSubscribeStatement implements IExtensionStatement {
 
             if (subscriptionId == null) {
                 //To create a new subscription
-                //VariableExpr subscriptionVar = new VariableExpr(new VarIdentifier("$sub", 1));
-                //VariableExpr useSubscriptionVar = new VariableExpr(new VarIdentifier("$sub", 1));
                 VariableExpr resultVar = new VariableExpr(new VarIdentifier("$result", 0));
                 VariableExpr useResultVar = new VariableExpr(new VarIdentifier("$result", 0));
                 useResultVar.setIsNewVar(false);
-                //useSubscriptionVar.setIsNewVar(false);
-                //List<Clause> clauseList = new ArrayList<>();
                 FieldAccessor accessor = new FieldAccessor(useResultVar, new Identifier(BADConstants.SubscriptionId));
-                //LetClause let = new LetClause(subscriptionVar, accessor);
-                //clauseList.add(let);
-                //FLWOGRExpression body = new FLWOGRExpression(clauseList, useSubscriptionVar);
 
                 metadataProvider.setResultSetId(new ResultSetId(resultSetIdCounter++));
                 boolean resultsAsync =

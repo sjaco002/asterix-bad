@@ -24,4 +24,4 @@
 */
 
 use channels;
-drop dataverseprocedure findMe@0;
+drop procedure addMe@0;

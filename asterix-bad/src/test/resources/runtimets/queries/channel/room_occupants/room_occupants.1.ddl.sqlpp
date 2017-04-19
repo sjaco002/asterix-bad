@@ -48,9 +48,9 @@ create dataset roomSecurityAssignments(roomSecurity)
 primary key roomNumber;
 
 upsert into roomSecurityAssignments([
-{"roomNumber":123, "securityGuardName":"Mike", "securityGuardNumber":"555-4815"},
-{"roomNumber":222, "securityGuardName":"Steven", "securityGuardNumber":"555-1623"},
-{"roomNumber":350, "securityGuardName":"Vassilis", "securityGuardNumber":"555-1234"}]
+{"roomNumber":123, "securityGuardName":"Mike", "securityGuardNumber":"555_4815"},
+{"roomNumber":222, "securityGuardName":"Steven", "securityGuardNumber":"555_1623"},
+{"roomNumber":350, "securityGuardName":"Vassilis", "securityGuardNumber":"555_1234"}]
 );
 
 upsert into watchedUsers([

@@ -25,6 +25,6 @@
 
 use channels;
 
-from $result in dataset roomRecordsResults
-order by $result.result
-select $result.result;
+select result.result.userId
+from roomRecordsResults result
+order by result.result.userId

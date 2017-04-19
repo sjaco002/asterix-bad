@@ -1,2 +1,2 @@
-{ "broker": "brokerA", "parameter": 123 }
-{ "broker": "brokerB", "parameter": 350 }
+{ "BrokerName": "brokerA", "param0": 123 }
+{ "BrokerName": "brokerB", "param0": 350 }

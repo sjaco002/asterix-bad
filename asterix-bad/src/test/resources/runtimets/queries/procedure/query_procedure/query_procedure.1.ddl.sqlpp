@@ -36,8 +36,7 @@ create type myLocation as {
 create dataset UserLocations(myLocation)
 primary key timeStamp;
 
-create dataverse procedure findMe() {
-for $i in dataset UserLocations
-order by $i.timeStamp
-return $i.roomNumber
+create procedure findMe() {
+select roomNumber from UserLocations
+order by timeStamp;
 };
