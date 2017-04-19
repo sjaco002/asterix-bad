@@ -197,7 +197,7 @@ public class ChannelSubscribeStatement implements IExtensionStatement {
                 useResultVar.setIsNewVar(false);
                 FieldAccessor accessor = new FieldAccessor(useResultVar, new Identifier(BADConstants.SubscriptionId));
 
-                metadataProvider.setResultSetId(new ResultSetId(resultSetIdCounter++));
+                metadataProvider.setResultSetId(new ResultSetId(resultSetIdCounter));
                 boolean resultsAsync =
                         resultDelivery == ResultDelivery.ASYNC || resultDelivery == ResultDelivery.DEFERRED;
                 metadataProvider.setResultAsyncMode(resultsAsync);
