@@ -54,6 +54,7 @@ import org.apache.asterix.lang.common.statement.DatasetDecl;
 import org.apache.asterix.lang.common.statement.IDatasetDetailsDecl;
 import org.apache.asterix.lang.common.statement.InsertStatement;
 import org.apache.asterix.lang.common.statement.InternalDetailsDecl;
+import org.apache.asterix.lang.common.statement.SetStatement;
 import org.apache.asterix.lang.common.struct.Identifier;
 import org.apache.asterix.lang.common.visitor.base.ILangVisitor;
 import org.apache.asterix.metadata.MetadataException;
@@ -206,14 +207,15 @@ public class CreateChannelStatement implements IExtensionStatement {
             Identifier resultsName, MetadataProvider metadataProvider, IHyracksClientConnection hcc,
             IHyracksDataset hdc, Stats stats, String dataverse) throws Exception {
         StringBuilder builder = new StringBuilder();
+        builder.append("SET inline_with \"false\"\n");
         builder.append("insert into " + dataverse + "." + resultsName);
-        builder.append(" as a (\n" + " let " + BADConstants.ChannelExecutionTime + " = current_datetime() \n");
+        builder.append(" as a (\n" + "with " + BADConstants.ChannelExecutionTime + " as current_datetime() \n");
         builder.append("select result, ");
         builder.append(BADConstants.ChannelExecutionTime + ", ");
         builder.append("sub." + BADConstants.SubscriptionId + " as " + BADConstants.SubscriptionId + ",");
         builder.append("current_datetime() as " + BADConstants.DeliveryTime + "\n");
-        builder.append("from " + BADConstants.BAD_DATAVERSE_NAME + "." + BADConstants.BROKER_KEYWORD + " b, \n");
-        builder.append(dataverse + "." + subscriptionsName + " sub,\n");
+        builder.append("from " + dataverse + "." + subscriptionsName + " sub,\n");
+        builder.append(BADConstants.BAD_DATAVERSE_NAME + "." + BADConstants.BROKER_KEYWORD + " b, \n");
         builder.append(function.getNamespace() + "." + function.getName() + "(");
         int i = 0;
         for (; i < function.getArity() - 1; i++) {
@@ -227,7 +229,11 @@ public class CreateChannelStatement implements IExtensionStatement {
         builder.append(";");
         BADParserFactory factory = new BADParserFactory();
         List<Statement> fStatements = factory.createParser(new StringReader(builder.toString())).parse();
-        return ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider, fStatements.get(0),
+
+        SetStatement ss = (SetStatement) fStatements.get(0);
+        metadataProvider.getConfig().put(ss.getPropName(), ss.getPropValue());
+
+        return ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider, fStatements.get(1),
                 hcc, hdc, ResultDelivery.ASYNC, stats, true, null, null);
     }
 

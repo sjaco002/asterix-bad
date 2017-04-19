@@ -93,9 +93,6 @@ public class BADExecutionTest {
 
     @Test
     public void test() throws Exception {
-        //while (true){
-
-        //}
         testExecutor.executeTest(PATH_ACTUAL, tcCtx, null, false, FailedGroup);
     }
 }
