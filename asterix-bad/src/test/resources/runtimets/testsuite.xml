@@ -19,7 +19,7 @@
 <test-suite  xmlns="urn:xml.testframework.asterix.apache.org"
              ResultOffsetPath="results"
              QueryOffsetPath="queries"
-             QueryFileExtension=".aql">
+             QueryFileExtension=".sqlpp">
   <test-group name="channel">
     <test-case FilePath="channel">
         <compilation-unit name="room_occupants">

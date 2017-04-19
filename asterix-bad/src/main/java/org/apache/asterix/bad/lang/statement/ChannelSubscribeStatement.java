@@ -30,10 +30,7 @@ import org.apache.asterix.bad.metadata.Channel;
 import org.apache.asterix.common.exceptions.AsterixException;
 import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.common.functions.FunctionSignature;
-import org.apache.asterix.lang.aql.expression.FLWOGRExpression;
-import org.apache.asterix.lang.common.base.Clause;
 import org.apache.asterix.lang.common.base.Expression;
-import org.apache.asterix.lang.common.clause.LetClause;
 import org.apache.asterix.lang.common.expression.CallExpr;
 import org.apache.asterix.lang.common.expression.FieldAccessor;
 import org.apache.asterix.lang.common.expression.FieldBinding;
@@ -195,19 +192,12 @@ public class ChannelSubscribeStatement implements IExtensionStatement {
 
             if (subscriptionId == null) {
                 //To create a new subscription
-                VariableExpr subscriptionVar = new VariableExpr(new VarIdentifier("$sub", 1));
-                VariableExpr useSubscriptionVar = new VariableExpr(new VarIdentifier("$sub", 1));
                 VariableExpr resultVar = new VariableExpr(new VarIdentifier("$result", 0));
                 VariableExpr useResultVar = new VariableExpr(new VarIdentifier("$result", 0));
                 useResultVar.setIsNewVar(false);
-                useSubscriptionVar.setIsNewVar(false);
-                List<Clause> clauseList = new ArrayList<>();
-                LetClause let = new LetClause(subscriptionVar,
-                        new FieldAccessor(useResultVar, new Identifier(BADConstants.SubscriptionId)));
-                clauseList.add(let);
-                FLWOGRExpression body = new FLWOGRExpression(clauseList, useSubscriptionVar);
+                FieldAccessor accessor = new FieldAccessor(useResultVar, new Identifier(BADConstants.SubscriptionId));
 
-                metadataProvider.setResultSetId(new ResultSetId(resultSetIdCounter++));
+                metadataProvider.setResultSetId(new ResultSetId(resultSetIdCounter));
                 boolean resultsAsync =
                         resultDelivery == ResultDelivery.ASYNC || resultDelivery == ResultDelivery.DEFERRED;
                 metadataProvider.setResultAsyncMode(resultsAsync);
@@ -219,7 +209,7 @@ public class ChannelSubscribeStatement implements IExtensionStatement {
                 tempMdProvider.setOutputFile(metadataProvider.getOutputFile());
 
                 InsertStatement insert = new InsertStatement(new Identifier(dataverse),
-                        new Identifier(subscriptionsDatasetName), subscriptionTuple, varCounter, resultVar, body);
+                        new Identifier(subscriptionsDatasetName), subscriptionTuple, varCounter, resultVar, accessor);
                 ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(tempMdProvider, insert, hcc, hdc,
                         resultDelivery, stats, false, null, null);
             } else {

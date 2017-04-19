@@ -36,6 +36,7 @@ import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
 import org.apache.asterix.bad.ChannelJobService;
 import org.apache.asterix.bad.lang.BADLangExtension;
+import org.apache.asterix.bad.lang.BADParserFactory;
 import org.apache.asterix.bad.metadata.Channel;
 import org.apache.asterix.bad.metadata.PrecompiledJobEventListener;
 import org.apache.asterix.bad.metadata.PrecompiledJobEventListener.PrecompiledType;
@@ -44,7 +45,6 @@ import org.apache.asterix.common.exceptions.AsterixException;
 import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.common.functions.FunctionSignature;
 import org.apache.asterix.common.metadata.IDataset;
-import org.apache.asterix.lang.aql.parser.AQLParserFactory;
 import org.apache.asterix.lang.common.base.Expression;
 import org.apache.asterix.lang.common.base.Statement;
 import org.apache.asterix.lang.common.expression.CallExpr;
@@ -54,6 +54,7 @@ import org.apache.asterix.lang.common.statement.DatasetDecl;
 import org.apache.asterix.lang.common.statement.IDatasetDetailsDecl;
 import org.apache.asterix.lang.common.statement.InsertStatement;
 import org.apache.asterix.lang.common.statement.InternalDetailsDecl;
+import org.apache.asterix.lang.common.statement.SetStatement;
 import org.apache.asterix.lang.common.struct.Identifier;
 import org.apache.asterix.lang.common.visitor.base.ILangVisitor;
 import org.apache.asterix.metadata.MetadataException;
@@ -206,32 +207,33 @@ public class CreateChannelStatement implements IExtensionStatement {
             Identifier resultsName, MetadataProvider metadataProvider, IHyracksClientConnection hcc,
             IHyracksDataset hdc, Stats stats, String dataverse) throws Exception {
         StringBuilder builder = new StringBuilder();
-        builder.append("insert into dataset " + dataverse + "." + resultsName + " ");
-        builder.append(" as $a (" + " let $" + BADConstants.ChannelExecutionTime + " := current-datetime() \n");
-
-        builder.append("for $sub in dataset " + dataverse + "." + subscriptionsName + "\n");
-        builder.append(
-                "for $broker in dataset " + BADConstants.BAD_DATAVERSE_NAME + "." + BADConstants.BROKER_KEYWORD + "\n");
-        builder.append("where $broker." + BADConstants.BrokerName + "= $sub." + BADConstants.BrokerName + "\n");
-        builder.append("and $broker." + BADConstants.DataverseName + "= $sub." + BADConstants.DataverseName + "\n");
-        builder.append(" for $result in " + function.getNamespace() + "." + function.getName() + "(");
+        builder.append("SET inline_with \"false\"\n");
+        builder.append("insert into " + dataverse + "." + resultsName);
+        builder.append(" as a (\n" + "with " + BADConstants.ChannelExecutionTime + " as current_datetime() \n");
+        builder.append("select result, ");
+        builder.append(BADConstants.ChannelExecutionTime + ", ");
+        builder.append("sub." + BADConstants.SubscriptionId + " as " + BADConstants.SubscriptionId + ",");
+        builder.append("current_datetime() as " + BADConstants.DeliveryTime + "\n");
+        builder.append("from " + dataverse + "." + subscriptionsName + " sub,\n");
+        builder.append(BADConstants.BAD_DATAVERSE_NAME + "." + BADConstants.BROKER_KEYWORD + " b, \n");
+        builder.append(function.getNamespace() + "." + function.getName() + "(");
         int i = 0;
         for (; i < function.getArity() - 1; i++) {
-            builder.append("$sub.param" + i + ",");
+            builder.append("sub.param" + i + ",");
         }
-        builder.append("$sub.param" + i + ")\n");
-        builder.append("return {\n");
-        builder.append("\"" + BADConstants.ChannelExecutionTime + "\":$" + BADConstants.ChannelExecutionTime + ",");
-        builder.append("\"" + BADConstants.SubscriptionId + "\":$sub." + BADConstants.SubscriptionId + ",");
-        builder.append("\"" + BADConstants.DeliveryTime + "\":current-datetime(),");
-        builder.append("\"result\":$result");
-        builder.append("}");
+        builder.append("sub.param" + i + ") result \n");
+        builder.append("where b." + BADConstants.BrokerName + " = sub." + BADConstants.BrokerName + "\n");
+        builder.append("and b." + BADConstants.DataverseName + " = sub." + BADConstants.DataverseName + "\n");
         builder.append(")");
-        builder.append(" returning $a");
+        builder.append(" returning a");
         builder.append(";");
-        AQLParserFactory aqlFact = new AQLParserFactory();
-        List<Statement> fStatements = aqlFact.createParser(new StringReader(builder.toString())).parse();
-        return ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider, fStatements.get(0),
+        BADParserFactory factory = new BADParserFactory();
+        List<Statement> fStatements = factory.createParser(new StringReader(builder.toString())).parse();
+
+        SetStatement ss = (SetStatement) fStatements.get(0);
+        metadataProvider.getConfig().put(ss.getPropName(), ss.getPropValue());
+
+        return ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider, fStatements.get(1),
                 hcc, hdc, ResultDelivery.ASYNC, stats, true, null, null);
     }
 

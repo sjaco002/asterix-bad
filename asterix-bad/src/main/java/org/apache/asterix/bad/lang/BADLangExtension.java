@@ -32,7 +32,6 @@ import org.apache.asterix.bad.metadata.Procedure;
 import org.apache.asterix.bad.metadata.ProcedureSearchKey;
 import org.apache.asterix.common.api.ExtensionId;
 import org.apache.asterix.compiler.provider.ILangCompilationProvider;
-import org.apache.asterix.compiler.provider.SqlppCompilationProvider;
 import org.apache.asterix.metadata.MetadataManager;
 import org.apache.asterix.metadata.MetadataTransactionContext;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
@@ -54,10 +53,8 @@ public class BADLangExtension implements ILangExtension {
     @Override
     public ILangCompilationProvider getLangCompilationProvider(Language lang) {
         switch (lang) {
-            case AQL:
-                return new BADCompilationProvider();
             case SQLPP:
-                return new SqlppCompilationProvider();
+                return new BADCompilationProvider();
             default:
                 return null;
         }
