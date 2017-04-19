@@ -212,7 +212,7 @@ public class CreateChannelStatement implements IExtensionStatement {
         builder.append(BADConstants.ChannelExecutionTime + ", ");
         builder.append("sub." + BADConstants.SubscriptionId + " as " + BADConstants.SubscriptionId + ",");
         builder.append("current_datetime() as " + BADConstants.DeliveryTime + "\n");
-        builder.append("from " + BADConstants.BAD_DATAVERSE_NAME + "." + BADConstants.BROKER_KEYWORD + " broker, \n");
+        builder.append("from " + BADConstants.BAD_DATAVERSE_NAME + "." + BADConstants.BROKER_KEYWORD + " b, \n");
         builder.append(dataverse + "." + subscriptionsName + " sub,\n");
         builder.append(function.getNamespace() + "." + function.getName() + "(");
         int i = 0;
@@ -220,8 +220,8 @@ public class CreateChannelStatement implements IExtensionStatement {
             builder.append("sub.param" + i + ",");
         }
         builder.append("sub.param" + i + ") result \n");
-        builder.append("where broker." + BADConstants.BrokerName + " = sub." + BADConstants.BrokerName + "\n");
-        builder.append("and broker." + BADConstants.DataverseName + " = sub." + BADConstants.DataverseName + "\n");
+        builder.append("where b." + BADConstants.BrokerName + " = sub." + BADConstants.BrokerName + "\n");
+        builder.append("and b." + BADConstants.DataverseName + " = sub." + BADConstants.DataverseName + "\n");
         builder.append(")");
         builder.append(" returning a");
         builder.append(";");
