@@ -128,8 +128,7 @@ public class ChannelSubscribeStatement implements IExtensionStatement {
             int resultSetIdCounter) throws HyracksDataException, AlgebricksException {
 
         String dataverse = ((QueryTranslator) statementExecutor).getActiveDataverse(dataverseName);
-        String brokerDataverse = ((QueryTranslator) statementExecutor)
-.getActiveDataverse(brokerDataverseName);
+        String brokerDataverse = ((QueryTranslator) statementExecutor).getActiveDataverse(brokerDataverseName);
 
         MetadataTransactionContext mdTxnCtx = null;
         try {
@@ -153,7 +152,7 @@ public class ChannelSubscribeStatement implements IExtensionStatement {
 
             Query subscriptionTuple = new Query(false);
 
-            List<FieldBinding> fb = new ArrayList<FieldBinding>();
+            List<FieldBinding> fb = new ArrayList<>();
             LiteralExpr leftExpr = new LiteralExpr(new StringLiteral(BADConstants.DataverseName));
             Expression rightExpr = new LiteralExpr(new StringLiteral(brokerDataverse));
             fb.add(new FieldBinding(leftExpr, rightExpr));
@@ -165,11 +164,11 @@ public class ChannelSubscribeStatement implements IExtensionStatement {
             if (subscriptionId != null) {
                 leftExpr = new LiteralExpr(new StringLiteral(BADConstants.SubscriptionId));
 
-                List<Expression> UUIDList = new ArrayList<Expression>();
+                List<Expression> UUIDList = new ArrayList<>();
                 UUIDList.add(new LiteralExpr(new StringLiteral(subscriptionId)));
                 FunctionIdentifier function = BuiltinFunctions.UUID_CONSTRUCTOR;
-                FunctionSignature UUIDfunc = new FunctionSignature(function.getNamespace(), function.getName(),
-                        function.getArity());
+                FunctionSignature UUIDfunc =
+                        new FunctionSignature(function.getNamespace(), function.getName(), function.getArity());
                 CallExpr UUIDCall = new CallExpr(UUIDfunc, UUIDList);
 
                 rightExpr = UUIDCall;
@@ -186,8 +185,8 @@ public class ChannelSubscribeStatement implements IExtensionStatement {
 
             subscriptionTuple.setVarCounter(varCounter);
 
-            MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getDefaultDataverse(),
-                    metadataProvider.getStorageComponentProvider());
+            MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getApplicationContext(),
+                    metadataProvider.getDefaultDataverse(), metadataProvider.getStorageComponentProvider());
             tempMdProvider.setConfig(metadataProvider.getConfig());
 
             if (subscriptionId == null) {

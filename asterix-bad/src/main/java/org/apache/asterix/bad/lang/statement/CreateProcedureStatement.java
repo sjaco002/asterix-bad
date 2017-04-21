@@ -27,6 +27,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.asterix.active.ActiveJobNotificationHandler;
+import org.apache.asterix.active.ActiveLifecycleListener;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.algebra.extension.IExtensionStatement;
 import org.apache.asterix.app.result.ResultReader;
@@ -37,6 +38,7 @@ import org.apache.asterix.bad.lang.BADParserFactory;
 import org.apache.asterix.bad.metadata.PrecompiledJobEventListener;
 import org.apache.asterix.bad.metadata.PrecompiledJobEventListener.PrecompiledType;
 import org.apache.asterix.bad.metadata.Procedure;
+import org.apache.asterix.common.dataflow.ICcApplicationContext;
 import org.apache.asterix.common.exceptions.AsterixException;
 import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.common.functions.FunctionSignature;
@@ -87,7 +89,7 @@ public class CreateProcedureStatement implements IExtensionStatement {
             Expression period) {
         this.signature = signature;
         this.functionBody = functionBody;
-        this.paramList = new ArrayList<String>();
+        this.paramList = new ArrayList<>();
         for (VarIdentifier varId : parameterList) {
             this.paramList.add(varId.getValue());
         }
@@ -168,7 +170,8 @@ public class CreateProcedureStatement implements IExtensionStatement {
             throw new CompilationException("Procedure can only execute a single statement");
         }
         if (fStatements.get(0).getKind() == Statement.Kind.INSERT) {
-            return new Pair<>(((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider,
+            return new Pair<>(
+                    ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider,
                             fStatements.get(0), hcc, hdc, ResultDelivery.ASYNC, stats, true, null, null),
                     PrecompiledType.INSERT);
         } else if (fStatements.get(0).getKind() == Statement.Kind.QUERY) {
@@ -182,14 +185,14 @@ public class CreateProcedureStatement implements IExtensionStatement {
             fStatements.get(0).accept(visitor, null);
             return new Pair<>(((QueryTranslator) statementExecutor).handleDeleteStatement(metadataProvider,
                     fStatements.get(0), hcc, true), PrecompiledType.DELETE);
-        }else{
+        } else {
             throw new CompilationException("Procedure can only execute a single delete, insert, or query");
         }
     }
 
     private void setupDistributedJob(EntityId entityId, JobSpecification jobSpec, IHyracksClientConnection hcc,
             PrecompiledJobEventListener listener, ResultSetId resultSetId, IHyracksDataset hdc, Stats stats)
-                    throws Exception {
+            throws Exception {
         JobId jobId = hcc.distributeJob(jobSpec);
         listener.storeDistributedInfo(jobId, null, new ResultReader(hdc, jobId, resultSetId));
     }
@@ -198,15 +201,15 @@ public class CreateProcedureStatement implements IExtensionStatement {
     public void handle(IStatementExecutor statementExecutor, MetadataProvider metadataProvider,
             IHyracksClientConnection hcc, IHyracksDataset hdc, ResultDelivery resultDelivery, Stats stats,
             int resultSetIdCounter) throws HyracksDataException, AlgebricksException {
-
+        ICcApplicationContext appCtx = metadataProvider.getApplicationContext();
+        ActiveLifecycleListener activeListener = (ActiveLifecycleListener) appCtx.getActiveLifecycleListener();
+        ActiveJobNotificationHandler activeEventHandler = activeListener.getNotificationHandler();
         initialize();
-
         String dataverse =
                 ((QueryTranslator) statementExecutor).getActiveDataverse(new Identifier(signature.getNamespace()));
-
         EntityId entityId = new EntityId(BADConstants.PROCEDURE_KEYWORD, dataverse, signature.getName());
         PrecompiledJobEventListener listener =
-                (PrecompiledJobEventListener) ActiveJobNotificationHandler.INSTANCE.getActiveEntityListener(entityId);
+                (PrecompiledJobEventListener) activeEventHandler.getActiveEntityListener(entityId);
         boolean alreadyActive = false;
         Procedure procedure = null;
 
@@ -229,8 +232,8 @@ public class CreateProcedureStatement implements IExtensionStatement {
             procedure = new Procedure(dataverse, signature.getName(), signature.getArity(), getParamList(),
                     Function.RETURNTYPE_VOID, getFunctionBody(), Function.LANGUAGE_AQL, duration);
 
-            MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getDefaultDataverse(),
-                    metadataProvider.getStorageComponentProvider());
+            MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getApplicationContext(),
+                    metadataProvider.getDefaultDataverse(), metadataProvider.getStorageComponentProvider());
             tempMdProvider.setConfig(metadataProvider.getConfig());
 
             metadataProvider.setResultSetId(new ResultSetId(resultSetIdCounter++));
@@ -250,7 +253,7 @@ public class CreateProcedureStatement implements IExtensionStatement {
             if (listener == null) {
                 //TODO: Add datasets used by channel function
                 listener = new PrecompiledJobEventListener(entityId, procedureJobSpec.second, new ArrayList<>());
-                ActiveJobNotificationHandler.INSTANCE.registerListener(listener);
+                activeEventHandler.registerListener(listener);
             }
             setupDistributedJob(entityId, procedureJobSpec.first, hcc, listener, tempMdProvider.getResultSetId(), hdc,
                     stats);

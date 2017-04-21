@@ -129,12 +129,12 @@ public class ChannelUnsubscribeStatement implements IExtensionStatement {
             condition.setCurrentop(true);
             condition.addOperator("=");
 
-            List<Expression> UUIDList = new ArrayList<Expression>();
+            List<Expression> UUIDList = new ArrayList<>();
             UUIDList.add(new LiteralExpr(new StringLiteral(subscriptionId)));
 
             FunctionIdentifier function = BuiltinFunctions.UUID_CONSTRUCTOR;
-            FunctionSignature UUIDfunc = new FunctionSignature(function.getNamespace(), function.getName(),
-                    function.getArity());
+            FunctionSignature UUIDfunc =
+                    new FunctionSignature(function.getNamespace(), function.getName(), function.getArity());
             CallExpr UUIDCall = new CallExpr(UUIDfunc, UUIDList);
 
             condition.addOperand(UUIDCall);
@@ -143,8 +143,8 @@ public class ChannelUnsubscribeStatement implements IExtensionStatement {
                     new Identifier(subscriptionsDatasetName), condition, varCounter);
             SqlppDeleteRewriteVisitor visitor = new SqlppDeleteRewriteVisitor();
             delete.accept(visitor, null);
-            MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getDefaultDataverse(),
-                    metadataProvider.getStorageComponentProvider());
+            MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getApplicationContext(),
+                    metadataProvider.getDefaultDataverse(), metadataProvider.getStorageComponentProvider());
             tempMdProvider.setConfig(metadataProvider.getConfig());
             ((QueryTranslator) statementExecutor).handleDeleteStatement(tempMdProvider, delete, hcc, false);
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);

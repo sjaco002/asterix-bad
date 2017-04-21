@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.asterix.bad.rules.InsertBrokerNotifierForChannelRule;
+import org.apache.asterix.common.dataflow.ICcApplicationContext;
 import org.apache.asterix.compiler.provider.DefaultRuleSetFactory;
 import org.apache.asterix.compiler.provider.IRuleSetFactory;
 import org.apache.asterix.optimizer.base.RuleCollections;
@@ -35,11 +36,12 @@ import org.apache.hyracks.algebricks.core.rewriter.base.IAlgebraicRewriteRule;
 public class BADRuleSetFactory implements IRuleSetFactory {
 
     @Override
-    public List<Pair<AbstractRuleController, List<IAlgebraicRewriteRule>>> getLogicalRewrites()
-            throws AlgebricksException {
-        List<Pair<AbstractRuleController, List<IAlgebraicRewriteRule>>> logicalRuleSet = DefaultRuleSetFactory.buildLogical();
+    public List<Pair<AbstractRuleController, List<IAlgebraicRewriteRule>>> getLogicalRewrites(
+            ICcApplicationContext appCtx) throws AlgebricksException {
+        List<Pair<AbstractRuleController, List<IAlgebraicRewriteRule>>> logicalRuleSet =
+                DefaultRuleSetFactory.buildLogical(appCtx);
 
-        List<IAlgebraicRewriteRule> normalizationCollection = RuleCollections.buildNormalizationRuleCollection();
+        List<IAlgebraicRewriteRule> normalizationCollection = RuleCollections.buildNormalizationRuleCollection(appCtx);
         List<IAlgebraicRewriteRule> alteredNormalizationCollection = new ArrayList<>();
         alteredNormalizationCollection.addAll(normalizationCollection);
 
@@ -54,7 +56,7 @@ public class BADRuleSetFactory implements IRuleSetFactory {
 
         //Find instances of the normalization collection and replace them with the new one
         SequentialOnceRuleController seqOnceCtrl = new SequentialOnceRuleController(true);
-        for (int i =0; i < logicalRuleSet.size(); i++){
+        for (int i = 0; i < logicalRuleSet.size(); i++) {
             List<IAlgebraicRewriteRule> collection = logicalRuleSet.get(i).second;
             if (collection.size() == normalizationCollection.size()) {
                 boolean isNormalizationCollection = true;
@@ -75,7 +77,8 @@ public class BADRuleSetFactory implements IRuleSetFactory {
     }
 
     @Override
-    public List<Pair<AbstractRuleController, List<IAlgebraicRewriteRule>>> getPhysicalRewrites() {
-        return DefaultRuleSetFactory.buildPhysical();
+    public List<Pair<AbstractRuleController, List<IAlgebraicRewriteRule>>> getPhysicalRewrites(
+            ICcApplicationContext appCtx) {
+        return DefaultRuleSetFactory.buildPhysical(appCtx);
     }
 }
