@@ -19,6 +19,7 @@
 package org.apache.asterix.bad.lang.statement;
 
 import org.apache.asterix.active.ActiveJobNotificationHandler;
+import org.apache.asterix.active.ActiveLifecycleListener;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.algebra.extension.IExtensionStatement;
 import org.apache.asterix.app.translator.QueryTranslator;
@@ -26,6 +27,7 @@ import org.apache.asterix.bad.BADConstants;
 import org.apache.asterix.bad.lang.BADLangExtension;
 import org.apache.asterix.bad.metadata.PrecompiledJobEventListener;
 import org.apache.asterix.bad.metadata.Procedure;
+import org.apache.asterix.common.dataflow.ICcApplicationContext;
 import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.common.functions.FunctionSignature;
 import org.apache.asterix.lang.common.struct.Identifier;
@@ -79,15 +81,17 @@ public class ProcedureDropStatement implements IExtensionStatement {
     public void handle(IStatementExecutor statementExecutor, MetadataProvider metadataProvider,
             IHyracksClientConnection hcc, IHyracksDataset hdc, ResultDelivery resultDelivery, Stats stats,
             int resultSetIdCounter) throws HyracksDataException, AlgebricksException {
+        ICcApplicationContext appCtx = metadataProvider.getApplicationContext();
+        ActiveLifecycleListener activeListener = (ActiveLifecycleListener) appCtx.getActiveLifecycleListener();
+        ActiveJobNotificationHandler activeEventHandler = activeListener.getNotificationHandler();
         FunctionSignature signature = getFunctionSignature();
         String dataverse =
                 ((QueryTranslator) statementExecutor).getActiveDataverse(new Identifier(signature.getNamespace()));
         signature.setNamespace(dataverse);
-
         boolean txnActive = false;
         EntityId entityId = new EntityId(BADConstants.PROCEDURE_KEYWORD, dataverse, signature.getName());
-        PrecompiledJobEventListener listener = (PrecompiledJobEventListener) ActiveJobNotificationHandler.INSTANCE
-                .getActiveEntityListener(entityId);
+        PrecompiledJobEventListener listener =
+                (PrecompiledJobEventListener) activeEventHandler.getActiveEntityListener(entityId);
         Procedure procedure = null;
 
         MetadataTransactionContext mdTxnCtx = null;
@@ -111,7 +115,7 @@ public class ProcedureDropStatement implements IExtensionStatement {
             }
             JobId hyracksJobId = listener.getJobId();
             listener.deActivate();
-            ActiveJobNotificationHandler.INSTANCE.removeListener(listener);
+            activeEventHandler.removeListener(listener);
             if (hyracksJobId != null) {
                 hcc.destroyJob(hyracksJobId);
             }

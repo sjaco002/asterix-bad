@@ -26,7 +26,7 @@ import java.nio.ByteBuffer;
 import org.apache.asterix.active.ActiveManager;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.bad.ChannelJobService;
-import org.apache.asterix.common.api.IAppRuntimeContext;
+import org.apache.asterix.common.api.INcApplicationContext;
 import org.apache.asterix.dataflow.data.nontagged.serde.ADateTimeSerializerDeserializer;
 import org.apache.asterix.dataflow.data.nontagged.serde.AOrderedListSerializerDeserializer;
 import org.apache.asterix.dataflow.data.nontagged.serde.AStringSerializerDeserializer;
@@ -51,8 +51,8 @@ public class NotifyBrokerRuntime extends AbstractOneInputOneOutputOneFramePushRu
 
     private final ByteBufferInputStream bbis = new ByteBufferInputStream();
     private final DataInputStream di = new DataInputStream(bbis);
-    private final AOrderedListSerializerDeserializer subSerDes = new AOrderedListSerializerDeserializer(
-            new AOrderedListType(BuiltinType.AUUID, null));
+    private final AOrderedListSerializerDeserializer subSerDes =
+            new AOrderedListSerializerDeserializer(new AOrderedListType(BuiltinType.AUUID, null));
 
     private IPointable inputArg0 = new VoidPointable();
     private IPointable inputArg1 = new VoidPointable();
@@ -70,7 +70,7 @@ public class NotifyBrokerRuntime extends AbstractOneInputOneOutputOneFramePushRu
         eval0 = brokerEvalFactory.createScalarEvaluator(ctx);
         eval1 = subEvalFactory.createScalarEvaluator(ctx);
         eval2 = channelExecutionEvalFactory.createScalarEvaluator(ctx);
-        this.activeManager = (ActiveManager) ((IAppRuntimeContext) ctx.getJobletContext().getServiceContext()
+        this.activeManager = (ActiveManager) ((INcApplicationContext) ctx.getJobletContext().getServiceContext()
                 .getApplicationContext()).getActiveManager();
         this.entityId = activeJobId;
     }

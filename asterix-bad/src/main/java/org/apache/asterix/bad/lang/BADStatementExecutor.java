@@ -29,6 +29,7 @@ import org.apache.asterix.bad.metadata.Broker;
 import org.apache.asterix.bad.metadata.Channel;
 import org.apache.asterix.bad.metadata.Procedure;
 import org.apache.asterix.common.context.IStorageComponentProvider;
+import org.apache.asterix.common.dataflow.ICcApplicationContext;
 import org.apache.asterix.common.functions.FunctionSignature;
 import org.apache.asterix.compiler.provider.ILangCompilationProvider;
 import org.apache.asterix.lang.common.base.Statement;
@@ -42,12 +43,11 @@ import org.apache.hyracks.api.client.IHyracksClientConnection;
 
 public class BADStatementExecutor extends QueryTranslator {
 
-    public BADStatementExecutor(List<Statement> aqlStatements, SessionConfig conf,
+    public BADStatementExecutor(ICcApplicationContext appCtx, List<Statement> statements, SessionConfig conf,
             ILangCompilationProvider compliationProvider, IStorageComponentProvider storageComponentProvider,
             ExecutorService executorService) {
-        super(aqlStatements, conf, compliationProvider, storageComponentProvider, executorService);
+        super(appCtx, statements, conf, compliationProvider, storageComponentProvider, executorService);
     }
-
 
     @Override
     protected void handleDataverseDropStatement(MetadataProvider metadataProvider, Statement stmt,
@@ -59,7 +59,7 @@ public class BADStatementExecutor extends QueryTranslator {
         metadataProvider.setMetadataTxnContext(mdTxnCtx);
         Identifier dvId = ((DataverseDropStatement) stmt).getDataverseName();
         List<Broker> brokers = BADLangExtension.getBrokers(mdTxnCtx, dvId.getValue());
-        MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getDefaultDataverse(),
+        MetadataProvider tempMdProvider = new MetadataProvider(appCtx, metadataProvider.getDefaultDataverse(),
                 metadataProvider.getStorageComponentProvider());
         tempMdProvider.setConfig(metadataProvider.getConfig());
         for (Broker broker : brokers) {
@@ -70,8 +70,8 @@ public class BADStatementExecutor extends QueryTranslator {
         List<Channel> channels = BADLangExtension.getChannels(mdTxnCtx, dvId.getValue());
         for (Channel channel : channels) {
             tempMdProvider.getLocks().reset();
-            ChannelDropStatement drop = new ChannelDropStatement(dvId,
-                    new Identifier(channel.getChannelId().getEntityName()), false);
+            ChannelDropStatement drop =
+                    new ChannelDropStatement(dvId, new Identifier(channel.getChannelId().getEntityName()), false);
             drop.handle(this, tempMdProvider, hcc, null, null, null, 0);
         }
         List<Procedure> procedures = BADLangExtension.getProcedures(mdTxnCtx, dvId.getValue());

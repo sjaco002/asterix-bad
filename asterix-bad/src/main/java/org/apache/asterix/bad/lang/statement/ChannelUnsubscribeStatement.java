@@ -29,7 +29,6 @@ import org.apache.asterix.bad.metadata.Channel;
 import org.apache.asterix.common.exceptions.AsterixException;
 import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.common.functions.FunctionSignature;
-import org.apache.asterix.lang.aql.visitor.AqlDeleteRewriteVisitor;
 import org.apache.asterix.lang.common.base.Expression;
 import org.apache.asterix.lang.common.expression.CallExpr;
 import org.apache.asterix.lang.common.expression.FieldAccessor;
@@ -40,6 +39,7 @@ import org.apache.asterix.lang.common.literal.StringLiteral;
 import org.apache.asterix.lang.common.statement.DeleteStatement;
 import org.apache.asterix.lang.common.struct.Identifier;
 import org.apache.asterix.lang.common.visitor.base.ILangVisitor;
+import org.apache.asterix.lang.sqlpp.visitor.SqlppDeleteRewriteVisitor;
 import org.apache.asterix.metadata.MetadataManager;
 import org.apache.asterix.metadata.MetadataTransactionContext;
 import org.apache.asterix.metadata.declared.MetadataProvider;
@@ -129,22 +129,22 @@ public class ChannelUnsubscribeStatement implements IExtensionStatement {
             condition.setCurrentop(true);
             condition.addOperator("=");
 
-            List<Expression> UUIDList = new ArrayList<Expression>();
+            List<Expression> UUIDList = new ArrayList<>();
             UUIDList.add(new LiteralExpr(new StringLiteral(subscriptionId)));
 
             FunctionIdentifier function = BuiltinFunctions.UUID_CONSTRUCTOR;
-            FunctionSignature UUIDfunc = new FunctionSignature(function.getNamespace(), function.getName(),
-                    function.getArity());
+            FunctionSignature UUIDfunc =
+                    new FunctionSignature(function.getNamespace(), function.getName(), function.getArity());
             CallExpr UUIDCall = new CallExpr(UUIDfunc, UUIDList);
 
             condition.addOperand(UUIDCall);
 
             DeleteStatement delete = new DeleteStatement(vars, new Identifier(dataverse),
                     new Identifier(subscriptionsDatasetName), condition, varCounter);
-            AqlDeleteRewriteVisitor visitor = new AqlDeleteRewriteVisitor();
+            SqlppDeleteRewriteVisitor visitor = new SqlppDeleteRewriteVisitor();
             delete.accept(visitor, null);
-            MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getDefaultDataverse(),
-                    metadataProvider.getStorageComponentProvider());
+            MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getApplicationContext(),
+                    metadataProvider.getDefaultDataverse(), metadataProvider.getStorageComponentProvider());
             tempMdProvider.setConfig(metadataProvider.getConfig());
             ((QueryTranslator) statementExecutor).handleDeleteStatement(tempMdProvider, delete, hcc, false);
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);

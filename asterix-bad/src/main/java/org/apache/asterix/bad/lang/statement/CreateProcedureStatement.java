@@ -26,20 +26,26 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.asterix.active.ActiveJobNotificationHandler;
+import org.apache.asterix.active.ActiveLifecycleListener;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.algebra.extension.IExtensionStatement;
 import org.apache.asterix.app.result.ResultReader;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
 import org.apache.asterix.bad.lang.BADLangExtension;
+import org.apache.asterix.bad.lang.BADParserFactory;
 import org.apache.asterix.bad.metadata.PrecompiledJobEventListener;
 import org.apache.asterix.bad.metadata.PrecompiledJobEventListener.PrecompiledType;
 import org.apache.asterix.bad.metadata.Procedure;
+import org.apache.asterix.common.dataflow.ICcApplicationContext;
 import org.apache.asterix.common.exceptions.AsterixException;
 import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.common.functions.FunctionSignature;
+<<<<<<< HEAD
 import org.apache.asterix.lang.aql.expression.FLWOGRExpression;
 import org.apache.asterix.lang.aql.visitor.AqlDeleteRewriteVisitor;
+=======
+>>>>>>> master
 import org.apache.asterix.lang.common.base.Expression;
 import org.apache.asterix.lang.common.base.Statement;
 import org.apache.asterix.lang.common.clause.LetClause;
@@ -53,6 +59,7 @@ import org.apache.asterix.lang.common.statement.Query;
 import org.apache.asterix.lang.common.struct.Identifier;
 import org.apache.asterix.lang.common.struct.VarIdentifier;
 import org.apache.asterix.lang.common.visitor.base.ILangVisitor;
+import org.apache.asterix.lang.sqlpp.visitor.SqlppDeleteRewriteVisitor;
 import org.apache.asterix.metadata.MetadataException;
 import org.apache.asterix.metadata.MetadataManager;
 import org.apache.asterix.metadata.MetadataTransactionContext;
@@ -83,7 +90,6 @@ public class CreateProcedureStatement implements IExtensionStatement {
     private final List<VariableExpr> varList;
     private final CallExpr period;
     private String duration = "";
-
 
     public CreateProcedureStatement(FunctionSignature signature, List<VarIdentifier> parameterList,
             List<Integer> paramIds, String functionBody, Statement procedureBodyStatement, Expression period) {
@@ -188,7 +194,7 @@ public class CreateProcedureStatement implements IExtensionStatement {
             metadataProvider.getLocks().unlock();
             return pair;
         } else if (getProcedureBodyStatement().getKind() == Statement.Kind.DELETE) {
-            AqlDeleteRewriteVisitor visitor = new AqlDeleteRewriteVisitor();
+            SqlppDeleteRewriteVisitor visitor = new SqlppDeleteRewriteVisitor();
             getProcedureBodyStatement().accept(visitor, null);
             DeleteStatement delete = (DeleteStatement) getProcedureBodyStatement();
             FLWOGRExpression flwogr = (FLWOGRExpression)delete.getQuery().getBody();
@@ -207,7 +213,7 @@ public class CreateProcedureStatement implements IExtensionStatement {
 
     private void setupDistributedJob(EntityId entityId, JobSpecification jobSpec, IHyracksClientConnection hcc,
             PrecompiledJobEventListener listener, ResultSetId resultSetId, IHyracksDataset hdc, Stats stats)
-                    throws Exception {
+            throws Exception {
         JobId jobId = hcc.distributeJob(jobSpec);
         listener.storeDistributedInfo(jobId, null, new ResultReader(hdc, jobId, resultSetId));
     }
@@ -216,15 +222,15 @@ public class CreateProcedureStatement implements IExtensionStatement {
     public void handle(IStatementExecutor statementExecutor, MetadataProvider metadataProvider,
             IHyracksClientConnection hcc, IHyracksDataset hdc, ResultDelivery resultDelivery, Stats stats,
             int resultSetIdCounter) throws HyracksDataException, AlgebricksException {
-
+        ICcApplicationContext appCtx = metadataProvider.getApplicationContext();
+        ActiveLifecycleListener activeListener = (ActiveLifecycleListener) appCtx.getActiveLifecycleListener();
+        ActiveJobNotificationHandler activeEventHandler = activeListener.getNotificationHandler();
         initialize();
-
         String dataverse =
                 ((QueryTranslator) statementExecutor).getActiveDataverse(new Identifier(signature.getNamespace()));
-
         EntityId entityId = new EntityId(BADConstants.PROCEDURE_KEYWORD, dataverse, signature.getName());
         PrecompiledJobEventListener listener =
-                (PrecompiledJobEventListener) ActiveJobNotificationHandler.INSTANCE.getActiveEntityListener(entityId);
+                (PrecompiledJobEventListener) activeEventHandler.getActiveEntityListener(entityId);
         boolean alreadyActive = false;
         Procedure procedure = null;
 
@@ -247,8 +253,8 @@ public class CreateProcedureStatement implements IExtensionStatement {
             procedure = new Procedure(dataverse, signature.getName(), signature.getArity(), getParamList(),
                     Function.RETURNTYPE_VOID, getProcedureBody(), Function.LANGUAGE_AQL, duration);
 
-            MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getDefaultDataverse(),
-                    metadataProvider.getStorageComponentProvider());
+            MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getApplicationContext(),
+                    metadataProvider.getDefaultDataverse(), metadataProvider.getStorageComponentProvider());
             tempMdProvider.setConfig(metadataProvider.getConfig());
 
             metadataProvider.setResultSetId(new ResultSetId(resultSetIdCounter++));
@@ -268,7 +274,7 @@ public class CreateProcedureStatement implements IExtensionStatement {
             if (listener == null) {
                 //TODO: Add datasets used by channel function
                 listener = new PrecompiledJobEventListener(entityId, procedureJobSpec.second, new ArrayList<>());
-                ActiveJobNotificationHandler.INSTANCE.registerListener(listener);
+                activeEventHandler.registerListener(listener);
             }
             setupDistributedJob(entityId, procedureJobSpec.first, hcc, listener, tempMdProvider.getResultSetId(), hdc,
                     stats);
