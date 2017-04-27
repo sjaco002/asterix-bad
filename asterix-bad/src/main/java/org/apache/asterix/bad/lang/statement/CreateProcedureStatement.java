@@ -33,19 +33,13 @@ import org.apache.asterix.app.result.ResultReader;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
 import org.apache.asterix.bad.lang.BADLangExtension;
-import org.apache.asterix.bad.lang.BADParserFactory;
 import org.apache.asterix.bad.metadata.PrecompiledJobEventListener;
 import org.apache.asterix.bad.metadata.PrecompiledJobEventListener.PrecompiledType;
 import org.apache.asterix.bad.metadata.Procedure;
-import org.apache.asterix.common.dataflow.ICcApplicationContext;
 import org.apache.asterix.common.exceptions.AsterixException;
 import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.common.functions.FunctionSignature;
-<<<<<<< HEAD
 import org.apache.asterix.lang.aql.expression.FLWOGRExpression;
-import org.apache.asterix.lang.aql.visitor.AqlDeleteRewriteVisitor;
-=======
->>>>>>> master
 import org.apache.asterix.lang.common.base.Expression;
 import org.apache.asterix.lang.common.base.Statement;
 import org.apache.asterix.lang.common.clause.LetClause;
