@@ -36,23 +36,24 @@ import org.apache.asterix.bad.lang.BADLangExtension;
 import org.apache.asterix.bad.metadata.PrecompiledJobEventListener;
 import org.apache.asterix.bad.metadata.PrecompiledJobEventListener.PrecompiledType;
 import org.apache.asterix.bad.metadata.Procedure;
+import org.apache.asterix.common.dataflow.ICcApplicationContext;
 import org.apache.asterix.common.exceptions.AsterixException;
 import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.common.functions.FunctionSignature;
-import org.apache.asterix.lang.aql.expression.FLWOGRExpression;
 import org.apache.asterix.lang.common.base.Expression;
 import org.apache.asterix.lang.common.base.Statement;
 import org.apache.asterix.lang.common.clause.LetClause;
 import org.apache.asterix.lang.common.expression.CallExpr;
 import org.apache.asterix.lang.common.expression.LiteralExpr;
-import org.apache.asterix.lang.common.expression.RuntimeContextVarExpr;
 import org.apache.asterix.lang.common.expression.VariableExpr;
+import org.apache.asterix.lang.common.literal.IntegerLiteral;
 import org.apache.asterix.lang.common.literal.StringLiteral;
 import org.apache.asterix.lang.common.statement.DeleteStatement;
 import org.apache.asterix.lang.common.statement.Query;
 import org.apache.asterix.lang.common.struct.Identifier;
 import org.apache.asterix.lang.common.struct.VarIdentifier;
 import org.apache.asterix.lang.common.visitor.base.ILangVisitor;
+import org.apache.asterix.lang.sqlpp.expression.SelectExpression;
 import org.apache.asterix.lang.sqlpp.visitor.SqlppDeleteRewriteVisitor;
 import org.apache.asterix.metadata.MetadataException;
 import org.apache.asterix.metadata.MetadataManager;
@@ -191,12 +192,12 @@ public class CreateProcedureStatement implements IExtensionStatement {
             SqlppDeleteRewriteVisitor visitor = new SqlppDeleteRewriteVisitor();
             getProcedureBodyStatement().accept(visitor, null);
             DeleteStatement delete = (DeleteStatement) getProcedureBodyStatement();
-            FLWOGRExpression flwogr = (FLWOGRExpression)delete.getQuery().getBody();
-            for (VariableExpr var : varList){
-                //Expression con = new LiteralExpr(new IntegerLiteral(var.getVar().getId()));
-                Expression con = new RuntimeContextVarExpr(var.getVar().getValue());
+            SelectExpression s = (SelectExpression) delete.getQuery().getBody();
+            for (VariableExpr var : varList) {
+                Expression con = new LiteralExpr(new IntegerLiteral(var.getVar().getId()));
+                //Expression con = new RuntimeContextVarExpr(var.getVar().getValue());
                 LetClause let = new LetClause(var, con);
-                flwogr.getClauseList().add(0, let);
+                s.getLetList().add(let);
             }
             return new Pair<>(((QueryTranslator) statementExecutor).handleDeleteStatement(metadataProvider,
                     getProcedureBodyStatement(), hcc, true), PrecompiledType.DELETE);
