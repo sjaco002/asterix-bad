@@ -18,6 +18,7 @@
  */
 package org.apache.asterix.bad.lang.statement;
 
+import java.io.DataOutput;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -41,12 +42,16 @@ import org.apache.asterix.common.dataflow.ICcApplicationContext;
 import org.apache.asterix.common.exceptions.AsterixException;
 import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.common.exceptions.ErrorCode;
+import org.apache.asterix.formats.nontagged.SerializerDeserializerProvider;
 import org.apache.asterix.lang.common.base.Expression;
+import org.apache.asterix.lang.common.expression.LiteralExpr;
 import org.apache.asterix.lang.common.struct.Identifier;
 import org.apache.asterix.lang.common.visitor.base.ILangVisitor;
 import org.apache.asterix.metadata.MetadataManager;
 import org.apache.asterix.metadata.MetadataTransactionContext;
 import org.apache.asterix.metadata.declared.MetadataProvider;
+import org.apache.asterix.om.base.IAObject;
+import org.apache.asterix.translator.ConstantHelper;
 import org.apache.asterix.translator.IStatementExecutor;
 import org.apache.asterix.translator.IStatementExecutor.ResultDelivery;
 import org.apache.asterix.translator.IStatementExecutor.Stats;
@@ -56,6 +61,7 @@ import org.apache.hyracks.api.dataset.IHyracksDataset;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.job.JobFlag;
 import org.apache.hyracks.api.job.JobId;
+import org.apache.hyracks.data.std.util.ArrayBackedValueStorage;
 
 public class ExecuteProcedureStatement implements IExtensionStatement {
 
@@ -151,7 +157,8 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
         }
     }
 
-    private Map<String, byte[]> createContextRuntimeMap(Procedure procedure) throws AsterixException {
+    private Map<String, byte[]> createContextRuntimeMap(Procedure procedure)
+            throws AsterixException, HyracksDataException {
         Map<String, byte[]> map = new HashMap<>();
         if (procedure.getParams().size() != argList.size()) {
             throw AsterixException.create(ErrorCode.COMPILATION_INVALID_PARAMETER_NUMBER,
@@ -159,8 +166,16 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
         }
         for (int i = 0; i < procedure.getParams().size(); i++) {
             //Turn the argument expression into a byte array
-            byte[] bytes = new byte[1];
-            map.put(procedure.getParams().get(i), bytes);
+            if (!(argList.get(i) instanceof LiteralExpr)) {
+                //TODO handle nonliteral arguments to procedure
+                throw AsterixException.create(ErrorCode.TYPE_UNSUPPORTED, procedure.getEntityId().getEntityName(),
+                        argList.get(i).getClass());
+            }
+            IAObject object = ConstantHelper.objectFromLiteral(((LiteralExpr) argList.get(i)).getValue());
+            ArrayBackedValueStorage abvs = new ArrayBackedValueStorage();
+            DataOutput dos = abvs.getDataOutput();
+            SerializerDeserializerProvider.INSTANCE.getSerializerDeserializer(object.getType()).serialize(object, dos);
+            map.put(procedure.getParams().get(i), abvs.getByteArray());
         }
         return map;
     }
