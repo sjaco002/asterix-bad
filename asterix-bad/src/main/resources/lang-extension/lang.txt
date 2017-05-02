@@ -183,7 +183,7 @@ ExecuteProcedureStatement ProcedureExecution() throws ParseException:
   )*)? <RIGHTPAREN>
     {
       String fqFunctionName =  funcName.function;
-      return new ExecuteProcedureStatement(funcName.dataverse, fqFunctionName, arity);
+      return new ExecuteProcedureStatement(funcName.dataverse, fqFunctionName, arity, argList);
     }
 }
 

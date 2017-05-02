@@ -24,6 +24,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.EnumSet;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -47,14 +48,14 @@ public class ChannelJobService {
     private static final Logger LOGGER = Logger.getLogger(ChannelJobService.class.getName());
 
     public static ScheduledExecutorService startJob(JobSpecification jobSpec, EnumSet<JobFlag> jobFlags, JobId jobId,
-            IHyracksClientConnection hcc, long duration)
+            IHyracksClientConnection hcc, long duration, Map<String, byte[]> contextRuntTimeVarMap)
             throws Exception {
         ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
         scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
                 try {
-                    executeJob(jobSpec, jobFlags, jobId, hcc);
+                    executeJob(jobSpec, jobFlags, jobId, hcc, contextRuntTimeVarMap);
                 } catch (Exception e) {
                     LOGGER.log(Level.WARNING, "Channel Job Failed to run.", e);
                 }
@@ -64,13 +65,13 @@ public class ChannelJobService {
     }
 
     public static void executeJob(JobSpecification jobSpec, EnumSet<JobFlag> jobFlags, JobId jobId,
-            IHyracksClientConnection hcc)
+            IHyracksClientConnection hcc, Map<String, byte[]> contextRuntTimeVarMap)
             throws Exception {
         LOGGER.info("Executing Channel Job");
         if (jobId == null) {
             hcc.startJob(jobSpec, jobFlags);
         } else {
-            hcc.startJob(jobId);
+            hcc.startJob(jobId, contextRuntTimeVarMap);
         }
     }
 

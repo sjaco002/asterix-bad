@@ -19,6 +19,9 @@
 package org.apache.asterix.bad.lang.statement;
 
 import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 
 import org.apache.asterix.active.ActiveJobNotificationHandler;
@@ -35,7 +38,10 @@ import org.apache.asterix.bad.metadata.PrecompiledJobEventListener;
 import org.apache.asterix.bad.metadata.PrecompiledJobEventListener.PrecompiledType;
 import org.apache.asterix.bad.metadata.Procedure;
 import org.apache.asterix.common.dataflow.ICcApplicationContext;
+import org.apache.asterix.common.exceptions.AsterixException;
 import org.apache.asterix.common.exceptions.CompilationException;
+import org.apache.asterix.common.exceptions.ErrorCode;
+import org.apache.asterix.lang.common.base.Expression;
 import org.apache.asterix.lang.common.struct.Identifier;
 import org.apache.asterix.lang.common.visitor.base.ILangVisitor;
 import org.apache.asterix.metadata.MetadataManager;
@@ -56,11 +62,13 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
     private final String dataverseName;
     private final String procedureName;
     private final int arity;
+    private final List<Expression> argList;
 
-    public ExecuteProcedureStatement(String dataverseName, String procedureName, int arity) {
+    public ExecuteProcedureStatement(String dataverseName, String procedureName, int arity, List<Expression> argList) {
         this.dataverseName = dataverseName;
         this.procedureName = procedureName;
         this.arity = arity;
+        this.argList = argList;
     }
 
     public String getDataverseName() {
@@ -112,10 +120,10 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
             if (procedure == null) {
                 throw new AlgebricksException("There is no procedure with this name " + procedureName + ".");
             }
-
+            Map<String, byte[]> contextRuntimeVarMap = createContextRuntimeMap(procedure);
             JobId hyracksJobId = listener.getJobId();
             if (procedure.getDuration().equals("")) {
-                hcc.startJob(hyracksJobId);
+                hcc.startJob(hyracksJobId, contextRuntimeVarMap);
 
                 if (listener.getType() == PrecompiledType.QUERY) {
                     hcc.waitForCompletion(hyracksJobId);
@@ -126,7 +134,7 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
 
             } else {
                 ScheduledExecutorService ses = ChannelJobService.startJob(null, EnumSet.noneOf(JobFlag.class),
-                        hyracksJobId, hcc, ChannelJobService.findPeriod(procedure.getDuration()));
+                        hyracksJobId, hcc, ChannelJobService.findPeriod(procedure.getDuration()), contextRuntimeVarMap);
                 listener.storeDistributedInfo(hyracksJobId, ses, listener.getResultReader());
             }
 
@@ -141,6 +149,20 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
         } finally {
             metadataProvider.getLocks().unlock();
         }
+    }
+
+    private Map<String, byte[]> createContextRuntimeMap(Procedure procedure) throws AsterixException {
+        Map<String, byte[]> map = new HashMap<>();
+        if (procedure.getParams().size() != argList.size()) {
+            throw AsterixException.create(ErrorCode.COMPILATION_INVALID_PARAMETER_NUMBER,
+                    procedure.getEntityId().getEntityName(), argList.size());
+        }
+        for (int i = 0; i < procedure.getParams().size(); i++) {
+            //Turn the argument expression into a byte array
+            byte[] bytes = new byte[1];
+            map.put(procedure.getParams().get(i), bytes);
+        }
+        return map;
     }
 
 }
