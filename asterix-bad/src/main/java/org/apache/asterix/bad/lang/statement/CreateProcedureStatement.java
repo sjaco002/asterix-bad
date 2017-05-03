@@ -174,15 +174,28 @@ public class CreateProcedureStatement implements IExtensionStatement {
         return jobSpec;
     }
 
+    private void addLets(SelectExpression s) {
+        for (VariableExpr var : varList) {
+            Expression con = new RuntimeContextVarExpr(var.getVar().getValue());
+            LetClause let = new LetClause(var, con);
+            s.getLetList().add(let);
+        }
+    }
+
     private Pair<JobSpecification, PrecompiledType> createProcedureJob(IStatementExecutor statementExecutor,
             MetadataProvider metadataProvider, IHyracksClientConnection hcc, IHyracksDataset hdc, Stats stats)
                     throws Exception {
         if (getProcedureBodyStatement().getKind() == Statement.Kind.INSERT) {
+            if (!varList.isEmpty()) {
+                throw new CompilationException("Insert procedures cannot have parameters");
+            }
             return new Pair<>(
                     ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider,
                             getProcedureBodyStatement(), hcc, hdc, ResultDelivery.ASYNC, stats, true, null, null),
                     PrecompiledType.INSERT);
         } else if (getProcedureBodyStatement().getKind() == Statement.Kind.QUERY) {
+            Query s = (Query) getProcedureBodyStatement();
+            addLets((SelectExpression) s.getBody());
             Pair<JobSpecification, PrecompiledType> pair = new Pair<>(
                     compileQueryJob(statementExecutor, metadataProvider, hcc, (Query) getProcedureBodyStatement()),
                     PrecompiledType.QUERY);
@@ -192,12 +205,7 @@ public class CreateProcedureStatement implements IExtensionStatement {
             SqlppDeleteRewriteVisitor visitor = new SqlppDeleteRewriteVisitor();
             getProcedureBodyStatement().accept(visitor, null);
             DeleteStatement delete = (DeleteStatement) getProcedureBodyStatement();
-            SelectExpression s = (SelectExpression) delete.getQuery().getBody();
-            for (VariableExpr var : varList) {
-                Expression con = new RuntimeContextVarExpr(var.getVar().getValue());
-                LetClause let = new LetClause(var, con);
-                s.getLetList().add(let);
-            }
+            addLets((SelectExpression) delete.getQuery().getBody());
             return new Pair<>(((QueryTranslator) statementExecutor).handleDeleteStatement(metadataProvider,
                     getProcedureBodyStatement(), hcc, true), PrecompiledType.DELETE);
         } else {
@@ -266,7 +274,7 @@ public class CreateProcedureStatement implements IExtensionStatement {
 
             // Now we subscribe
             if (listener == null) {
-                //TODO: Add datasets used by channel function
+                //TODO: Add datasets used by procedure
                 listener = new PrecompiledJobEventListener(entityId, procedureJobSpec.second, new ArrayList<>());
                 activeEventHandler.registerListener(listener);
             }

@@ -37,8 +37,18 @@
         </compilation-unit>
     </test-case>
     <test-case FilePath="procedure">
+        <compilation-unit name="delete_procedure_with_parameters">
+            <output-dir compare="Text">delete_procedure_with_parameters</output-dir>
+        </compilation-unit>
+    </test-case>
+    <test-case FilePath="procedure">
         <compilation-unit name="query_procedure">
             <output-dir compare="Text">query_procedure</output-dir>
+        </compilation-unit>
+    </test-case>
+    <test-case FilePath="procedure">
+        <compilation-unit name="query_procedure_with_parameters">
+            <output-dir compare="Text">query_procedure_with_parameters</output-dir>
         </compilation-unit>
     </test-case>
     <test-case FilePath="procedure">
