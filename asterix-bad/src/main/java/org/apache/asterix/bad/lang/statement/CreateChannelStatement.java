@@ -249,7 +249,7 @@ public class CreateChannelStatement implements IExtensionStatement {
             }
             ScheduledExecutorService ses = ChannelJobService.startJob(channeljobSpec, EnumSet.noneOf(JobFlag.class),
                     jobId, hcc, ChannelJobService.findPeriod(duration), new HashMap<>());
-            listener.storeDistributedInfo(jobId, ses, null);
+            listener.storeDistributedInfo(jobId, ses, null, null);
         }
 
     }

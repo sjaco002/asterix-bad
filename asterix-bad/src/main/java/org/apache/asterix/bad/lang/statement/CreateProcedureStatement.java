@@ -29,7 +29,6 @@ import org.apache.asterix.active.ActiveJobNotificationHandler;
 import org.apache.asterix.active.ActiveLifecycleListener;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.algebra.extension.IExtensionStatement;
-import org.apache.asterix.app.result.ResultReader;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
 import org.apache.asterix.bad.lang.BADLangExtension;
@@ -217,7 +216,7 @@ public class CreateProcedureStatement implements IExtensionStatement {
             PrecompiledJobEventListener listener, ResultSetId resultSetId, IHyracksDataset hdc, Stats stats)
             throws Exception {
         JobId jobId = hcc.distributeJob(jobSpec);
-        listener.storeDistributedInfo(jobId, null, new ResultReader(hdc, jobId, resultSetId));
+        listener.storeDistributedInfo(jobId, null, hdc, resultSetId);
     }
 
     @Override
