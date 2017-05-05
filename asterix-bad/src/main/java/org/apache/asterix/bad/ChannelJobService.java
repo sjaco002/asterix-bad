@@ -48,7 +48,7 @@ public class ChannelJobService {
     private static final Logger LOGGER = Logger.getLogger(ChannelJobService.class.getName());
 
     public static ScheduledExecutorService startJob(JobSpecification jobSpec, EnumSet<JobFlag> jobFlags, JobId jobId,
-            IHyracksClientConnection hcc, long duration, Map<String, byte[]> contextRuntTimeVarMap)
+            IHyracksClientConnection hcc, long duration, Map<byte[], byte[]> contextRuntTimeVarMap)
             throws Exception {
         ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
         scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
@@ -65,7 +65,7 @@ public class ChannelJobService {
     }
 
     public static void executeJob(JobSpecification jobSpec, EnumSet<JobFlag> jobFlags, JobId jobId,
-            IHyracksClientConnection hcc, Map<String, byte[]> contextRuntTimeVarMap)
+            IHyracksClientConnection hcc, Map<byte[], byte[]> contextRuntTimeVarMap)
             throws Exception {
         LOGGER.info("Executing Channel Job");
         if (jobId == null) {

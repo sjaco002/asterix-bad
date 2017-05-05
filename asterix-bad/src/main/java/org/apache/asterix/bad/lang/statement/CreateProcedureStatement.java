@@ -44,7 +44,6 @@ import org.apache.asterix.lang.common.base.Statement;
 import org.apache.asterix.lang.common.clause.LetClause;
 import org.apache.asterix.lang.common.expression.CallExpr;
 import org.apache.asterix.lang.common.expression.LiteralExpr;
-import org.apache.asterix.lang.common.expression.RuntimeContextVarExpr;
 import org.apache.asterix.lang.common.expression.VariableExpr;
 import org.apache.asterix.lang.common.literal.StringLiteral;
 import org.apache.asterix.lang.common.statement.DeleteStatement;
@@ -60,11 +59,13 @@ import org.apache.asterix.metadata.MetadataTransactionContext;
 import org.apache.asterix.metadata.declared.MetadataProvider;
 import org.apache.asterix.metadata.entities.Function;
 import org.apache.asterix.om.base.temporal.ADurationParserFactory;
+import org.apache.asterix.om.functions.BuiltinFunctions;
 import org.apache.asterix.translator.IStatementExecutor;
 import org.apache.asterix.translator.IStatementExecutor.ResultDelivery;
 import org.apache.asterix.translator.IStatementExecutor.Stats;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.algebricks.common.utils.Pair;
+import org.apache.hyracks.algebricks.core.algebra.functions.FunctionIdentifier;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.dataset.IHyracksDataset;
 import org.apache.hyracks.api.dataset.ResultSetId;
@@ -174,8 +175,14 @@ public class CreateProcedureStatement implements IExtensionStatement {
     }
 
     private void addLets(SelectExpression s) {
+        FunctionIdentifier function = BuiltinFunctions.GET_RUNTIME_CONTEXT_VARIABLE;
+        FunctionSignature sig =
+                new FunctionSignature(function.getNamespace(), function.getName(), function.getArity());
         for (VariableExpr var : varList) {
-            Expression con = new RuntimeContextVarExpr(var.getVar().getValue());
+            List<Expression> strListForCall = new ArrayList<>();
+            LiteralExpr l = new LiteralExpr(new StringLiteral(var.getVar().getValue()));
+            strListForCall.add(l);
+            Expression con = new CallExpr(sig, strListForCall);
             LetClause let = new LetClause(var, con);
             s.getLetList().add(let);
         }

@@ -50,6 +50,7 @@ import org.apache.asterix.lang.common.visitor.base.ILangVisitor;
 import org.apache.asterix.metadata.MetadataManager;
 import org.apache.asterix.metadata.MetadataTransactionContext;
 import org.apache.asterix.metadata.declared.MetadataProvider;
+import org.apache.asterix.om.base.AString;
 import org.apache.asterix.om.base.IAObject;
 import org.apache.asterix.translator.ConstantHelper;
 import org.apache.asterix.translator.IStatementExecutor;
@@ -126,7 +127,7 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
             if (procedure == null) {
                 throw new AlgebricksException("There is no procedure with this name " + procedureName + ".");
             }
-            Map<String, byte[]> contextRuntimeVarMap = createContextRuntimeMap(procedure);
+            Map<byte[], byte[]> contextRuntimeVarMap = createContextRuntimeMap(procedure);
             JobId hyracksJobId = listener.getJobId();
             if (procedure.getDuration().equals("")) {
                 hcc.startJob(hyracksJobId, contextRuntimeVarMap);
@@ -159,25 +160,40 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
         }
     }
 
-    private Map<String, byte[]> createContextRuntimeMap(Procedure procedure)
+    private Map<byte[], byte[]> createContextRuntimeMap(Procedure procedure)
             throws AsterixException, HyracksDataException {
-        Map<String, byte[]> map = new HashMap<>();
+        Map<byte[], byte[]> map = new HashMap<>();
         if (procedure.getParams().size() != argList.size()) {
             throw AsterixException.create(ErrorCode.COMPILATION_INVALID_PARAMETER_NUMBER,
                     procedure.getEntityId().getEntityName(), argList.size());
         }
+        ArrayBackedValueStorage abvsKey = new ArrayBackedValueStorage();
+        DataOutput dosKey = abvsKey.getDataOutput();
+        ArrayBackedValueStorage abvsValue = new ArrayBackedValueStorage();
+        DataOutput dosValue = abvsValue.getDataOutput();
+
         for (int i = 0; i < procedure.getParams().size(); i++) {
-            //Turn the argument expression into a byte array
             if (!(argList.get(i) instanceof LiteralExpr)) {
                 //TODO handle nonliteral arguments to procedure
                 throw AsterixException.create(ErrorCode.TYPE_UNSUPPORTED, procedure.getEntityId().getEntityName(),
                         argList.get(i).getClass());
             }
+            //Turn the argument name into a byte array
+            IAObject str = new AString(procedure.getParams().get(i));
+            abvsKey.reset();
+            SerializerDeserializerProvider.INSTANCE.getSerializerDeserializer(str.getType()).serialize(str, dosKey);
+            byte[] key = new byte[abvsKey.getLength()];
+            System.arraycopy(abvsKey.getByteArray(), 0, key, 0, abvsKey.getLength());
+
+            //Turn the argument value into a byte array
             IAObject object = ConstantHelper.objectFromLiteral(((LiteralExpr) argList.get(i)).getValue());
-            ArrayBackedValueStorage abvs = new ArrayBackedValueStorage();
-            DataOutput dos = abvs.getDataOutput();
-            SerializerDeserializerProvider.INSTANCE.getSerializerDeserializer(object.getType()).serialize(object, dos);
-            map.put(procedure.getParams().get(i), abvs.getByteArray());
+            abvsValue.reset();
+            SerializerDeserializerProvider.INSTANCE.getSerializerDeserializer(object.getType()).serialize(object,
+                    dosValue);
+            byte[] value = new byte[abvsValue.getLength()];
+            System.arraycopy(abvsValue.getByteArray(), 0, value, 0, abvsValue.getLength());
+            
+            map.put(key, value);
         }
         return map;
     }
