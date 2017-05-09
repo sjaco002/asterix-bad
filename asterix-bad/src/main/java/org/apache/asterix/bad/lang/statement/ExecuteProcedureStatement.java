@@ -182,8 +182,9 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
             IAObject str = new AString(procedure.getParams().get(i));
             abvsKey.reset();
             SerializerDeserializerProvider.INSTANCE.getSerializerDeserializer(str.getType()).serialize(str, dosKey);
-            byte[] key = new byte[abvsKey.getLength()];
-            System.arraycopy(abvsKey.getByteArray(), 0, key, 0, abvsKey.getLength());
+            //We do not save the type tag of the string key
+            byte[] key = new byte[abvsKey.getLength() - 1];
+            System.arraycopy(abvsKey.getByteArray(), 1, key, 0, abvsKey.getLength() - 1);
 
             //Turn the argument value into a byte array
             IAObject object = ConstantHelper.objectFromLiteral(((LiteralExpr) argList.get(i)).getValue());
@@ -191,7 +192,7 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
             SerializerDeserializerProvider.INSTANCE.getSerializerDeserializer(object.getType()).serialize(object,
                     dosValue);
             byte[] value = new byte[abvsValue.getLength()];
-            System.arraycopy(abvsValue.getByteArray(), 0, value, 0, abvsValue.getLength());
+            System.arraycopy(abvsValue.getByteArray(), abvsValue.getStartOffset(), value, 0, abvsValue.getLength());
             
             map.put(key, value);
         }
