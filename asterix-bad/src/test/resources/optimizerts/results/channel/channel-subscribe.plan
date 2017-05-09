@@ -1,13 +1,13 @@
 -- NOTIFY_BROKERS  |PARTITIONED|
   -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
-    -- PRE_CLUSTERED_GROUP_BY[$$52, $$0]  |PARTITIONED|
+    -- PRE_CLUSTERED_GROUP_BY[$$52, $$channelExecutionTime]  |PARTITIONED|
             {
               -- AGGREGATE  |LOCAL|
                 -- NESTED_TUPLE_SOURCE  |LOCAL|
             }
       -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
-        -- STABLE_SORT [$$52(ASC), $$0(ASC)]  |PARTITIONED|
-          -- HASH_PARTITION_EXCHANGE [$$52, $$0]  |PARTITIONED|
+        -- STABLE_SORT [$$52(ASC), $$channelExecutionTime(ASC)]  |PARTITIONED|
+          -- HASH_PARTITION_EXCHANGE [$$52, $$channelExecutionTime]  |PARTITIONED|
             -- PRE_SORTED_DISTINCT_BY  |PARTITIONED|
               -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
                 -- STABLE_SORT [$$37(ASC)]  |PARTITIONED|

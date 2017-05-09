@@ -171,7 +171,7 @@ public class CreateChannelStatement implements IExtensionStatement {
 
     private void createDatasets(IStatementExecutor statementExecutor, Identifier subscriptionsName,
             Identifier resultsName, MetadataProvider metadataProvider, IHyracksClientConnection hcc,
-            IHyracksDataset hdc, Stats stats, String dataverse) throws AsterixException, Exception {
+            IHyracksDataset hdc, String dataverse) throws AsterixException, Exception {
 
         Identifier subscriptionsTypeName = new Identifier(BADConstants.ChannelSubscriptionsType);
         Identifier resultsTypeName = new Identifier(BADConstants.ChannelResultsType);
@@ -310,7 +310,7 @@ public class CreateChannelStatement implements IExtensionStatement {
                     metadataProvider.getDefaultDataverse(), metadataProvider.getStorageComponentProvider());
             tempMdProvider.setConfig(metadataProvider.getConfig());
             //Create Channel Datasets
-            createDatasets(statementExecutor, subscriptionsName, resultsName, tempMdProvider, hcc, hdc, stats,
+            createDatasets(statementExecutor, subscriptionsName, resultsName, tempMdProvider, hcc, hdc,
                     dataverse);
             tempMdProvider.getLocks().reset();
             //Create Channel Internal Job
