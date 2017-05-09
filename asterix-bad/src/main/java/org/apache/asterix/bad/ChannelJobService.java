@@ -93,8 +93,10 @@ public class ChannelJobService {
                 + channelExecutionTime + "\", \"subscriptionIds\":[";
         for (int i = 0; i < subscriptionIds.size(); i++) {
             AUUID subId = (AUUID) subscriptionIds.getItem(i);
-            String subString = subId.toSimpleString();
-            JSON += "\"" + subString + "\"";
+            String subscriptionString = subId.toString();
+            //Broker code currently cannot handle the "uuid {}" part of the string, so we parse just the value
+            subscriptionString = subscriptionString.substring(8, subscriptionString.length() - 2);
+            JSON += "\"" + subscriptionString + "\"";
             if (i < subscriptionIds.size() - 1) {
                 JSON += ",";
             }
