@@ -193,7 +193,7 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
                     dosValue);
             byte[] value = new byte[abvsValue.getLength()];
             System.arraycopy(abvsValue.getByteArray(), abvsValue.getStartOffset(), value, 0, abvsValue.getLength());
-            
+
             map.put(key, value);
         }
         return map;
