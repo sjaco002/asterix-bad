@@ -22,15 +22,19 @@ import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 
 import org.apache.asterix.active.ActiveEvent;
+import org.apache.asterix.active.ActiveLifecycleListener;
 import org.apache.asterix.active.ActivityState;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.active.IActiveEventSubscriber;
+import org.apache.asterix.common.dataflow.ICcApplicationContext;
 import org.apache.asterix.common.metadata.IDataset;
 import org.apache.asterix.external.feed.management.ActiveEntityEventsListener;
+import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.dataset.IHyracksDataset;
 import org.apache.hyracks.api.dataset.ResultSetId;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.job.JobId;
+import org.apache.hyracks.api.job.JobStatus;
 import org.apache.log4j.Logger;
 
 public class PrecompiledJobEventListener extends ActiveEntityEventsListener {
@@ -39,6 +43,7 @@ public class PrecompiledJobEventListener extends ActiveEntityEventsListener {
     private ScheduledExecutorService executorService = null;
     private IHyracksDataset hdc;
     private ResultSetId resultSetId;
+    private final ICcApplicationContext appCtx;
 
     public enum PrecompiledType {
         CHANNEL,
@@ -49,7 +54,9 @@ public class PrecompiledJobEventListener extends ActiveEntityEventsListener {
 
     private final PrecompiledType type;
 
-    public PrecompiledJobEventListener(EntityId entityId, PrecompiledType type, List<IDataset> datasets) {
+    public PrecompiledJobEventListener(ICcApplicationContext appCtx, EntityId entityId, PrecompiledType type,
+            List<IDataset> datasets) {
+        this.appCtx = appCtx;
         this.entityId = entityId;
         this.datasets = datasets;
         state = ActivityState.STOPPED;
@@ -117,6 +124,15 @@ public class PrecompiledJobEventListener extends ActiveEntityEventsListener {
     private synchronized void handleJobFinishEvent(ActiveEvent message) throws Exception {
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("Channel Job finished for  " + entityId);
+        }
+        IHyracksClientConnection hcc = appCtx.getHcc();
+        JobStatus status = hcc.getJobStatus(jobId);
+        if (status.equals(JobStatus.FAILURE)) {
+            getExecutorService().shutdownNow();
+            deActivate();
+            ActiveLifecycleListener activeLcListener = (ActiveLifecycleListener) appCtx.getActiveLifecycleListener();
+            activeLcListener.getNotificationHandler().removeListener(this, jobId);
+            hcc.destroyJob(jobId);
         }
     }
 

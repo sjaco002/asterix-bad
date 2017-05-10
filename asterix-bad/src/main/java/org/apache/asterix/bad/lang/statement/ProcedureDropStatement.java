@@ -115,7 +115,7 @@ public class ProcedureDropStatement implements IExtensionStatement {
             }
             JobId hyracksJobId = listener.getJobId();
             listener.deActivate();
-            activeEventHandler.removeListener(listener);
+            activeEventHandler.removeListener(listener, hyracksJobId);
             if (hyracksJobId != null) {
                 hcc.destroyJob(hyracksJobId);
             }

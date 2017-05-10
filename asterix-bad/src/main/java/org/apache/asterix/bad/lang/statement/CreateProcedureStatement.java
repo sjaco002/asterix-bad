@@ -278,10 +278,13 @@ public class CreateProcedureStatement implements IExtensionStatement {
             Pair<JobSpecification, PrecompiledType> procedureJobSpec =
                     createProcedureJob(statementExecutor, tempMdProvider, hcc, hdc, stats);
 
+            procedureJobSpec.first.setProperty(ActiveJobNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, entityId);
+
             // Now we subscribe
             if (listener == null) {
                 //TODO: Add datasets used by procedure
-                listener = new PrecompiledJobEventListener(entityId, procedureJobSpec.second, new ArrayList<>());
+                listener =
+                        new PrecompiledJobEventListener(appCtx, entityId, procedureJobSpec.second, new ArrayList<>());
                 activeEventHandler.registerListener(listener);
             }
             setupDistributedJob(entityId, procedureJobSpec.first, hcc, listener, tempMdProvider.getResultSetId(), hdc,

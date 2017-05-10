@@ -339,13 +339,15 @@ public class CreateChannelStatement implements IExtensionStatement {
             JobSpecification channeljobSpec = createChannelJob(statementExecutor, subscriptionsName, resultsName,
                     tempMdProvider, hcc, hdc, stats, dataverse);
 
+            channeljobSpec.setProperty(ActiveJobNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, entityId);
+
             // Now we subscribe
             if (listener == null) {
                 List<IDataset> datasets = new ArrayList<>();
                 datasets.add(MetadataManager.INSTANCE.getDataset(mdTxnCtx, dataverse, subscriptionsName.getValue()));
                 datasets.add(MetadataManager.INSTANCE.getDataset(mdTxnCtx, dataverse, resultsName.getValue()));
                 //TODO: Add datasets used by channel function
-                listener = new PrecompiledJobEventListener(entityId, PrecompiledType.CHANNEL, datasets);
+                listener = new PrecompiledJobEventListener(appCtx, entityId, PrecompiledType.CHANNEL, datasets);
                 activeEventHandler.registerListener(listener);
             }
 
