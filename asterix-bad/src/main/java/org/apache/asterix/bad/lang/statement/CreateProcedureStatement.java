@@ -175,7 +175,7 @@ public class CreateProcedureStatement implements IExtensionStatement {
     }
 
     private void addLets(SelectExpression s) {
-        FunctionIdentifier function = BuiltinFunctions.GET_RUNTIME_CONTEXT_VARIABLE;
+        FunctionIdentifier function = BuiltinFunctions.GET_JOB_PARAMETER;
         FunctionSignature sig =
                 new FunctionSignature(function.getNamespace(), function.getName(), function.getArity());
         for (VariableExpr var : varList) {
