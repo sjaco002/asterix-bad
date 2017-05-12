@@ -121,7 +121,7 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
                     hcc.waitForCompletion(hyracksJobId);
                     ResultReader resultReader = listener.getResultReader();
                     ResultUtil.printResults(appCtx, resultReader,
-                            ((QueryTranslator) statementExecutor).getSessionConfig(), new Stats(), null);
+                            ((QueryTranslator) statementExecutor).getSessionOutput(), new Stats(), null);
                 }
 
             } else {

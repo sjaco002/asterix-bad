@@ -38,15 +38,15 @@ import org.apache.asterix.lang.common.struct.Identifier;
 import org.apache.asterix.metadata.MetadataManager;
 import org.apache.asterix.metadata.MetadataTransactionContext;
 import org.apache.asterix.metadata.declared.MetadataProvider;
-import org.apache.asterix.translator.SessionConfig;
+import org.apache.asterix.translator.SessionOutput;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 
 public class BADStatementExecutor extends QueryTranslator {
 
-    public BADStatementExecutor(ICcApplicationContext appCtx, List<Statement> statements, SessionConfig conf,
+    public BADStatementExecutor(ICcApplicationContext appCtx, List<Statement> statements, SessionOutput output,
             ILangCompilationProvider compliationProvider, IStorageComponentProvider storageComponentProvider,
             ExecutorService executorService) {
-        super(appCtx, statements, conf, compliationProvider, storageComponentProvider, executorService);
+        super(appCtx, statements, output, compliationProvider, storageComponentProvider, executorService);
     }
 
     @Override
