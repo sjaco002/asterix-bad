@@ -35,12 +35,12 @@ create type userLocation as {
 create dataset UserLocations(userLocation)
 primary key userId;
 
-create function RoomOccupants($room) {
-    for $location in dataset UserLocations
-    where $location.roomNumber = $room
-    return $location.userId
+create function RoomOccupants(room) {
+  (select location.userId
+  from UserLocations location
+  where location.roomNumber = room)
 };
 
 create broker brokerA at "http://www.notifyA.com";
 
-create repetitive channel roomRecords using RoomOccupants@1 period duration("PT1S");
+create repetitive channel roomRecords using RoomOccupants@1 period duration("PT10S");

@@ -81,10 +81,10 @@
             <output-dir compare="Text">subscribe_channel_check_subscriptions</output-dir>
         </compilation-unit>
     </test-case>
-    <!-- <test-case FilePath="channel">
+    <test-case FilePath="channel">
         <compilation-unit name="ten_minute_channel">
             <output-dir compare="Text">ten_minute_channel</output-dir>
         </compilation-unit>
-    </test-case> -->
+    </test-case>
   </test-group>
 </test-suite>
