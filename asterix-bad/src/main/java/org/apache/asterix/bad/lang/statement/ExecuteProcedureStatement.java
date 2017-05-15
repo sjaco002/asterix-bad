@@ -138,7 +138,7 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
                             new ResultReader(listener.getResultDataset(), hyracksJobId, listener.getResultId());
 
                     ResultUtil.printResults(appCtx, resultReader,
-                            ((QueryTranslator) statementExecutor).getSessionConfig(), new Stats(), null);
+                            ((QueryTranslator) statementExecutor).getSessionOutput(), new Stats(), null);
                 }
 
             } else {

@@ -26,14 +26,14 @@ import org.apache.asterix.common.context.IStorageComponentProvider;
 import org.apache.asterix.common.dataflow.ICcApplicationContext;
 import org.apache.asterix.compiler.provider.ILangCompilationProvider;
 import org.apache.asterix.lang.common.base.Statement;
-import org.apache.asterix.translator.SessionConfig;
+import org.apache.asterix.translator.SessionOutput;
 
 public class BADQueryTranslatorFactory extends DefaultStatementExecutorFactory {
 
     @Override
-    public QueryTranslator create(ICcApplicationContext appCtx, List<Statement> statements, SessionConfig conf,
+    public QueryTranslator create(ICcApplicationContext appCtx, List<Statement> statements, SessionOutput output,
             ILangCompilationProvider compilationProvider, IStorageComponentProvider storageComponentProvider) {
-        return new BADStatementExecutor(appCtx, statements, conf, compilationProvider, storageComponentProvider,
+        return new BADStatementExecutor(appCtx, statements, output, compilationProvider, storageComponentProvider,
                 executorService);
     }
 }

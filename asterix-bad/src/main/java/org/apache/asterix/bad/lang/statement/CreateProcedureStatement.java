@@ -197,7 +197,7 @@ public class CreateProcedureStatement implements IExtensionStatement {
             }
             return new Pair<>(
                     ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider,
-                            getProcedureBodyStatement(), hcc, hdc, ResultDelivery.ASYNC, stats, true, null, null),
+                            getProcedureBodyStatement(), hcc, hdc, ResultDelivery.ASYNC, null, stats, true, null, null),
                     PrecompiledType.INSERT);
         } else if (getProcedureBodyStatement().getKind() == Statement.Kind.QUERY) {
             Query s = (Query) getProcedureBodyStatement();
