@@ -43,4 +43,4 @@ create function RoomOccupants(room) {
 
 create broker brokerA at "http://www.notifyA.com";
 
-create repetitive channel roomRecords using RoomOccupants@1 period duration("PT10S");
+create repetitive channel roomRecords using RoomOccupants@1 period duration("PT30S");
