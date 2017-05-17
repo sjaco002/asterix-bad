@@ -25,4 +25,4 @@
 
 use channels;
 
-select value case when (select value count(result) from roomRecordsResults)[0] > 59 THEN "true" ELSE "false" END;
+select value case when (select value count(result) from roomRecordsResults)[0] > 60 THEN "true" ELSE "false" END;
