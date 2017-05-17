@@ -266,6 +266,7 @@ public class CreateChannelStatement implements IExtensionStatement {
         if (channeljobSpec != null) {
             //TODO: Find a way to fix optimizer tests so we don't need this check
             JobId jobId = null;
+            channeljobSpec.setProperty(ActiveJobNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, entityId);
             if (predistributed) {
                 jobId = hcc.distributeJob(channeljobSpec);
             }
@@ -338,8 +339,6 @@ public class CreateChannelStatement implements IExtensionStatement {
             //Create Channel Internal Job
             JobSpecification channeljobSpec = createChannelJob(statementExecutor, subscriptionsName, resultsName,
                     tempMdProvider, hcc, hdc, stats, dataverse);
-
-            channeljobSpec.setProperty(ActiveJobNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, entityId);
 
             // Now we subscribe
             if (listener == null) {
