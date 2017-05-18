@@ -128,23 +128,25 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
                 throw new AlgebricksException("There is no procedure with this name " + procedureName + ".");
             }
             Map<byte[], byte[]> contextRuntimeVarMap = createContextRuntimeMap(procedure);
-            JobId hyracksJobId = listener.getJobId();
+            long predistributedId = listener.getPredistributedId();
             if (procedure.getDuration().equals("")) {
-                hcc.startJob(hyracksJobId, contextRuntimeVarMap);
+                JobId jobId = hcc.startJob(predistributedId, contextRuntimeVarMap);
 
                 if (listener.getType() == PrecompiledType.QUERY) {
-                    hcc.waitForCompletion(hyracksJobId);
+                    hcc.waitForCompletion(jobId);
                     ResultReader resultReader =
-                            new ResultReader(listener.getResultDataset(), hyracksJobId, listener.getResultId());
+                            new ResultReader(listener.getResultDataset(), jobId, listener.getResultId());
 
                     ResultUtil.printResults(appCtx, resultReader,
                             ((QueryTranslator) statementExecutor).getSessionOutput(), new Stats(), null);
                 }
 
             } else {
-                ScheduledExecutorService ses = ChannelJobService.startJob(null, EnumSet.noneOf(JobFlag.class),
-                        hyracksJobId, hcc, ChannelJobService.findPeriod(procedure.getDuration()), contextRuntimeVarMap);
-                listener.storeDistributedInfo(hyracksJobId, ses, listener.getResultDataset(), listener.getResultId());
+                ScheduledExecutorService ses =
+                        ChannelJobService.startJob(null, EnumSet.noneOf(JobFlag.class), predistributedId, hcc,
+                                ChannelJobService.findPeriod(procedure.getDuration()), contextRuntimeVarMap);
+                listener.storeDistributedInfo(predistributedId, ses, listener.getResultDataset(),
+                        listener.getResultId());
             }
 
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);

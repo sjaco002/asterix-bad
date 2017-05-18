@@ -77,7 +77,6 @@ import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.dataset.IHyracksDataset;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.job.JobFlag;
-import org.apache.hyracks.api.job.JobId;
 import org.apache.hyracks.api.job.JobSpecification;
 import org.apache.hyracks.dataflow.common.data.parsers.IValueParser;
 
@@ -265,14 +264,13 @@ public class CreateChannelStatement implements IExtensionStatement {
             PrecompiledJobEventListener listener, boolean predistributed) throws Exception {
         if (channeljobSpec != null) {
             //TODO: Find a way to fix optimizer tests so we don't need this check
-            JobId jobId = null;
-            channeljobSpec.setProperty(ActiveJobNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, entityId);
+            long destributedId = -1;
             if (predistributed) {
-                jobId = hcc.distributeJob(channeljobSpec);
+                destributedId = hcc.distributeJob(channeljobSpec);
             }
             ScheduledExecutorService ses = ChannelJobService.startJob(channeljobSpec, EnumSet.noneOf(JobFlag.class),
-                    jobId, hcc, ChannelJobService.findPeriod(duration), new HashMap<>());
-            listener.storeDistributedInfo(jobId, ses, null, null);
+                    destributedId, hcc, ChannelJobService.findPeriod(duration), new HashMap<>());
+            listener.storeDistributedInfo(destributedId, ses, null, null);
         }
 
     }
@@ -346,7 +344,7 @@ public class CreateChannelStatement implements IExtensionStatement {
                 datasets.add(MetadataManager.INSTANCE.getDataset(mdTxnCtx, dataverse, subscriptionsName.getValue()));
                 datasets.add(MetadataManager.INSTANCE.getDataset(mdTxnCtx, dataverse, resultsName.getValue()));
                 //TODO: Add datasets used by channel function
-                listener = new PrecompiledJobEventListener(appCtx, entityId, PrecompiledType.CHANNEL, datasets);
+                listener = new PrecompiledJobEventListener(entityId, PrecompiledType.CHANNEL, datasets);
                 activeEventHandler.registerListener(listener);
             }
 

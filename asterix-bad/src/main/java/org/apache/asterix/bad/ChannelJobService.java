@@ -47,7 +47,8 @@ public class ChannelJobService {
 
     private static final Logger LOGGER = Logger.getLogger(ChannelJobService.class.getName());
 
-    public static ScheduledExecutorService startJob(JobSpecification jobSpec, EnumSet<JobFlag> jobFlags, JobId jobId,
+    public static ScheduledExecutorService startJob(JobSpecification jobSpec, EnumSet<JobFlag> jobFlags,
+            long distributedId,
             IHyracksClientConnection hcc, long duration, Map<byte[], byte[]> contextRuntTimeVarMap)
             throws Exception {
         ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
@@ -55,7 +56,7 @@ public class ChannelJobService {
             @Override
             public void run() {
                 try {
-                    executeJob(jobSpec, jobFlags, jobId, hcc, contextRuntTimeVarMap);
+                    executeJob(jobSpec, jobFlags, distributedId, hcc, contextRuntTimeVarMap);
                 } catch (Exception e) {
                     LOGGER.log(Level.WARNING, "Channel Job Failed to run.", e);
                 }
@@ -64,14 +65,14 @@ public class ChannelJobService {
         return scheduledExecutorService;
     }
 
-    public static void executeJob(JobSpecification jobSpec, EnumSet<JobFlag> jobFlags, JobId jobId,
+    public static void executeJob(JobSpecification jobSpec, EnumSet<JobFlag> jobFlags, long distributedId,
             IHyracksClientConnection hcc, Map<byte[], byte[]> contextRuntTimeVarMap)
             throws Exception {
         LOGGER.info("Executing Channel Job");
-        if (jobId == null) {
+        if (distributedId == -1) {
             hcc.startJob(jobSpec, jobFlags);
         } else {
-            hcc.startJob(jobId, contextRuntTimeVarMap);
+            hcc.startJob(distributedId, contextRuntTimeVarMap);
         }
     }
 

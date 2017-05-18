@@ -70,7 +70,6 @@ import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.dataset.IHyracksDataset;
 import org.apache.hyracks.api.dataset.ResultSetId;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
-import org.apache.hyracks.api.job.JobId;
 import org.apache.hyracks.api.job.JobSpecification;
 import org.apache.hyracks.dataflow.common.data.parsers.IValueParser;
 
@@ -222,8 +221,8 @@ public class CreateProcedureStatement implements IExtensionStatement {
     private void setupDistributedJob(EntityId entityId, JobSpecification jobSpec, IHyracksClientConnection hcc,
             PrecompiledJobEventListener listener, ResultSetId resultSetId, IHyracksDataset hdc, Stats stats)
             throws Exception {
-        JobId jobId = hcc.distributeJob(jobSpec);
-        listener.storeDistributedInfo(jobId, null, hdc, resultSetId);
+        long predistributedId = hcc.distributeJob(jobSpec);
+        listener.storeDistributedInfo(predistributedId, null, hdc, resultSetId);
     }
 
     @Override
@@ -278,13 +277,10 @@ public class CreateProcedureStatement implements IExtensionStatement {
             Pair<JobSpecification, PrecompiledType> procedureJobSpec =
                     createProcedureJob(statementExecutor, tempMdProvider, hcc, hdc, stats);
 
-            procedureJobSpec.first.setProperty(ActiveJobNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, entityId);
-
             // Now we subscribe
             if (listener == null) {
                 //TODO: Add datasets used by procedure
-                listener =
-                        new PrecompiledJobEventListener(appCtx, entityId, procedureJobSpec.second, new ArrayList<>());
+                listener = new PrecompiledJobEventListener(entityId, procedureJobSpec.second, new ArrayList<>());
                 activeEventHandler.registerListener(listener);
             }
             setupDistributedJob(entityId, procedureJobSpec.first, hcc, listener, tempMdProvider.getResultSetId(), hdc,

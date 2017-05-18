@@ -42,7 +42,6 @@ import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.dataset.IHyracksDataset;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
-import org.apache.hyracks.api.job.JobId;
 
 public class ProcedureDropStatement implements IExtensionStatement {
 
@@ -113,11 +112,12 @@ public class ProcedureDropStatement implements IExtensionStatement {
             if (listener.getExecutorService() != null) {
                 listener.getExecutorService().shutdownNow();
             }
-            JobId hyracksJobId = listener.getJobId();
+            long predistributedId = listener.getPredistributedId();
             listener.deActivate();
-            activeEventHandler.removeListener(listener, hyracksJobId);
-            if (hyracksJobId != null) {
-                hcc.destroyJob(hyracksJobId);
+            //TODO: How to remove the listener?
+            //activeEventHandler.removeListener(listener, hyracksJobId);
+            if (predistributedId != -1) {
+                hcc.destroyJob(predistributedId);
             }
 
             //Remove the Channel Metadata
