@@ -134,6 +134,7 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
 
                 if (listener.getType() == PrecompiledType.QUERY) {
                     hcc.waitForCompletion(jobId);
+                    //ResultReader resultReader = new ResultReader(hdc, jobId, metadataProvider.getResultSetId());
                     ResultReader resultReader =
                             new ResultReader(listener.getResultDataset(), jobId, listener.getResultId());
 
