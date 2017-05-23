@@ -114,8 +114,7 @@ public class ChannelDropStatement implements IExtensionStatement {
             listener.getExecutorService().shutdownNow();
             long predistributedId = listener.getPredistributedId();
             listener.deActivate();
-            //TODO: How to remove the listener?
-            //activeEventHandler.removeListener(listener, hyracksJobId);
+            activeEventHandler.removeListener(listener);
             if (predistributedId != -1) {
                 hcc.destroyJob(predistributedId);
             }

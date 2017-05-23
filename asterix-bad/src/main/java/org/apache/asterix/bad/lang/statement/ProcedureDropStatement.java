@@ -114,8 +114,8 @@ public class ProcedureDropStatement implements IExtensionStatement {
             }
             long predistributedId = listener.getPredistributedId();
             listener.deActivate();
-            //TODO: How to remove the listener?
-            //activeEventHandler.removeListener(listener, hyracksJobId);
+
+            activeEventHandler.removeListener(listener);
             if (predistributedId != -1) {
                 hcc.destroyJob(predistributedId);
             }
