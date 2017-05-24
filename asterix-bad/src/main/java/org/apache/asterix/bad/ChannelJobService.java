@@ -23,6 +23,7 @@ import java.io.DataOutputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Date;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -56,7 +57,9 @@ public class ChannelJobService {
             @Override
             public void run() {
                 try {
-                    executeJob(jobSpec, jobFlags, distributedId, hcc, contextRuntTimeVarMap);
+                    if (!executeJob(jobSpec, jobFlags, distributedId, hcc, contextRuntTimeVarMap, duration)) {
+                        scheduledExecutorService.shutdown();
+                    }
                 } catch (Exception e) {
                     LOGGER.log(Level.WARNING, "Channel Job Failed to run.", e);
                 }
@@ -65,15 +68,30 @@ public class ChannelJobService {
         return scheduledExecutorService;
     }
 
-    public static void executeJob(JobSpecification jobSpec, EnumSet<JobFlag> jobFlags, long distributedId,
-            IHyracksClientConnection hcc, Map<byte[], byte[]> contextRuntTimeVarMap)
+    public static boolean executeJob(JobSpecification jobSpec, EnumSet<JobFlag> jobFlags, long distributedId,
+            IHyracksClientConnection hcc, Map<byte[], byte[]> contextRuntTimeVarMap, long duration)
             throws Exception {
-        LOGGER.info("Executing Channel Job");
-        if (distributedId == -1) {
-            hcc.startJob(jobSpec, jobFlags);
-        } else {
-            hcc.startJob(distributedId, contextRuntTimeVarMap);
+        if (LOGGER.isLoggable(Level.INFO)) {
+            LOGGER.info("Executing Distributed Job");
         }
+        boolean onTime = true;
+        JobId jobId;
+        Date checkStartTime = new Date();
+        if (distributedId == -1) {
+            jobId = hcc.startJob(jobSpec, jobFlags);
+        } else {
+            jobId = hcc.startJob(distributedId, contextRuntTimeVarMap);
+        }
+        hcc.waitForCompletion(jobId);
+        Date checkEndTime = new Date();
+        long executionMilliseconds = (checkEndTime.getTime() - checkStartTime.getTime());
+        if (executionMilliseconds > duration && LOGGER.isLoggable(Level.SEVERE)) {
+            LOGGER.severe("Periodic job was unable to meet the period of " + duration + " milliseconds. Actually took "
+                    + executionMilliseconds + " execution will shutdown" + new Date());
+            onTime = false;
+        }
+        return onTime;
+
     }
 
     public static void runChannelJob(JobSpecification channeljobSpec, IHyracksClientConnection hcc) throws Exception {
