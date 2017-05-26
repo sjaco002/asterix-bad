@@ -222,6 +222,8 @@ public class CreateChannelStatement implements IExtensionStatement {
         metadataProvider.getLocks().reset();
         ((QueryTranslator) statementExecutor).handleCreateDatasetStatement(metadataProvider, createResultsDataset, hcc);
         metadataProvider.getLocks().reset();
+        
+        //Create a time index for the results
         ((QueryTranslator) statementExecutor).handleCreateIndexStatement(metadataProvider, createTimeIndex, hcc);
 
     }

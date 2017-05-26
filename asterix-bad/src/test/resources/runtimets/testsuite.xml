@@ -82,6 +82,11 @@
         </compilation-unit>
     </test-case>
     <test-case FilePath="channel">
+        <compilation-unit name="disasters_with_friends">
+            <output-dir compare="Text">disasters_with_friends</output-dir>
+        </compilation-unit>
+    </test-case>
+    <test-case FilePath="channel">
         <compilation-unit name="ten_minute_channel">
             <output-dir compare="Text">ten_minute_channel</output-dir>
         </compilation-unit>

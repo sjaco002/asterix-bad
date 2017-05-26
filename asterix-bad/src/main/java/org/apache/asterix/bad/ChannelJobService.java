@@ -50,14 +50,14 @@ public class ChannelJobService {
 
     public static ScheduledExecutorService startJob(JobSpecification jobSpec, EnumSet<JobFlag> jobFlags,
             long distributedId,
-            IHyracksClientConnection hcc, long duration, Map<byte[], byte[]> contextRuntTimeVarMap)
+            IHyracksClientConnection hcc, long duration, Map<byte[], byte[]> jobParameters)
             throws Exception {
         ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
         scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
                 try {
-                    if (!executeJob(jobSpec, jobFlags, distributedId, hcc, contextRuntTimeVarMap, duration)) {
+                    if (!executeJob(jobSpec, jobFlags, distributedId, hcc, jobParameters, duration)) {
                         scheduledExecutorService.shutdown();
                     }
                 } catch (Exception e) {
@@ -69,7 +69,7 @@ public class ChannelJobService {
     }
 
     public static boolean executeJob(JobSpecification jobSpec, EnumSet<JobFlag> jobFlags, long distributedId,
-            IHyracksClientConnection hcc, Map<byte[], byte[]> contextRuntTimeVarMap, long duration)
+            IHyracksClientConnection hcc, Map<byte[], byte[]> jobParameters, long duration)
             throws Exception {
         if (LOGGER.isLoggable(Level.INFO)) {
             LOGGER.info("Executing Distributed Job");
@@ -80,7 +80,7 @@ public class ChannelJobService {
         if (distributedId == -1) {
             jobId = hcc.startJob(jobSpec, jobFlags);
         } else {
-            jobId = hcc.startJob(distributedId, contextRuntTimeVarMap);
+            jobId = hcc.startJob(distributedId, jobParameters);
         }
         hcc.waitForCompletion(jobId);
         Date checkEndTime = new Date();
