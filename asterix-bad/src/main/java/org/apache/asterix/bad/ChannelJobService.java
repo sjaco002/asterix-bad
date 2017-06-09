@@ -19,6 +19,7 @@
 package org.apache.asterix.bad;
 
 import java.io.BufferedReader;
+import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -33,13 +34,18 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.asterix.active.EntityId;
+import org.apache.asterix.formats.nontagged.SerializerDeserializerProvider;
+import org.apache.asterix.om.base.AMutableDateTime;
 import org.apache.asterix.om.base.AOrderedList;
 import org.apache.asterix.om.base.AUUID;
+import org.apache.asterix.om.types.BuiltinType;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.job.JobFlag;
 import org.apache.hyracks.api.job.JobId;
 import org.apache.hyracks.api.job.JobSpecification;
+import org.apache.hyracks.data.std.primitive.UTF8StringPointable;
+import org.apache.hyracks.data.std.util.ArrayBackedValueStorage;
 
 /**
  * Provides functionality for running channel jobs and communicating with Brokers
@@ -80,6 +86,22 @@ public class ChannelJobService {
         if (distributedId == -1) {
             jobId = hcc.startJob(jobSpec, jobFlags);
         } else {
+            //Add current_datetime to the job parameters
+            UTF8StringPointable strPointable = UTF8StringPointable.generateUTF8Pointable("current_datetime");
+            byte[] key = new byte[strPointable.getLength()];
+            System.arraycopy(strPointable.getByteArray(), 0, key, 0, strPointable.getLength());
+
+            ArrayBackedValueStorage resultStorage = new ArrayBackedValueStorage();
+            DataOutput out = resultStorage.getDataOutput();
+            AMutableDateTime aDateTime = new AMutableDateTime(0);
+            aDateTime.setValue(System.currentTimeMillis());
+            SerializerDeserializerProvider.INSTANCE.getSerializerDeserializer(BuiltinType.ADATETIME)
+                    .serialize(aDateTime, out);
+            byte[] value = new byte[resultStorage.getLength()];
+            System.arraycopy(resultStorage.getByteArray(), resultStorage.getStartOffset(), value, 0,
+                    resultStorage.getLength());
+
+            jobParameters.put(key, value);
             jobId = hcc.startJob(distributedId, jobParameters);
         }
         hcc.waitForCompletion(jobId);

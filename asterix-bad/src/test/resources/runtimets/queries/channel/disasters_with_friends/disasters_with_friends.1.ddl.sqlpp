@@ -55,14 +55,13 @@ create dataset EmergencyShelters(EmergencyShelter) primary key name;
 create broker brokerA at "http://www.notifyA.com";
 
 create function EmergenciesNearMe(emergencyType, uid){
-  (with tenMinutesAgo as current_datetime() - day_time_duration("PT10S")
-  select report as report, shelters as shelters
+  (select report as report, shelters as shelters
   from EmergencyReports report, UserLocations user
   let shelters = (select * from EmergencyShelters shelter
     where spatial_intersect(report.impactZone,shelter.location))
   where user.user_id = uid 
-    and report.timestamp >= tenMinutesAgo
-    and user.timestamp >= tenMinutesAgo
+    and report.timestamp >= current_datetime() - day_time_duration("PT10S")
+    and user.timestamp >= current_datetime() - day_time_duration("PT10S")
     and report.emergencyType = emergencyType
     and spatial_intersect(report.impactZone,create_point(user.latitude,user.longitude)))
 }

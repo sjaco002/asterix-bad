@@ -26,4 +26,4 @@
 use channels;
 select result.result.shelters
 from EmergenciesNearMeChannelResults result
-order by name;
+order by shelter.name;
