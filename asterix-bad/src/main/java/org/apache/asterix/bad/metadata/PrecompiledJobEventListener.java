@@ -26,8 +26,10 @@ import org.apache.asterix.active.ActivityState;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.active.IActiveEventSubscriber;
 import org.apache.asterix.app.result.ResultReader;
+import org.apache.asterix.common.dataflow.ICcApplicationContext;
 import org.apache.asterix.common.metadata.IDataset;
 import org.apache.asterix.external.feed.management.ActiveEntityEventsListener;
+import org.apache.hyracks.algebricks.common.constraints.AlgebricksAbsolutePartitionConstraint;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.job.JobId;
 import org.apache.log4j.Logger;
@@ -47,9 +49,9 @@ public class PrecompiledJobEventListener extends ActiveEntityEventsListener {
 
     private final PrecompiledType type;
 
-    public PrecompiledJobEventListener(EntityId entityId, PrecompiledType type, List<IDataset> datasets) {
-        this.entityId = entityId;
-        this.datasets = datasets;
+    public PrecompiledJobEventListener(ICcApplicationContext appCtx, EntityId entityId, PrecompiledType type,
+            List<IDataset> datasets, AlgebricksAbsolutePartitionConstraint locations, String runtimeName) {
+        super(appCtx, entityId, datasets, locations, runtimeName);
         state = ActivityState.STOPPED;
         this.type = type;
     }
@@ -99,6 +101,11 @@ public class PrecompiledJobEventListener extends ActiveEntityEventsListener {
         }
     }
 
+    @Override
+    public void refreshStats(long l) throws HyracksDataException {
+        // no op
+    }
+
     private synchronized void handleJobStartEvent(ActiveEvent message) throws Exception {
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("Channel Job started for  " + entityId);
@@ -113,7 +120,7 @@ public class PrecompiledJobEventListener extends ActiveEntityEventsListener {
     }
 
     @Override
-    public IActiveEventSubscriber subscribe(ActivityState state) throws HyracksDataException {
-        return null;
+    public synchronized void subscribe(IActiveEventSubscriber subscriber) throws HyracksDataException {
+        // no op
     }
 }

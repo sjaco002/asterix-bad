@@ -96,8 +96,7 @@ public class CreateProcedureStatement implements IExtensionStatement {
         this.period = (CallExpr) period;
     }
 
-    @Override
-    public byte getKind() {
+    @Override public byte getKind() {
         return Kind.EXTENSION;
     }
 
@@ -109,8 +108,7 @@ public class CreateProcedureStatement implements IExtensionStatement {
         return signature;
     }
 
-    @Override
-    public byte getCategory() {
+    @Override public byte getCategory() {
         return Category.DDL;
     }
 
@@ -118,8 +116,7 @@ public class CreateProcedureStatement implements IExtensionStatement {
         return period;
     }
 
-    @Override
-    public <R, T> R accept(ILangVisitor<R, T> visitor, T arg) throws CompilationException {
+    @Override public <R, T> R accept(ILangVisitor<R, T> visitor, T arg) throws CompilationException {
         return null;
     }
 
@@ -170,10 +167,9 @@ public class CreateProcedureStatement implements IExtensionStatement {
             throw new CompilationException("Procedure can only execute a single statement");
         }
         if (fStatements.get(0).getKind() == Statement.Kind.INSERT) {
-            return new Pair<>(
-                    ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider,
-                            fStatements.get(0), hcc, hdc, ResultDelivery.ASYNC, null, stats, true, null, null),
-                    PrecompiledType.INSERT);
+            return new Pair<>(((QueryTranslator) statementExecutor)
+                    .handleInsertUpsertStatement(metadataProvider, fStatements.get(0), hcc, hdc, ResultDelivery.ASYNC,
+                            null, stats, true, null, null), PrecompiledType.INSERT);
         } else if (fStatements.get(0).getKind() == Statement.Kind.QUERY) {
             Pair<JobSpecification, PrecompiledType> pair =
                     new Pair<>(compileQueryJob(statementExecutor, metadataProvider, hcc, (Query) fStatements.get(0)),
@@ -183,8 +179,8 @@ public class CreateProcedureStatement implements IExtensionStatement {
         } else if (fStatements.get(0).getKind() == Statement.Kind.DELETE) {
             SqlppDeleteRewriteVisitor visitor = new SqlppDeleteRewriteVisitor();
             fStatements.get(0).accept(visitor, null);
-            return new Pair<>(((QueryTranslator) statementExecutor).handleDeleteStatement(metadataProvider,
-                    fStatements.get(0), hcc, true), PrecompiledType.DELETE);
+            return new Pair<>(((QueryTranslator) statementExecutor)
+                    .handleDeleteStatement(metadataProvider, fStatements.get(0), hcc, true), PrecompiledType.DELETE);
         } else {
             throw new CompilationException("Procedure can only execute a single delete, insert, or query");
         }
@@ -197,8 +193,7 @@ public class CreateProcedureStatement implements IExtensionStatement {
         listener.storeDistributedInfo(jobId, null, new ResultReader(hdc, jobId, resultSetId));
     }
 
-    @Override
-    public void handle(IStatementExecutor statementExecutor, MetadataProvider metadataProvider,
+    @Override public void handle(IStatementExecutor statementExecutor, MetadataProvider metadataProvider,
             IHyracksClientConnection hcc, IHyracksDataset hdc, ResultDelivery resultDelivery, Stats stats,
             int resultSetIdCounter) throws HyracksDataException, AlgebricksException {
         ICcApplicationContext appCtx = metadataProvider.getApplicationContext();
@@ -217,8 +212,8 @@ public class CreateProcedureStatement implements IExtensionStatement {
         try {
             mdTxnCtx = MetadataManager.INSTANCE.beginTransaction();
             metadataProvider.setMetadataTxnContext(mdTxnCtx);
-            procedure = BADLangExtension.getProcedure(mdTxnCtx, dataverse, signature.getName(),
-                    Integer.toString(signature.getArity()));
+            procedure = BADLangExtension
+                    .getProcedure(mdTxnCtx, dataverse, signature.getName(), Integer.toString(signature.getArity()));
             if (procedure != null) {
                 throw new AlgebricksException("A procedure with this name " + signature.getName() + " already exists.");
             }
@@ -252,7 +247,8 @@ public class CreateProcedureStatement implements IExtensionStatement {
             // Now we subscribe
             if (listener == null) {
                 //TODO: Add datasets used by channel function
-                listener = new PrecompiledJobEventListener(entityId, procedureJobSpec.second, new ArrayList<>());
+                listener = new PrecompiledJobEventListener(appCtx, entityId, procedureJobSpec.second, new ArrayList<>(),
+                        null, "BadListener");
                 activeEventHandler.registerListener(listener);
             }
             setupDistributedJob(entityId, procedureJobSpec.first, hcc, listener, tempMdProvider.getResultSetId(), hdc,
