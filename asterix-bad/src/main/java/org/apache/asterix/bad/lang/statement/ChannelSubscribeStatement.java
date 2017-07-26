@@ -186,7 +186,7 @@ public class ChannelSubscribeStatement implements IExtensionStatement {
             subscriptionTuple.setVarCounter(varCounter);
 
             MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getApplicationContext(),
-                    metadataProvider.getDefaultDataverse(), metadataProvider.getStorageComponentProvider());
+                    metadataProvider.getDefaultDataverse());
             tempMdProvider.setConfig(metadataProvider.getConfig());
 
             if (subscriptionId == null) {

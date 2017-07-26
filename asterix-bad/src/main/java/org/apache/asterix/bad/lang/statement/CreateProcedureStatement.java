@@ -26,10 +26,9 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.asterix.active.ActiveJobNotificationHandler;
-import org.apache.asterix.active.ActiveLifecycleListener;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.algebra.extension.IExtensionStatement;
+import org.apache.asterix.app.active.ActiveNotificationHandler;
 import org.apache.asterix.app.result.ResultReader;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
@@ -41,6 +40,7 @@ import org.apache.asterix.bad.metadata.Procedure;
 import org.apache.asterix.common.dataflow.ICcApplicationContext;
 import org.apache.asterix.common.exceptions.AsterixException;
 import org.apache.asterix.common.exceptions.CompilationException;
+import org.apache.asterix.common.exceptions.MetadataException;
 import org.apache.asterix.common.functions.FunctionSignature;
 import org.apache.asterix.lang.common.base.Expression;
 import org.apache.asterix.lang.common.base.Statement;
@@ -52,7 +52,6 @@ import org.apache.asterix.lang.common.struct.Identifier;
 import org.apache.asterix.lang.common.struct.VarIdentifier;
 import org.apache.asterix.lang.common.visitor.base.ILangVisitor;
 import org.apache.asterix.lang.sqlpp.visitor.SqlppDeleteRewriteVisitor;
-import org.apache.asterix.metadata.MetadataException;
 import org.apache.asterix.metadata.MetadataManager;
 import org.apache.asterix.metadata.MetadataTransactionContext;
 import org.apache.asterix.metadata.declared.MetadataProvider;
@@ -96,7 +95,8 @@ public class CreateProcedureStatement implements IExtensionStatement {
         this.period = (CallExpr) period;
     }
 
-    @Override public byte getKind() {
+    @Override
+    public byte getKind() {
         return Kind.EXTENSION;
     }
 
@@ -108,7 +108,8 @@ public class CreateProcedureStatement implements IExtensionStatement {
         return signature;
     }
 
-    @Override public byte getCategory() {
+    @Override
+    public byte getCategory() {
         return Category.DDL;
     }
 
@@ -116,7 +117,8 @@ public class CreateProcedureStatement implements IExtensionStatement {
         return period;
     }
 
-    @Override public <R, T> R accept(ILangVisitor<R, T> visitor, T arg) throws CompilationException {
+    @Override
+    public <R, T> R accept(ILangVisitor<R, T> visitor, T arg) throws CompilationException {
         return null;
     }
 
@@ -167,9 +169,10 @@ public class CreateProcedureStatement implements IExtensionStatement {
             throw new CompilationException("Procedure can only execute a single statement");
         }
         if (fStatements.get(0).getKind() == Statement.Kind.INSERT) {
-            return new Pair<>(((QueryTranslator) statementExecutor)
-                    .handleInsertUpsertStatement(metadataProvider, fStatements.get(0), hcc, hdc, ResultDelivery.ASYNC,
-                            null, stats, true, null, null), PrecompiledType.INSERT);
+            return new Pair<>(
+                    ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider,
+                            fStatements.get(0), hcc, hdc, ResultDelivery.ASYNC, null, stats, true, null, null),
+                    PrecompiledType.INSERT);
         } else if (fStatements.get(0).getKind() == Statement.Kind.QUERY) {
             Pair<JobSpecification, PrecompiledType> pair =
                     new Pair<>(compileQueryJob(statementExecutor, metadataProvider, hcc, (Query) fStatements.get(0)),
@@ -179,8 +182,8 @@ public class CreateProcedureStatement implements IExtensionStatement {
         } else if (fStatements.get(0).getKind() == Statement.Kind.DELETE) {
             SqlppDeleteRewriteVisitor visitor = new SqlppDeleteRewriteVisitor();
             fStatements.get(0).accept(visitor, null);
-            return new Pair<>(((QueryTranslator) statementExecutor)
-                    .handleDeleteStatement(metadataProvider, fStatements.get(0), hcc, true), PrecompiledType.DELETE);
+            return new Pair<>(((QueryTranslator) statementExecutor).handleDeleteStatement(metadataProvider,
+                    fStatements.get(0), hcc, true), PrecompiledType.DELETE);
         } else {
             throw new CompilationException("Procedure can only execute a single delete, insert, or query");
         }
@@ -193,18 +196,18 @@ public class CreateProcedureStatement implements IExtensionStatement {
         listener.storeDistributedInfo(jobId, null, new ResultReader(hdc, jobId, resultSetId));
     }
 
-    @Override public void handle(IStatementExecutor statementExecutor, MetadataProvider metadataProvider,
+    @Override
+    public void handle(IStatementExecutor statementExecutor, MetadataProvider metadataProvider,
             IHyracksClientConnection hcc, IHyracksDataset hdc, ResultDelivery resultDelivery, Stats stats,
             int resultSetIdCounter) throws HyracksDataException, AlgebricksException {
         ICcApplicationContext appCtx = metadataProvider.getApplicationContext();
-        ActiveLifecycleListener activeListener = (ActiveLifecycleListener) appCtx.getActiveLifecycleListener();
-        ActiveJobNotificationHandler activeEventHandler = activeListener.getNotificationHandler();
+        ActiveNotificationHandler activeEventHandler =
+                (ActiveNotificationHandler) appCtx.getActiveNotificationHandler();
         initialize();
         String dataverse =
                 ((QueryTranslator) statementExecutor).getActiveDataverse(new Identifier(signature.getNamespace()));
         EntityId entityId = new EntityId(BADConstants.PROCEDURE_KEYWORD, dataverse, signature.getName());
-        PrecompiledJobEventListener listener =
-                (PrecompiledJobEventListener) activeEventHandler.getActiveEntityListener(entityId);
+        PrecompiledJobEventListener listener = (PrecompiledJobEventListener) activeEventHandler.getListener(entityId);
         boolean alreadyActive = false;
         Procedure procedure = null;
 
@@ -212,13 +215,13 @@ public class CreateProcedureStatement implements IExtensionStatement {
         try {
             mdTxnCtx = MetadataManager.INSTANCE.beginTransaction();
             metadataProvider.setMetadataTxnContext(mdTxnCtx);
-            procedure = BADLangExtension
-                    .getProcedure(mdTxnCtx, dataverse, signature.getName(), Integer.toString(signature.getArity()));
+            procedure = BADLangExtension.getProcedure(mdTxnCtx, dataverse, signature.getName(),
+                    Integer.toString(signature.getArity()));
             if (procedure != null) {
                 throw new AlgebricksException("A procedure with this name " + signature.getName() + " already exists.");
             }
             if (listener != null) {
-                alreadyActive = listener.isEntityActive();
+                alreadyActive = listener.isActive();
             }
             if (alreadyActive) {
                 throw new AsterixException("Procedure " + signature.getName() + " is already running");
@@ -228,7 +231,7 @@ public class CreateProcedureStatement implements IExtensionStatement {
                     Function.RETURNTYPE_VOID, getFunctionBody(), Function.LANGUAGE_AQL, duration);
 
             MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getApplicationContext(),
-                    metadataProvider.getDefaultDataverse(), metadataProvider.getStorageComponentProvider());
+                    metadataProvider.getDefaultDataverse());
             tempMdProvider.setConfig(metadataProvider.getConfig());
 
             metadataProvider.setResultSetId(new ResultSetId(resultSetIdCounter++));

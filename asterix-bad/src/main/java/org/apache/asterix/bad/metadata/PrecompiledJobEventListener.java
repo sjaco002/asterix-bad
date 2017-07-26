@@ -18,27 +18,30 @@
  */
 package org.apache.asterix.bad.metadata;
 
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 
 import org.apache.asterix.active.ActiveEvent;
+import org.apache.asterix.active.ActiveEvent.Kind;
 import org.apache.asterix.active.ActivityState;
 import org.apache.asterix.active.EntityId;
-import org.apache.asterix.active.IActiveEventSubscriber;
+import org.apache.asterix.active.IActiveEntityEventSubscriber;
+import org.apache.asterix.active.IActiveEntityEventsListener;
+import org.apache.asterix.active.message.ActivePartitionMessage;
 import org.apache.asterix.app.result.ResultReader;
 import org.apache.asterix.common.dataflow.ICcApplicationContext;
 import org.apache.asterix.common.metadata.IDataset;
-import org.apache.asterix.external.feed.management.ActiveEntityEventsListener;
 import org.apache.hyracks.algebricks.common.constraints.AlgebricksAbsolutePartitionConstraint;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.job.JobId;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
-public class PrecompiledJobEventListener extends ActiveEntityEventsListener {
-    private static final Logger LOGGER = Logger.getLogger(PrecompiledJobEventListener.class);
+public class PrecompiledJobEventListener implements IActiveEntityEventsListener {
 
-    private ScheduledExecutorService executorService = null;
-    private ResultReader resultReader;
+    private static final Logger LOGGER = Logger.getLogger(PrecompiledJobEventListener.class);
 
     public enum PrecompiledType {
         CHANNEL,
@@ -47,13 +50,117 @@ public class PrecompiledJobEventListener extends ActiveEntityEventsListener {
         DELETE
     }
 
+    enum RequestState {
+        INIT,
+        STARTED,
+        FINISHED
+    }
+
+    private ScheduledExecutorService executorService = null;
+    private ResultReader resultReader;
     private final PrecompiledType type;
+    // members
+    protected volatile ActivityState state;
+    protected JobId jobId;
+    protected final List<IActiveEntityEventSubscriber> subscribers = new ArrayList<>();
+    protected final ICcApplicationContext appCtx;
+    protected final EntityId entityId;
+    protected final List<IDataset> datasets;
+    protected final ActiveEvent statsUpdatedEvent;
+    protected long statsTimestamp;
+    protected String stats;
+    protected RequestState statsRequestState;
+    protected final String runtimeName;
+    protected final AlgebricksAbsolutePartitionConstraint locations;
+    protected int numRegistered;
 
     public PrecompiledJobEventListener(ICcApplicationContext appCtx, EntityId entityId, PrecompiledType type,
             List<IDataset> datasets, AlgebricksAbsolutePartitionConstraint locations, String runtimeName) {
-        super(appCtx, entityId, datasets, locations, runtimeName);
+        this.appCtx = appCtx;
+        this.entityId = entityId;
+        this.datasets = datasets;
+        this.state = ActivityState.STOPPED;
+        this.statsTimestamp = -1;
+        this.statsRequestState = RequestState.INIT;
+        this.statsUpdatedEvent = new ActiveEvent(null, Kind.STATS_UPDATED, entityId, null);
+        this.stats = "{\"Stats\":\"N/A\"}";
+        this.runtimeName = runtimeName;
+        this.locations = locations;
+        this.numRegistered = 0;
         state = ActivityState.STOPPED;
         this.type = type;
+    }
+
+    protected synchronized void handle(ActivePartitionMessage message) {
+        if (message.getEvent() == ActivePartitionMessage.ACTIVE_RUNTIME_REGISTERED) {
+            numRegistered++;
+            if (numRegistered == locations.getLocations().length) {
+                state = ActivityState.RUNNING;
+            }
+        }
+    }
+
+    @Override
+    public EntityId getEntityId() {
+        return entityId;
+    }
+
+    @Override
+    public ActivityState getState() {
+        return state;
+    }
+
+    @Override
+    public boolean isEntityUsingDataset(IDataset dataset) {
+        return datasets.contains(dataset);
+    }
+
+    public JobId getJobId() {
+        return jobId;
+    }
+
+    @Override
+    public String getStats() {
+        return stats;
+    }
+
+    @Override
+    public long getStatsTimeStamp() {
+        return statsTimestamp;
+    }
+
+    public String formatStats(List<String> responses) {
+        StringBuilder strBuilder = new StringBuilder();
+        strBuilder.append("{\"Stats\": [").append(responses.get(0));
+        for (int i = 1; i < responses.size(); i++) {
+            strBuilder.append(", ").append(responses.get(i));
+        }
+        strBuilder.append("]}");
+        return strBuilder.toString();
+    }
+
+    protected synchronized void notifySubscribers(ActiveEvent event) {
+        notifyAll();
+        Iterator<IActiveEntityEventSubscriber> it = subscribers.iterator();
+        while (it.hasNext()) {
+            IActiveEntityEventSubscriber subscriber = it.next();
+            if (subscriber.isDone()) {
+                it.remove();
+            } else {
+                try {
+                    subscriber.notify(event);
+                } catch (HyracksDataException e) {
+                    LOGGER.log(Level.WARN, "Failed to notify subscriber", e);
+                }
+                if (subscriber.isDone()) {
+                    it.remove();
+                }
+            }
+        }
+    }
+
+    public AlgebricksAbsolutePartitionConstraint getLocations() {
+        return locations;
     }
 
     public ResultReader getResultReader() {
@@ -72,10 +179,6 @@ public class PrecompiledJobEventListener extends ActiveEntityEventsListener {
 
     public ScheduledExecutorService getExecutorService() {
         return executorService;
-    }
-
-    public boolean isEntityActive() {
-        return state == ActivityState.STARTED;
     }
 
     public void deActivate() {
@@ -110,7 +213,7 @@ public class PrecompiledJobEventListener extends ActiveEntityEventsListener {
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("Channel Job started for  " + entityId);
         }
-        state = ActivityState.STARTED;
+        state = ActivityState.RUNNING;
     }
 
     private synchronized void handleJobFinishEvent(ActiveEvent message) throws Exception {
@@ -120,7 +223,21 @@ public class PrecompiledJobEventListener extends ActiveEntityEventsListener {
     }
 
     @Override
-    public synchronized void subscribe(IActiveEventSubscriber subscriber) throws HyracksDataException {
+    public synchronized void subscribe(IActiveEntityEventSubscriber subscriber) throws HyracksDataException {
         // no op
+    }
+
+    @Override
+    public boolean isActive() {
+        return state == ActivityState.RUNNING;
+    }
+
+    @Override
+    public void unregister() throws HyracksDataException {
+    }
+
+    @Override
+    public Exception getJobFailure() {
+        return null;
     }
 }

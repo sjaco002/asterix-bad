@@ -42,8 +42,8 @@ import org.apache.hyracks.api.exceptions.HyracksDataException;
 
 public class BADMetadataExtension implements IMetadataExtension {
 
-    public static final ExtensionId BAD_METADATA_EXTENSION_ID = new ExtensionId(
-            BADConstants.BAD_METADATA_EXTENSION_NAME, 0);
+    public static final ExtensionId BAD_METADATA_EXTENSION_ID =
+            new ExtensionId(BADConstants.BAD_METADATA_EXTENSION_NAME, 0);
     public static final Dataverse BAD_DATAVERSE = new Dataverse(BADConstants.BAD_DATAVERSE_NAME,
             NonTaggedDataFormat.class.getName(), MetadataUtil.PENDING_NO_OP);
 
