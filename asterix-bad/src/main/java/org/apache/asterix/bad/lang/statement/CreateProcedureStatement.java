@@ -226,14 +226,11 @@ public class CreateProcedureStatement implements IExtensionStatement {
             if (alreadyActive) {
                 throw new AsterixException("Procedure " + signature.getName() + " is already running");
             }
-
             procedure = new Procedure(dataverse, signature.getName(), signature.getArity(), getParamList(),
                     Function.RETURNTYPE_VOID, getFunctionBody(), Function.LANGUAGE_AQL, duration);
-
             MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getApplicationContext(),
                     metadataProvider.getDefaultDataverse());
-            tempMdProvider.setConfig(metadataProvider.getConfig());
-
+            tempMdProvider.getConfig().putAll(metadataProvider.getConfig());
             metadataProvider.setResultSetId(new ResultSetId(resultSetIdCounter++));
             boolean resultsAsync = resultDelivery == ResultDelivery.ASYNC || resultDelivery == ResultDelivery.DEFERRED;
             metadataProvider.setResultAsyncMode(resultsAsync);

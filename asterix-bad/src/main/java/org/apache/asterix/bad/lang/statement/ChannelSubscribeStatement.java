@@ -182,13 +182,10 @@ public class ChannelSubscribeStatement implements IExtensionStatement {
             }
             RecordConstructor recordCon = new RecordConstructor(fb);
             subscriptionTuple.setBody(recordCon);
-
             subscriptionTuple.setVarCounter(varCounter);
-
             MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getApplicationContext(),
                     metadataProvider.getDefaultDataverse());
-            tempMdProvider.setConfig(metadataProvider.getConfig());
-
+            tempMdProvider.getConfig().putAll(metadataProvider.getConfig());
             if (subscriptionId == null) {
                 //To create a new subscription
                 VariableExpr resultVar = new VariableExpr(new VarIdentifier("$result", 0));

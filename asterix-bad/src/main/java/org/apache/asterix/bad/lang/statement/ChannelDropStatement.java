@@ -120,7 +120,7 @@ public class ChannelDropStatement implements IExtensionStatement {
 
             //Create a metadata provider to use in nested jobs.
             MetadataProvider tempMdProvider = new MetadataProvider(appCtx, metadataProvider.getDefaultDataverse());
-            tempMdProvider.setConfig(metadataProvider.getConfig());
+            tempMdProvider.getConfig().putAll(metadataProvider.getConfig());
             //Drop the Channel Datasets
             //TODO: Need to find some way to handle if this fails.
             //TODO: Prevent datasets for Channels from being dropped elsewhere

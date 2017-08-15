@@ -160,7 +160,6 @@ public class CreateChannelStatement implements IExtensionStatement {
         durationParser.parse(duration.toCharArray(), 0, duration.toCharArray().length, outputStream);
         this.resultsTableName = resultsTableName;
         this.subscriptionsTableName = subscriptionsTableName;
-
     }
 
     @Override
@@ -306,7 +305,7 @@ public class CreateChannelStatement implements IExtensionStatement {
             }
             MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getApplicationContext(),
                     metadataProvider.getDefaultDataverse());
-            tempMdProvider.setConfig(metadataProvider.getConfig());
+            tempMdProvider.getConfig().putAll(metadataProvider.getConfig());
             //Create Channel Datasets
             createDatasets(statementExecutor, subscriptionsName, resultsName, tempMdProvider, hcc, hdc, dataverse);
             tempMdProvider.getLocks().reset();

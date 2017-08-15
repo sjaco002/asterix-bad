@@ -58,7 +58,7 @@ public class BADStatementExecutor extends QueryTranslator {
         Identifier dvId = ((DataverseDropStatement) stmt).getDataverseName();
         List<Broker> brokers = BADLangExtension.getBrokers(mdTxnCtx, dvId.getValue());
         MetadataProvider tempMdProvider = new MetadataProvider(appCtx, metadataProvider.getDefaultDataverse());
-        tempMdProvider.setConfig(metadataProvider.getConfig());
+        tempMdProvider.getConfig().putAll(metadataProvider.getConfig());
         for (Broker broker : brokers) {
             tempMdProvider.getLocks().reset();
             BrokerDropStatement drop = new BrokerDropStatement(dvId, new Identifier(broker.getBrokerName()), false);
