@@ -28,3 +28,4 @@ use channels;
 select test.BrokerName, test.param0
 from roomRecordsSubscriptions test
 order by test.BrokerName
+;

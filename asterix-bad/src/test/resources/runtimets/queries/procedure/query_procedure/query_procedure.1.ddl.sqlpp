@@ -30,7 +30,7 @@ use channels;
 create type myLocation as {
   timeStamp: datetime,
   roomNumber: int
-}
+};
 
 
 create dataset UserLocations(myLocation)
@@ -38,5 +38,5 @@ primary key timeStamp;
 
 create procedure findMe() {
 select roomNumber from UserLocations
-order by timeStamp;
+order by timeStamp
 };

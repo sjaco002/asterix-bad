@@ -28,3 +28,4 @@ use channels;
 insert into UserLocations([
   {"timeStamp":current_datetime(), "roomNumber":222}]
 )
+;

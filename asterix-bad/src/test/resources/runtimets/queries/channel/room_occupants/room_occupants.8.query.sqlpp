@@ -28,3 +28,4 @@ use channels;
 select result.result.userId
 from roomRecordsResults result
 order by result.result.userId
+;

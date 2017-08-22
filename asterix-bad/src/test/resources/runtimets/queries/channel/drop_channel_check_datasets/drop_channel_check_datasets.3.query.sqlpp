@@ -23,3 +23,4 @@ from Metadata.`Channel` result, Metadata.`Dataset` x
 where x.DatasetName = result.SubscriptionsDatasetName
 or x.DatasetName = result.ResultsDatasetName
 order by x.DatasetName
+;

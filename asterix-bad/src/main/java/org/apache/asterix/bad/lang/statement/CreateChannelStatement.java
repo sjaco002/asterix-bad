@@ -207,7 +207,7 @@ public class CreateChannelStatement implements IExtensionStatement {
             Identifier resultsName, MetadataProvider metadataProvider, IHyracksClientConnection hcc,
             IHyracksDataset hdc, Stats stats, String dataverse) throws Exception {
         StringBuilder builder = new StringBuilder();
-        builder.append("SET inline_with \"false\"\n");
+        builder.append("SET inline_with \"false\";\n");
         builder.append("insert into " + dataverse + "." + resultsName);
         builder.append(" as a (\n" + "with " + BADConstants.ChannelExecutionTime + " as current_datetime() \n");
         builder.append("select result, ");
