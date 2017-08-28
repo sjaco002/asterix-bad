@@ -171,7 +171,7 @@ public class CreateProcedureStatement implements IExtensionStatement {
         if (fStatements.get(0).getKind() == Statement.Kind.INSERT) {
             return new Pair<>(
                     ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider,
-                            fStatements.get(0), hcc, hdc, ResultDelivery.ASYNC, null, stats, true, null, null),
+                            fStatements.get(0), hcc, hdc, ResultDelivery.ASYNC, null, stats, true, null),
                     PrecompiledType.INSERT);
         } else if (fStatements.get(0).getKind() == Statement.Kind.QUERY) {
             Pair<JobSpecification, PrecompiledType> pair =

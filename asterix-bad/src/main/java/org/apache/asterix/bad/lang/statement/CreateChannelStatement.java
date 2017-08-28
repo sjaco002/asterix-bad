@@ -234,7 +234,7 @@ public class CreateChannelStatement implements IExtensionStatement {
         metadataProvider.getConfig().put(ss.getPropName(), ss.getPropValue());
 
         return ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider, fStatements.get(1),
-                hcc, hdc, ResultDelivery.ASYNC, null, stats, true, null, null);
+                hcc, hdc, ResultDelivery.ASYNC, null, stats, true, null);
     }
 
     private void setupExecutorJob(EntityId entityId, JobSpecification channeljobSpec, IHyracksClientConnection hcc,
