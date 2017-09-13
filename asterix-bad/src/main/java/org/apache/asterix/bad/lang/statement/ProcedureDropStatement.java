@@ -18,10 +18,9 @@
  */
 package org.apache.asterix.bad.lang.statement;
 
-import org.apache.asterix.active.ActiveJobNotificationHandler;
-import org.apache.asterix.active.ActiveLifecycleListener;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.algebra.extension.IExtensionStatement;
+import org.apache.asterix.app.active.ActiveNotificationHandler;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
 import org.apache.asterix.bad.lang.BADLangExtension;
@@ -81,16 +80,15 @@ public class ProcedureDropStatement implements IExtensionStatement {
             IHyracksClientConnection hcc, IHyracksDataset hdc, ResultDelivery resultDelivery, Stats stats,
             int resultSetIdCounter) throws HyracksDataException, AlgebricksException {
         ICcApplicationContext appCtx = metadataProvider.getApplicationContext();
-        ActiveLifecycleListener activeListener = (ActiveLifecycleListener) appCtx.getActiveLifecycleListener();
-        ActiveJobNotificationHandler activeEventHandler = activeListener.getNotificationHandler();
+        ActiveNotificationHandler activeEventHandler =
+                (ActiveNotificationHandler) appCtx.getActiveNotificationHandler();
         FunctionSignature signature = getFunctionSignature();
         String dataverse =
                 ((QueryTranslator) statementExecutor).getActiveDataverse(new Identifier(signature.getNamespace()));
         signature.setNamespace(dataverse);
         boolean txnActive = false;
         EntityId entityId = new EntityId(BADConstants.PROCEDURE_KEYWORD, dataverse, signature.getName());
-        PrecompiledJobEventListener listener =
-                (PrecompiledJobEventListener) activeEventHandler.getActiveEntityListener(entityId);
+        PrecompiledJobEventListener listener = (PrecompiledJobEventListener) activeEventHandler.getListener(entityId);
         Procedure procedure = null;
 
         MetadataTransactionContext mdTxnCtx = null;
@@ -114,8 +112,7 @@ public class ProcedureDropStatement implements IExtensionStatement {
             }
             long predistributedId = listener.getPredistributedId();
             listener.deActivate();
-
-            activeEventHandler.removeListener(listener);
+            activeEventHandler.unregisterListener(listener);
             if (predistributedId != -1) {
                 hcc.destroyJob(predistributedId);
             }

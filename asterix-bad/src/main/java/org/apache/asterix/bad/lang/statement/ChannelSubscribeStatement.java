@@ -182,13 +182,10 @@ public class ChannelSubscribeStatement implements IExtensionStatement {
             }
             RecordConstructor recordCon = new RecordConstructor(fb);
             subscriptionTuple.setBody(recordCon);
-
             subscriptionTuple.setVarCounter(varCounter);
-
             MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getApplicationContext(),
-                    metadataProvider.getDefaultDataverse(), metadataProvider.getStorageComponentProvider());
-            tempMdProvider.setConfig(metadataProvider.getConfig());
-
+                    metadataProvider.getDefaultDataverse());
+            tempMdProvider.getConfig().putAll(metadataProvider.getConfig());
             if (subscriptionId == null) {
                 //To create a new subscription
                 VariableExpr resultVar = new VariableExpr(new VarIdentifier("$result", 0));
@@ -210,13 +207,13 @@ public class ChannelSubscribeStatement implements IExtensionStatement {
                 InsertStatement insert = new InsertStatement(new Identifier(dataverse),
                         new Identifier(subscriptionsDatasetName), subscriptionTuple, varCounter, resultVar, accessor);
                 ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(tempMdProvider, insert, hcc, hdc,
-                        resultDelivery, null, stats, false, null, null);
+                        resultDelivery, null, stats, false, null);
             } else {
                 //To update an existing subscription
                 UpsertStatement upsert = new UpsertStatement(new Identifier(dataverse),
                         new Identifier(subscriptionsDatasetName), subscriptionTuple, varCounter, null, null);
                 ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(tempMdProvider, upsert, hcc, hdc,
-                        resultDelivery, null, stats, false, null, null);
+                        resultDelivery, null, stats, false, null);
             }
 
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);

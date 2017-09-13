@@ -21,3 +21,4 @@ use channels;
 select value param1
 from nearbyTweetChannelSubscriptions
 order by param1
+;

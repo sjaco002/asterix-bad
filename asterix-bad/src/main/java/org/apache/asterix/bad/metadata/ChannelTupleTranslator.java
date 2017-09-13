@@ -19,9 +19,9 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
 
+import org.apache.asterix.common.exceptions.MetadataException;
 import org.apache.asterix.common.functions.FunctionSignature;
 import org.apache.asterix.formats.nontagged.SerializerDeserializerProvider;
-import org.apache.asterix.metadata.MetadataException;
 import org.apache.asterix.metadata.entitytupletranslators.AbstractTupleTranslator;
 import org.apache.asterix.om.base.ARecord;
 import org.apache.asterix.om.base.AString;

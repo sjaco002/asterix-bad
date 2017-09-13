@@ -30,7 +30,7 @@ use channels;
 create type userLocation as {
   userId: int,
   roomNumber: int
-}
+};
 
 create dataset UserLocations(userLocation)
 primary key userId;

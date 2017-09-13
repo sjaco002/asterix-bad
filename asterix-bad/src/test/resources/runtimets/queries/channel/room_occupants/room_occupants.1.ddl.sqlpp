@@ -30,16 +30,16 @@ use channels;
 create type userLocation as {
   userId: int,
   roomNumber: int
-}
+};
 create type watchedUser as {
   userId: int,
   name: string
-}
+};
 create type roomSecurity as {
   roomNumber: int,
   securityGuardName: string,
   securityGuardNumber: string
-}
+};
 
 create dataset watchedUsers(watchedUser)
 primary key userId;

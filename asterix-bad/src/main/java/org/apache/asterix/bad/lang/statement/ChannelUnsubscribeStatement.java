@@ -144,8 +144,8 @@ public class ChannelUnsubscribeStatement implements IExtensionStatement {
             SqlppDeleteRewriteVisitor visitor = new SqlppDeleteRewriteVisitor();
             delete.accept(visitor, null);
             MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getApplicationContext(),
-                    metadataProvider.getDefaultDataverse(), metadataProvider.getStorageComponentProvider());
-            tempMdProvider.setConfig(metadataProvider.getConfig());
+                    metadataProvider.getDefaultDataverse());
+            tempMdProvider.getConfig().putAll(metadataProvider.getConfig());
             ((QueryTranslator) statementExecutor).handleDeleteStatement(tempMdProvider, delete, hcc, false);
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
         } catch (Exception e) {

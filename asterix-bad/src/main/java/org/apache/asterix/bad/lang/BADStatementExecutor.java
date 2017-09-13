@@ -28,7 +28,6 @@ import org.apache.asterix.bad.lang.statement.ProcedureDropStatement;
 import org.apache.asterix.bad.metadata.Broker;
 import org.apache.asterix.bad.metadata.Channel;
 import org.apache.asterix.bad.metadata.Procedure;
-import org.apache.asterix.common.context.IStorageComponentProvider;
 import org.apache.asterix.common.dataflow.ICcApplicationContext;
 import org.apache.asterix.common.functions.FunctionSignature;
 import org.apache.asterix.compiler.provider.ILangCompilationProvider;
@@ -44,9 +43,8 @@ import org.apache.hyracks.api.client.IHyracksClientConnection;
 public class BADStatementExecutor extends QueryTranslator {
 
     public BADStatementExecutor(ICcApplicationContext appCtx, List<Statement> statements, SessionOutput output,
-            ILangCompilationProvider compliationProvider, IStorageComponentProvider storageComponentProvider,
-            ExecutorService executorService) {
-        super(appCtx, statements, output, compliationProvider, storageComponentProvider, executorService);
+            ILangCompilationProvider compliationProvider, ExecutorService executorService) {
+        super(appCtx, statements, output, compliationProvider, executorService);
     }
 
     @Override
@@ -59,9 +57,8 @@ public class BADStatementExecutor extends QueryTranslator {
         metadataProvider.setMetadataTxnContext(mdTxnCtx);
         Identifier dvId = ((DataverseDropStatement) stmt).getDataverseName();
         List<Broker> brokers = BADLangExtension.getBrokers(mdTxnCtx, dvId.getValue());
-        MetadataProvider tempMdProvider = new MetadataProvider(appCtx, metadataProvider.getDefaultDataverse(),
-                metadataProvider.getStorageComponentProvider());
-        tempMdProvider.setConfig(metadataProvider.getConfig());
+        MetadataProvider tempMdProvider = new MetadataProvider(appCtx, metadataProvider.getDefaultDataverse());
+        tempMdProvider.getConfig().putAll(metadataProvider.getConfig());
         for (Broker broker : brokers) {
             tempMdProvider.getLocks().reset();
             BrokerDropStatement drop = new BrokerDropStatement(dvId, new Identifier(broker.getBrokerName()), false);

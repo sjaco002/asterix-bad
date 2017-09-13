@@ -25,10 +25,9 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.asterix.active.ActiveJobNotificationHandler;
-import org.apache.asterix.active.ActiveLifecycleListener;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.algebra.extension.IExtensionStatement;
+import org.apache.asterix.app.active.ActiveNotificationHandler;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
 import org.apache.asterix.bad.lang.BADLangExtension;
@@ -38,6 +37,7 @@ import org.apache.asterix.bad.metadata.Procedure;
 import org.apache.asterix.common.dataflow.ICcApplicationContext;
 import org.apache.asterix.common.exceptions.AsterixException;
 import org.apache.asterix.common.exceptions.CompilationException;
+import org.apache.asterix.common.exceptions.MetadataException;
 import org.apache.asterix.common.functions.FunctionSignature;
 import org.apache.asterix.lang.common.base.Expression;
 import org.apache.asterix.lang.common.base.Statement;
@@ -53,7 +53,6 @@ import org.apache.asterix.lang.common.struct.VarIdentifier;
 import org.apache.asterix.lang.common.visitor.base.ILangVisitor;
 import org.apache.asterix.lang.sqlpp.expression.SelectExpression;
 import org.apache.asterix.lang.sqlpp.visitor.SqlppDeleteRewriteVisitor;
-import org.apache.asterix.metadata.MetadataException;
 import org.apache.asterix.metadata.MetadataManager;
 import org.apache.asterix.metadata.MetadataTransactionContext;
 import org.apache.asterix.metadata.declared.MetadataProvider;
@@ -196,7 +195,7 @@ public class CreateProcedureStatement implements IExtensionStatement {
             }
             return new Pair<>(
                     ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider,
-                            getProcedureBodyStatement(), hcc, hdc, ResultDelivery.ASYNC, null, stats, true, null, null),
+                            getProcedureBodyStatement(), hcc, hdc, ResultDelivery.ASYNC, null, stats, true, null),
                     PrecompiledType.INSERT);
         } else if (getProcedureBodyStatement().getKind() == Statement.Kind.QUERY) {
             Query s = (Query) getProcedureBodyStatement();
@@ -230,14 +229,13 @@ public class CreateProcedureStatement implements IExtensionStatement {
             IHyracksClientConnection hcc, IHyracksDataset hdc, ResultDelivery resultDelivery, Stats stats,
             int resultSetIdCounter) throws HyracksDataException, AlgebricksException {
         ICcApplicationContext appCtx = metadataProvider.getApplicationContext();
-        ActiveLifecycleListener activeListener = (ActiveLifecycleListener) appCtx.getActiveLifecycleListener();
-        ActiveJobNotificationHandler activeEventHandler = activeListener.getNotificationHandler();
+        ActiveNotificationHandler activeEventHandler =
+                (ActiveNotificationHandler) appCtx.getActiveNotificationHandler();
         initialize();
         String dataverse =
                 ((QueryTranslator) statementExecutor).getActiveDataverse(new Identifier(signature.getNamespace()));
         EntityId entityId = new EntityId(BADConstants.PROCEDURE_KEYWORD, dataverse, signature.getName());
-        PrecompiledJobEventListener listener =
-                (PrecompiledJobEventListener) activeEventHandler.getActiveEntityListener(entityId);
+        PrecompiledJobEventListener listener = (PrecompiledJobEventListener) activeEventHandler.getListener(entityId);
         boolean alreadyActive = false;
         Procedure procedure = null;
 
@@ -251,19 +249,16 @@ public class CreateProcedureStatement implements IExtensionStatement {
                 throw new AlgebricksException("A procedure with this name " + signature.getName() + " already exists.");
             }
             if (listener != null) {
-                alreadyActive = listener.isEntityActive();
+                alreadyActive = listener.isActive();
             }
             if (alreadyActive) {
                 throw new AsterixException("Procedure " + signature.getName() + " is already running");
             }
-
             procedure = new Procedure(dataverse, signature.getName(), signature.getArity(), getParamList(),
                     Function.RETURNTYPE_VOID, getProcedureBody(), Function.LANGUAGE_AQL, duration);
-
             MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getApplicationContext(),
-                    metadataProvider.getDefaultDataverse(), metadataProvider.getStorageComponentProvider());
-            tempMdProvider.setConfig(metadataProvider.getConfig());
-
+                    metadataProvider.getDefaultDataverse());
+            tempMdProvider.getConfig().putAll(metadataProvider.getConfig());
             metadataProvider.setResultSetId(new ResultSetId(resultSetIdCounter++));
             boolean resultsAsync = resultDelivery == ResultDelivery.ASYNC || resultDelivery == ResultDelivery.DEFERRED;
             metadataProvider.setResultAsyncMode(resultsAsync);
@@ -279,11 +274,14 @@ public class CreateProcedureStatement implements IExtensionStatement {
 
             // Now we subscribe
             if (listener == null) {
-                //TODO: Add datasets used by procedure
-                listener = new PrecompiledJobEventListener(entityId, procedureJobSpec.second, new ArrayList<>());
+                //TODO: Add datasets used by channel function
+                listener = new PrecompiledJobEventListener(appCtx, entityId, procedureJobSpec.second,
+                        new ArrayList<>(),
+                        null, "BadListener");
                 activeEventHandler.registerListener(listener);
             }
-            setupDistributedJob(entityId, procedureJobSpec.first, hcc, listener, tempMdProvider.getResultSetId(), hdc,
+            setupDistributedJob(entityId, procedureJobSpec.first, hcc, listener, tempMdProvider.getResultSetId(),
+                    hdc,
                     stats);
 
             MetadataManager.INSTANCE.addEntity(mdTxnCtx, procedure);

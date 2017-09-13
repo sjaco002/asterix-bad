@@ -30,7 +30,7 @@ use channels;
 create type myLocation as {
   timeStamp: datetime,
   roomNumber: int
-}
+};
 
 
 create dataset UserLocations(myLocation)

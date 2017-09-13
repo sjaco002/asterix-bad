@@ -33,7 +33,6 @@ public class BADQueryTranslatorFactory extends DefaultStatementExecutorFactory {
     @Override
     public QueryTranslator create(ICcApplicationContext appCtx, List<Statement> statements, SessionOutput output,
             ILangCompilationProvider compilationProvider, IStorageComponentProvider storageComponentProvider) {
-        return new BADStatementExecutor(appCtx, statements, output, compilationProvider, storageComponentProvider,
-                executorService);
+        return new BADStatementExecutor(appCtx, statements, output, compilationProvider, executorService);
     }
 }

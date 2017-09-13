@@ -29,10 +29,9 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.asterix.active.ActiveJobNotificationHandler;
-import org.apache.asterix.active.ActiveLifecycleListener;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.algebra.extension.IExtensionStatement;
+import org.apache.asterix.app.active.ActiveNotificationHandler;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
 import org.apache.asterix.bad.ChannelJobService;
@@ -46,13 +45,14 @@ import org.apache.asterix.common.config.DatasetConfig.IndexType;
 import org.apache.asterix.common.dataflow.ICcApplicationContext;
 import org.apache.asterix.common.exceptions.AsterixException;
 import org.apache.asterix.common.exceptions.CompilationException;
+import org.apache.asterix.common.exceptions.MetadataException;
 import org.apache.asterix.common.functions.FunctionSignature;
 import org.apache.asterix.common.metadata.IDataset;
 import org.apache.asterix.lang.common.base.Expression;
 import org.apache.asterix.lang.common.base.Statement;
 import org.apache.asterix.lang.common.expression.CallExpr;
+import org.apache.asterix.lang.common.expression.IndexedTypeExpression;
 import org.apache.asterix.lang.common.expression.LiteralExpr;
-import org.apache.asterix.lang.common.expression.TypeExpression;
 import org.apache.asterix.lang.common.literal.StringLiteral;
 import org.apache.asterix.lang.common.statement.CreateIndexStatement;
 import org.apache.asterix.lang.common.statement.DatasetDecl;
@@ -62,7 +62,6 @@ import org.apache.asterix.lang.common.statement.InternalDetailsDecl;
 import org.apache.asterix.lang.common.statement.SetStatement;
 import org.apache.asterix.lang.common.struct.Identifier;
 import org.apache.asterix.lang.common.visitor.base.ILangVisitor;
-import org.apache.asterix.metadata.MetadataException;
 import org.apache.asterix.metadata.MetadataManager;
 import org.apache.asterix.metadata.MetadataTransactionContext;
 import org.apache.asterix.metadata.declared.MetadataProvider;
@@ -164,7 +163,6 @@ public class CreateChannelStatement implements IExtensionStatement {
         durationParser.parse(duration.toCharArray(), 0, duration.toCharArray().length, outputStream);
         this.resultsTableName = resultsTableName;
         this.subscriptionsTableName = subscriptionsTableName;
-
     }
 
     @Override
@@ -211,7 +209,7 @@ public class CreateChannelStatement implements IExtensionStatement {
         createTimeIndex.setGramLength(0);
         List<String> fNames = new ArrayList<>();
         fNames.add(BADConstants.ChannelExecutionTime);
-        Pair<List<String>, TypeExpression> fields = new Pair<List<String>, TypeExpression>(fNames, null);
+        Pair<List<String>, IndexedTypeExpression> fields = new Pair<>(fNames, null);
         createTimeIndex.addFieldExprPair(fields);
         createTimeIndex.addFieldIndexIndicator(0);
 
@@ -232,7 +230,7 @@ public class CreateChannelStatement implements IExtensionStatement {
             Identifier resultsName, MetadataProvider metadataProvider, IHyracksClientConnection hcc,
             IHyracksDataset hdc, Stats stats, String dataverse) throws Exception {
         StringBuilder builder = new StringBuilder();
-        builder.append("SET inline_with \"false\"\n");
+        builder.append("SET inline_with \"false\";\n");
         builder.append("insert into " + dataverse + "." + resultsName);
         builder.append(" as a (\n" + "with " + BADConstants.ChannelExecutionTime + " as current_datetime() \n");
         builder.append("select result, ");
@@ -259,7 +257,7 @@ public class CreateChannelStatement implements IExtensionStatement {
         metadataProvider.getConfig().put(ss.getPropName(), ss.getPropValue());
 
         return ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider, fStatements.get(1),
-                hcc, hdc, ResultDelivery.ASYNC, null, stats, true, null, null);
+                hcc, hdc, ResultDelivery.ASYNC, null, stats, true, null);
     }
 
     private void setupExecutorJob(EntityId entityId, JobSpecification channeljobSpec, IHyracksClientConnection hcc,
@@ -297,10 +295,9 @@ public class CreateChannelStatement implements IExtensionStatement {
         Identifier resultsName = new Identifier(channelName + BADConstants.resultsEnding);
         EntityId entityId = new EntityId(BADConstants.CHANNEL_EXTENSION_NAME, dataverse, channelName.getValue());
         ICcApplicationContext appCtx = metadataProvider.getApplicationContext();
-        ActiveLifecycleListener activeListener = (ActiveLifecycleListener) appCtx.getActiveLifecycleListener();
-        ActiveJobNotificationHandler activeEventHandler = activeListener.getNotificationHandler();
-        PrecompiledJobEventListener listener =
-                (PrecompiledJobEventListener) activeEventHandler.getActiveEntityListener(entityId);
+        ActiveNotificationHandler activeEventHandler =
+                (ActiveNotificationHandler) appCtx.getActiveNotificationHandler();
+        PrecompiledJobEventListener listener = (PrecompiledJobEventListener) activeEventHandler.getListener(entityId);
         boolean alreadyActive = false;
         Channel channel = null;
 
@@ -313,7 +310,7 @@ public class CreateChannelStatement implements IExtensionStatement {
                 throw new AlgebricksException("A channel with this name " + channelName + " already exists.");
             }
             if (listener != null) {
-                alreadyActive = listener.isEntityActive();
+                alreadyActive = listener.isActive();
             }
             if (alreadyActive) {
                 throw new AsterixException("Channel " + channelName + " is already running");
@@ -330,11 +327,10 @@ public class CreateChannelStatement implements IExtensionStatement {
                 throw new AsterixException("The channel name:" + channelName + " is not available.");
             }
             MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getApplicationContext(),
-                    metadataProvider.getDefaultDataverse(), metadataProvider.getStorageComponentProvider());
-            tempMdProvider.setConfig(metadataProvider.getConfig());
+                    metadataProvider.getDefaultDataverse());
+            tempMdProvider.getConfig().putAll(metadataProvider.getConfig());
             //Create Channel Datasets
-            createDatasets(statementExecutor, subscriptionsName, resultsName, tempMdProvider, hcc, hdc,
-                    dataverse);
+            createDatasets(statementExecutor, subscriptionsName, resultsName, tempMdProvider, hcc, hdc, dataverse);
             tempMdProvider.getLocks().reset();
             //Create Channel Internal Job
             JobSpecification channeljobSpec = createChannelJob(statementExecutor, subscriptionsName, resultsName,
@@ -346,7 +342,8 @@ public class CreateChannelStatement implements IExtensionStatement {
                 datasets.add(MetadataManager.INSTANCE.getDataset(mdTxnCtx, dataverse, subscriptionsName.getValue()));
                 datasets.add(MetadataManager.INSTANCE.getDataset(mdTxnCtx, dataverse, resultsName.getValue()));
                 //TODO: Add datasets used by channel function
-                listener = new PrecompiledJobEventListener(entityId, PrecompiledType.CHANNEL, datasets);
+                listener = new PrecompiledJobEventListener(appCtx, entityId, PrecompiledType.CHANNEL, datasets, null,
+                        "BadListener");
                 activeEventHandler.registerListener(listener);
             }
 
