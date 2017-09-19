@@ -64,6 +64,7 @@ import org.apache.asterix.metadata.MetadataTransactionContext;
 import org.apache.asterix.metadata.declared.MetadataProvider;
 import org.apache.asterix.metadata.entities.Function;
 import org.apache.asterix.om.base.temporal.ADurationParserFactory;
+import org.apache.asterix.translator.IRequestParameters;
 import org.apache.asterix.translator.IStatementExecutor;
 import org.apache.asterix.translator.IStatementExecutor.ResultDelivery;
 import org.apache.asterix.translator.IStatementExecutor.Stats;
@@ -253,10 +254,9 @@ public class CreateChannelStatement implements IExtensionStatement {
     }
 
     @Override
-    public void handle(IStatementExecutor statementExecutor, MetadataProvider metadataProvider,
-            IHyracksClientConnection hcc, IHyracksDataset hdc, ResultDelivery resultDelivery, Stats stats,
-            int resultSetIdCounter) throws HyracksDataException, AlgebricksException {
-
+    public void handle(IHyracksClientConnection hcc, IStatementExecutor statementExecutor,
+            IRequestParameters requestContext, MetadataProvider metadataProvider, int resultSetId)
+            throws HyracksDataException, AlgebricksException {
         //This function performs three tasks:
         //1. Create datasets for the Channel
         //2. Create and run the Channel Job
@@ -306,6 +306,8 @@ public class CreateChannelStatement implements IExtensionStatement {
             MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getApplicationContext(),
                     metadataProvider.getDefaultDataverse());
             tempMdProvider.getConfig().putAll(metadataProvider.getConfig());
+            final IHyracksDataset hdc = requestContext.getHyracksDataset();
+            final Stats stats = requestContext.getStats();
             //Create Channel Datasets
             createDatasets(statementExecutor, subscriptionsName, resultsName, tempMdProvider, hcc, hdc, dataverse);
             tempMdProvider.getLocks().reset();
