@@ -262,4 +262,9 @@ public class PrecompiledJobEventListener implements IActiveEntityEventsListener 
     public Exception getJobFailure() {
         return null;
     }
+
+    @Override
+    public String getDisplayName() throws HyracksDataException {
+        return this.entityId.toString();
+    }
 }

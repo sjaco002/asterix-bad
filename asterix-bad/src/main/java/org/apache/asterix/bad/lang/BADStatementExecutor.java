@@ -21,6 +21,7 @@ package org.apache.asterix.bad.lang;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
+import org.apache.asterix.app.translator.RequestParameters;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.lang.statement.BrokerDropStatement;
 import org.apache.asterix.bad.lang.statement.ChannelDropStatement;
@@ -37,6 +38,7 @@ import org.apache.asterix.lang.common.struct.Identifier;
 import org.apache.asterix.metadata.MetadataManager;
 import org.apache.asterix.metadata.MetadataTransactionContext;
 import org.apache.asterix.metadata.declared.MetadataProvider;
+import org.apache.asterix.translator.IRequestParameters;
 import org.apache.asterix.translator.SessionOutput;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 
@@ -59,24 +61,25 @@ public class BADStatementExecutor extends QueryTranslator {
         List<Broker> brokers = BADLangExtension.getBrokers(mdTxnCtx, dvId.getValue());
         MetadataProvider tempMdProvider = new MetadataProvider(appCtx, metadataProvider.getDefaultDataverse());
         tempMdProvider.getConfig().putAll(metadataProvider.getConfig());
+        final IRequestParameters requestParameters = new RequestParameters(null, null, null, null, null, null);
         for (Broker broker : brokers) {
             tempMdProvider.getLocks().reset();
             BrokerDropStatement drop = new BrokerDropStatement(dvId, new Identifier(broker.getBrokerName()), false);
-            drop.handle(this, tempMdProvider, hcc, null, null, null, 0);
+            drop.handle(hcc, this, requestParameters, tempMdProvider, 0);
         }
         List<Channel> channels = BADLangExtension.getChannels(mdTxnCtx, dvId.getValue());
         for (Channel channel : channels) {
             tempMdProvider.getLocks().reset();
             ChannelDropStatement drop =
                     new ChannelDropStatement(dvId, new Identifier(channel.getChannelId().getEntityName()), false);
-            drop.handle(this, tempMdProvider, hcc, null, null, null, 0);
+            drop.handle(hcc, this, requestParameters, tempMdProvider, 0);
         }
         List<Procedure> procedures = BADLangExtension.getProcedures(mdTxnCtx, dvId.getValue());
         for (Procedure procedure : procedures) {
             tempMdProvider.getLocks().reset();
             ProcedureDropStatement drop = new ProcedureDropStatement(new FunctionSignature(dvId.getValue(),
                     procedure.getEntityId().getEntityName(), procedure.getArity()), false);
-            drop.handle(this, tempMdProvider, hcc, null, null, null, 0);
+            drop.handle(hcc, this, requestParameters, tempMdProvider, 0);
         }
         MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
     }

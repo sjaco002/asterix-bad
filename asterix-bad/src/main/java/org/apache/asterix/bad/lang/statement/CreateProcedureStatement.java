@@ -59,6 +59,7 @@ import org.apache.asterix.metadata.declared.MetadataProvider;
 import org.apache.asterix.metadata.entities.Function;
 import org.apache.asterix.om.base.temporal.ADurationParserFactory;
 import org.apache.asterix.om.functions.BuiltinFunctions;
+import org.apache.asterix.translator.IRequestParameters;
 import org.apache.asterix.translator.IStatementExecutor;
 import org.apache.asterix.translator.IStatementExecutor.ResultDelivery;
 import org.apache.asterix.translator.IStatementExecutor.Stats;
@@ -225,9 +226,9 @@ public class CreateProcedureStatement implements IExtensionStatement {
     }
 
     @Override
-    public void handle(IStatementExecutor statementExecutor, MetadataProvider metadataProvider,
-            IHyracksClientConnection hcc, IHyracksDataset hdc, ResultDelivery resultDelivery, Stats stats,
-            int resultSetIdCounter) throws HyracksDataException, AlgebricksException {
+    public void handle(IHyracksClientConnection hcc, IStatementExecutor statementExecutor,
+            IRequestParameters requestParameters, MetadataProvider metadataProvider, int resultSetId)
+            throws HyracksDataException, AlgebricksException {
         ICcApplicationContext appCtx = metadataProvider.getApplicationContext();
         ActiveNotificationHandler activeEventHandler =
                 (ActiveNotificationHandler) appCtx.getActiveNotificationHandler();
@@ -259,7 +260,10 @@ public class CreateProcedureStatement implements IExtensionStatement {
             MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getApplicationContext(),
                     metadataProvider.getDefaultDataverse());
             tempMdProvider.getConfig().putAll(metadataProvider.getConfig());
-            metadataProvider.setResultSetId(new ResultSetId(resultSetIdCounter++));
+            metadataProvider.setResultSetId(new ResultSetId(resultSetId++));
+            final ResultDelivery resultDelivery = requestParameters.getResultDelivery();
+            final IHyracksDataset hdc = requestParameters.getHyracksDataset();
+            final Stats stats = requestParameters.getStats();
             boolean resultsAsync = resultDelivery == ResultDelivery.ASYNC || resultDelivery == ResultDelivery.DEFERRED;
             metadataProvider.setResultAsyncMode(resultsAsync);
             tempMdProvider.setResultSetId(metadataProvider.getResultSetId());
