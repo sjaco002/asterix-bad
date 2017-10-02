@@ -60,7 +60,7 @@ create function EmergenciesNearMe(emergencyType, uid){
   from EmergencyReports report, UserLocations user
   let shelters = (select * from EmergencyShelters shelter
     where spatial_intersect(report.impactZone,shelter.location))
-  where user.user_id = uid 
+  where user.user_id = uid
     and report.timestamp >= tenMinutesAgo
     and user.timestamp >= tenMinutesAgo
     and report.emergencyType = emergencyType
