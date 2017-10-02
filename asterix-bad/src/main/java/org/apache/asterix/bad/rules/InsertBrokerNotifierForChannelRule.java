@@ -70,9 +70,6 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
     @Override
     public boolean rewritePost(Mutable<ILogicalOperator> opRef, IOptimizationContext context)
             throws AlgebricksException {
-        if (1 == 1) {
-            return false;
-        }
         AbstractLogicalOperator op1 = (AbstractLogicalOperator) opRef.getValue();
         if (op1.getOperatorTag() != LogicalOperatorTag.DISTRIBUTE_RESULT) {
             return false;

@@ -28,7 +28,7 @@ create dataverse channels;
 use channels;
 create type myLocation as {
   id: int
-}
+};
 create dataset UserLocations(myLocation)
 primary key id;
 insert into UserLocations(
