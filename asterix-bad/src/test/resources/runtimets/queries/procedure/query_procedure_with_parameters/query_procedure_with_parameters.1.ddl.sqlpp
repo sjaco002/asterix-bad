@@ -41,5 +41,5 @@ create procedure selectSome(r, otherRoom) {
 select roomNumber from UserLocations
 where roomNumber = r
 or roomNumber = otherRoom
-order by id;
+order by id
 };
