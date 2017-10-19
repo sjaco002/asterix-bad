@@ -27,22 +27,22 @@ create dataverse channels5;
 use channels5;
 
 create type UserLocation as closed {
-	recordId: uuid,
-	location: circle,
-	userName: string,
-	timeStamp: datetime
+  recordId: uuid,
+  location: circle,
+  userName: string,
+  timeStamp: datetime
 };
 
 create type EmergencyReport as closed {
-	reportId: uuid,
-	Etype: string,
-	location: circle,
-	timeStamp: datetime
+  reportId: uuid,
+  Etype: string,
+  location: circle,
+  timeStamp: datetime
 };
 
 create type EmergencyShelter as closed {
-	shelterName: string,
-	location: circle
+  shelterName: string,
+  location: circle
 };
 
 create dataset UserLocations(UserLocation)
