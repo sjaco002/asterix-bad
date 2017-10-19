@@ -19,10 +19,42 @@
 package org.apache.asterix.bad.test;
 
 import org.apache.asterix.api.common.AsterixHyracksIntegrationUtil;
+import org.apache.asterix.common.config.GlobalConfig;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 @RunWith(Parameterized.class)
 public class BADAsterixHyracksIntegrationUtil extends AsterixHyracksIntegrationUtil {
+
+    public static void main(String[] args) throws Exception {
+        BADAsterixHyracksIntegrationUtil integrationUtil = new BADAsterixHyracksIntegrationUtil();
+        try {
+            integrationUtil.run(Boolean.getBoolean("cleanup.start"), Boolean.getBoolean("cleanup.shutdown"));
+        } catch (Exception e) {
+            System.exit(1);
+        }
+    }
+
+    @Override
+    protected void run(boolean cleanupOnStart, boolean cleanupOnShutdown) throws Exception {
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            @Override
+            public void run() {
+                try {
+                    deinit(cleanupOnShutdown);
+                } catch (Exception e) {
+
+                }
+            }
+        });
+
+        System.setProperty(GlobalConfig.CONFIG_FILE_PROPERTY,
+                "/Users/stevenjacobs/asterix/asertixdb/asterixdb/asterix-opt/asterix-bad/src/main/resources/asterix-build-configuration.xml");
+
+        init(cleanupOnStart);
+        while (true) {
+            Thread.sleep(10000);
+        }
+    }
 
 }

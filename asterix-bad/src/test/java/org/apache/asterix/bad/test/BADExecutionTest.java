@@ -48,7 +48,7 @@ public class BADExecutionTest {
     protected static final String PATH_BASE = StringUtils.join(new String[] { "src", "test", "resources", "runtimets" },
             File.separator);
 
-    protected static final String TEST_CONFIG_FILE_NAME = "src/test/resources/conf/asterix-build-configuration.xml";
+    protected static final String TEST_CONFIG_FILE_NAME = "src/main/resources/asterix-build-configuration.xml";
 
     protected static TransactionProperties txnProperties;
     private static final TestExecutor testExecutor = new TestExecutor();

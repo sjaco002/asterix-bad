@@ -38,7 +38,7 @@ public class BADOptimizerTest extends OptimizerTest {
 
     @BeforeClass
     public static void setUp() throws Exception {
-        TEST_CONFIG_FILE_NAME = "src/test/resources/conf/asterix-build-configuration.xml";
+        TEST_CONFIG_FILE_NAME = "src/main/resources/asterix-build-configuration.xml";
         System.setProperty(GlobalConfig.CONFIG_FILE_PROPERTY, TEST_CONFIG_FILE_NAME);
         final File outdir = new File(PATH_ACTUAL);
         outdir.mkdirs();
