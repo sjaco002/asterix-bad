@@ -142,7 +142,7 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
             } else {
                 ScheduledExecutorService ses =
                         ChannelJobService.startJob(null, EnumSet.noneOf(JobFlag.class), predistributedId, hcc,
-                                ChannelJobService.findPeriod(procedure.getDuration()), contextRuntimeVarMap);
+                                ChannelJobService.findPeriod(procedure.getDuration()), contextRuntimeVarMap, entityId);
                 listener.storeDistributedInfo(predistributedId, ses, listener.getResultDataset(),
                         listener.getResultId());
             }

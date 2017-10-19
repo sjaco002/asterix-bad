@@ -50,18 +50,19 @@ public class ChannelJobService {
 
     public static ScheduledExecutorService startJob(JobSpecification jobSpec, EnumSet<JobFlag> jobFlags,
             long distributedId,
-            IHyracksClientConnection hcc, long duration, Map<byte[], byte[]> jobParameters)
+            IHyracksClientConnection hcc, long duration, Map<byte[], byte[]> jobParameters, EntityId entityId)
             throws Exception {
         ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
         scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
                 try {
-                    if (!executeJob(jobSpec, jobFlags, distributedId, hcc, jobParameters, duration)) {
+                    if (!executeJob(jobSpec, jobFlags, distributedId, hcc, jobParameters, duration, entityId)) {
                         scheduledExecutorService.shutdown();
                     }
                 } catch (Exception e) {
-                    LOGGER.log(Level.WARNING, "Channel Job Failed to run.", e);
+                    LOGGER.log(Level.WARNING, "Job Failed to run for " + entityId.getExtensionName() + " "
+                            + entityId.getDataverse() + "." + entityId.getEntityName() + ".", e);
                 }
             }
         }, duration, duration, TimeUnit.MILLISECONDS);
@@ -69,7 +70,7 @@ public class ChannelJobService {
     }
 
     public static boolean executeJob(JobSpecification jobSpec, EnumSet<JobFlag> jobFlags, long distributedId,
-            IHyracksClientConnection hcc, Map<byte[], byte[]> jobParameters, long duration)
+            IHyracksClientConnection hcc, Map<byte[], byte[]> jobParameters, long duration, EntityId entityId)
             throws Exception {
         if (LOGGER.isLoggable(Level.INFO)) {
             LOGGER.info("Executing Distributed Job");
@@ -86,9 +87,16 @@ public class ChannelJobService {
         Date checkEndTime = new Date();
         long executionMilliseconds = (checkEndTime.getTime() - checkStartTime.getTime());
         if (executionMilliseconds > duration && LOGGER.isLoggable(Level.SEVERE)) {
-            LOGGER.severe("Periodic job was unable to meet the period of " + duration + " milliseconds. Actually took "
-                    + executionMilliseconds + " execution will shutdown" + new Date());
+            LOGGER.log(Level.SEVERE,
+                    "Periodic job for " + entityId.getExtensionName() + " " + entityId.getDataverse() + "."
+                            + entityId.getEntityName() + " was unable to meet the required period of " + duration
+                            + " milliseconds. Actually took " + executionMilliseconds + " execution will shutdown"
+                            + new Date());
             onTime = false;
+        }
+        else {
+            LOGGER.log(Level.INFO, "Job completed for " + entityId.getExtensionName() + " " + entityId.getDataverse()
+                    + "." + entityId.getEntityName() + ".");
         }
         return onTime;
 
