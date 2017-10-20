@@ -96,7 +96,7 @@ public class ChannelJobService {
         }
         else {
             LOGGER.log(Level.INFO, "Job completed for " + entityId.getExtensionName() + " " + entityId.getDataverse()
-                    + "." + entityId.getEntityName() + ".");
+                    + "." + entityId.getEntityName() + ". Took " + executionMilliseconds + " milliseconds ");
         }
         return onTime;
 
