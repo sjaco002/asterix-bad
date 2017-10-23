@@ -51,6 +51,7 @@ import org.apache.asterix.metadata.MetadataTransactionContext;
 import org.apache.asterix.metadata.declared.MetadataProvider;
 import org.apache.asterix.om.base.AString;
 import org.apache.asterix.om.base.IAObject;
+import org.apache.asterix.transaction.management.service.transaction.JobIdFactory;
 import org.apache.asterix.translator.ConstantHelper;
 import org.apache.asterix.translator.IRequestParameters;
 import org.apache.asterix.translator.IStatementExecutor;
@@ -128,6 +129,8 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
             Map<byte[], byte[]> contextRuntimeVarMap = createContextRuntimeMap(procedure);
             PreDistributedId preDistributedId = listener.getPredistributedId();
             if (procedure.getDuration().equals("")) {
+                org.apache.asterix.common.transactions.JobId asterixJobId = JobIdFactory.generateJobId();
+                preDistributedId.setAsterixJobId(asterixJobId.getId());
                 JobId jobId = hcc.startJob(preDistributedId, contextRuntimeVarMap);
 
                 if (listener.getType() == PrecompiledType.QUERY) {

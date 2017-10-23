@@ -35,6 +35,7 @@ import java.util.logging.Logger;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.om.base.AOrderedList;
 import org.apache.asterix.om.base.AUUID;
+import org.apache.asterix.transaction.management.service.transaction.JobIdFactory;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.job.JobFlag;
@@ -83,6 +84,8 @@ public class ChannelJobService {
         if (distributedId == null) {
             jobId = hcc.startJob(jobSpec, jobFlags);
         } else {
+            org.apache.asterix.common.transactions.JobId asterixJobId = JobIdFactory.generateJobId();
+            distributedId.setAsterixJobId(asterixJobId.getId());
             jobId = hcc.startJob(distributedId, jobParameters);
         }
         hcc.waitForCompletion(jobId);
