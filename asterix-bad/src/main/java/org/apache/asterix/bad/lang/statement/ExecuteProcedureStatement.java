@@ -60,6 +60,7 @@ import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.job.JobFlag;
 import org.apache.hyracks.api.job.JobId;
+import org.apache.hyracks.api.job.PreDistributedId;
 import org.apache.hyracks.data.std.util.ArrayBackedValueStorage;
 
 public class ExecuteProcedureStatement implements IExtensionStatement {
@@ -125,9 +126,9 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
                 throw new AlgebricksException("There is no procedure with this name " + procedureName + ".");
             }
             Map<byte[], byte[]> contextRuntimeVarMap = createContextRuntimeMap(procedure);
-            long predistributedId = listener.getPredistributedId();
+            PreDistributedId preDistributedId = listener.getPredistributedId();
             if (procedure.getDuration().equals("")) {
-                JobId jobId = hcc.startJob(predistributedId, contextRuntimeVarMap);
+                JobId jobId = hcc.startJob(preDistributedId, contextRuntimeVarMap);
 
                 if (listener.getType() == PrecompiledType.QUERY) {
                     hcc.waitForCompletion(jobId);
@@ -141,9 +142,9 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
 
             } else {
                 ScheduledExecutorService ses =
-                        ChannelJobService.startJob(null, EnumSet.noneOf(JobFlag.class), predistributedId, hcc,
+                        ChannelJobService.startJob(null, EnumSet.noneOf(JobFlag.class), preDistributedId, hcc,
                                 ChannelJobService.findPeriod(procedure.getDuration()), contextRuntimeVarMap, entityId);
-                listener.storeDistributedInfo(predistributedId, ses, listener.getResultDataset(),
+                listener.storeDistributedInfo(preDistributedId, ses, listener.getResultDataset(),
                         listener.getResultId());
             }
 

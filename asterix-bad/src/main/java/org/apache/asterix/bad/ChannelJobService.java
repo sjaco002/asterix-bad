@@ -40,6 +40,7 @@ import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.job.JobFlag;
 import org.apache.hyracks.api.job.JobId;
 import org.apache.hyracks.api.job.JobSpecification;
+import org.apache.hyracks.api.job.PreDistributedId;
 
 /**
  * Provides functionality for running channel jobs and communicating with Brokers
@@ -49,7 +50,7 @@ public class ChannelJobService {
     private static final Logger LOGGER = Logger.getLogger(ChannelJobService.class.getName());
 
     public static ScheduledExecutorService startJob(JobSpecification jobSpec, EnumSet<JobFlag> jobFlags,
-            long distributedId,
+            PreDistributedId distributedId,
             IHyracksClientConnection hcc, long duration, Map<byte[], byte[]> jobParameters, EntityId entityId)
             throws Exception {
         ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
@@ -69,7 +70,8 @@ public class ChannelJobService {
         return scheduledExecutorService;
     }
 
-    public static boolean executeJob(JobSpecification jobSpec, EnumSet<JobFlag> jobFlags, long distributedId,
+    public static boolean executeJob(JobSpecification jobSpec, EnumSet<JobFlag> jobFlags,
+            PreDistributedId distributedId,
             IHyracksClientConnection hcc, Map<byte[], byte[]> jobParameters, long duration, EntityId entityId)
             throws Exception {
         if (LOGGER.isLoggable(Level.INFO)) {
@@ -78,7 +80,7 @@ public class ChannelJobService {
         boolean onTime = true;
         JobId jobId;
         Date checkStartTime = new Date();
-        if (distributedId == -1) {
+        if (distributedId == null) {
             jobId = hcc.startJob(jobSpec, jobFlags);
         } else {
             jobId = hcc.startJob(distributedId, jobParameters);

@@ -71,6 +71,7 @@ import org.apache.hyracks.api.dataset.IHyracksDataset;
 import org.apache.hyracks.api.dataset.ResultSetId;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.job.JobSpecification;
+import org.apache.hyracks.api.job.PreDistributedId;
 import org.apache.hyracks.dataflow.common.data.parsers.IValueParser;
 
 public class CreateProcedureStatement implements IExtensionStatement {
@@ -221,8 +222,8 @@ public class CreateProcedureStatement implements IExtensionStatement {
     private void setupDistributedJob(EntityId entityId, JobSpecification jobSpec, IHyracksClientConnection hcc,
             PrecompiledJobEventListener listener, ResultSetId resultSetId, IHyracksDataset hdc, Stats stats)
             throws Exception {
-        long predistributedId = hcc.distributeJob(jobSpec);
-        listener.storeDistributedInfo(predistributedId, null, hdc, resultSetId);
+        PreDistributedId preDistributedId = hcc.distributeJob(jobSpec);
+        listener.storeDistributedInfo(preDistributedId, null, hdc, resultSetId);
     }
 
     @Override

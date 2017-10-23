@@ -78,6 +78,7 @@ import org.apache.hyracks.api.dataset.IHyracksDataset;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.job.JobFlag;
 import org.apache.hyracks.api.job.JobSpecification;
+import org.apache.hyracks.api.job.PreDistributedId;
 import org.apache.hyracks.dataflow.common.data.parsers.IValueParser;
 
 public class CreateChannelStatement implements IExtensionStatement {
@@ -266,7 +267,7 @@ public class CreateChannelStatement implements IExtensionStatement {
             PrecompiledJobEventListener listener, boolean predistributed) throws Exception {
         if (channeljobSpec != null) {
             //TODO: Find a way to fix optimizer tests so we don't need this check
-            long destributedId = -1;
+            PreDistributedId destributedId = null;
             if (predistributed) {
                 destributedId = hcc.distributeJob(channeljobSpec);
             }

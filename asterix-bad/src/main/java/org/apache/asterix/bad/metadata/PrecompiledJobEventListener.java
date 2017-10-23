@@ -38,6 +38,7 @@ import org.apache.hyracks.api.dataset.IHyracksDataset;
 import org.apache.hyracks.api.dataset.ResultSetId;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.job.JobId;
+import org.apache.hyracks.api.job.PreDistributedId;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
@@ -59,7 +60,7 @@ public class PrecompiledJobEventListener implements IActiveEntityEventsListener 
         FINISHED
     }
 
-    private long predistributedId;
+    private PreDistributedId preDistributedId;
     private ScheduledExecutorService executorService = null;
     private ResultReader resultReader;
     private final PrecompiledType type;
@@ -107,8 +108,8 @@ public class PrecompiledJobEventListener implements IActiveEntityEventsListener 
         return resultSetId;
     }
 
-    public long getPredistributedId() {
-        return predistributedId;
+    public PreDistributedId getPredistributedId() {
+        return preDistributedId;
     }
 
     protected synchronized void handle(ActivePartitionMessage message) {
@@ -191,9 +192,9 @@ public class PrecompiledJobEventListener implements IActiveEntityEventsListener 
         return type;
     }
 
-    public void storeDistributedInfo(long predistributedId, ScheduledExecutorService ses,
+    public void storeDistributedInfo(PreDistributedId preDistributedId, ScheduledExecutorService ses,
             IHyracksDataset hdc, ResultSetId resultSetId) {
-        this.predistributedId = predistributedId;
+        this.preDistributedId = preDistributedId;
         this.executorService = ses;
         this.hdc = hdc;
         this.resultSetId = resultSetId;

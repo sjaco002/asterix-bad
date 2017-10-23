@@ -18,6 +18,9 @@
  */
 package org.apache.asterix.bad.lang.statement;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.algebra.extension.IExtensionStatement;
 import org.apache.asterix.app.active.ActiveNotificationHandler;
@@ -39,8 +42,10 @@ import org.apache.asterix.translator.IStatementExecutor;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.api.job.PreDistributedId;
 
 public class ChannelDropStatement implements IExtensionStatement {
+    private static final Logger LOGGER = Logger.getLogger(ChannelDropStatement.class.getName());
 
     private final Identifier dataverseName;
     private final Identifier channelName;
@@ -107,14 +112,22 @@ public class ChannelDropStatement implements IExtensionStatement {
                 }
             }
 
-            listener.getExecutorService().shutdownNow();
-            long predistributedId = listener.getPredistributedId();
-            listener.deActivate();
-            activeEventHandler.unregisterListener(listener);
-            if (predistributedId != -1) {
-                hcc.destroyJob(predistributedId);
-            }
+            if (listener == null) {
+                //TODO: Channels need to better handle cluster failures
+                LOGGER.log(Level.SEVERE,
+                        "Tried to drop a PreDistributed Job whose listener no longer exists:  "
+                                + entityId.getExtensionName() + " " + entityId.getDataverse() + "."
+                                + entityId.getEntityName() + ".");
 
+            } else {
+                listener.getExecutorService().shutdownNow();
+                PreDistributedId preDistributedId = listener.getPredistributedId();
+                listener.deActivate();
+                activeEventHandler.unregisterListener(listener);
+                if (preDistributedId != null) {
+                    hcc.destroyJob(preDistributedId);
+                }
+            }
             //Create a metadata provider to use in nested jobs.
             MetadataProvider tempMdProvider = new MetadataProvider(appCtx, metadataProvider.getDefaultDataverse());
             tempMdProvider.getConfig().putAll(metadataProvider.getConfig());

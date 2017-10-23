@@ -18,6 +18,9 @@
  */
 package org.apache.asterix.bad.lang.statement;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.algebra.extension.IExtensionStatement;
 import org.apache.asterix.app.active.ActiveNotificationHandler;
@@ -39,8 +42,10 @@ import org.apache.asterix.translator.IStatementExecutor;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.api.job.PreDistributedId;
 
 public class ProcedureDropStatement implements IExtensionStatement {
+    private static final Logger LOGGER = Logger.getLogger(ProcedureDropStatement.class.getName());
 
     private final FunctionSignature signature;
     private boolean ifExists;
@@ -105,14 +110,23 @@ public class ProcedureDropStatement implements IExtensionStatement {
                 }
             }
 
-            if (listener.getExecutorService() != null) {
-                listener.getExecutorService().shutdownNow();
-            }
-            long predistributedId = listener.getPredistributedId();
-            listener.deActivate();
-            activeEventHandler.unregisterListener(listener);
-            if (predistributedId != -1) {
-                hcc.destroyJob(predistributedId);
+            if (listener == null) {
+                //TODO: Channels need to better handle cluster failures
+                LOGGER.log(Level.SEVERE,
+                        "Tried to drop a PreDistributed Job whose listener no longer exists:  "
+                                + entityId.getExtensionName() + " " + entityId.getDataverse() + "."
+                                + entityId.getEntityName() + ".");
+            } else {
+                if (listener.getExecutorService() != null) {
+                    listener.getExecutorService().shutdownNow();
+                }
+                PreDistributedId preDistributedId = listener.getPredistributedId();
+                listener.deActivate();
+                activeEventHandler.unregisterListener(listener);
+                if (preDistributedId != null) {
+                    hcc.destroyJob(preDistributedId);
+                }
+
             }
 
             //Remove the Channel Metadata
