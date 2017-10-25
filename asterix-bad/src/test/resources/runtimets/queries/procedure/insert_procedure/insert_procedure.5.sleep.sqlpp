@@ -17,12 +17,10 @@
  * under the License.
  */
 /*
-* Description  : Disasters with friends
+* Description  : Simple Insert Procedure
 * Expected Res : Success
-* Date         : May 17
+* Date         : Jan 2017
 * Author       : Steven Jacobs
 */
 
-use channels;
-select value array_count (result.result.shelters)
-from EmergenciesNearMeChannelResults result;
+10000

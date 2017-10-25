@@ -1,1 +1,1 @@
-{ "shelters": [ { "shelter": { "name": "A", "location": point("5.0,5.0") } }, { "shelter": { "name": "B", "location": point("10.0,10.0") } } ] }
+2
