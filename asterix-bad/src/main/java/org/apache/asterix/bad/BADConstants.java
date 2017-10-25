@@ -49,6 +49,7 @@ public interface BADConstants {
     public static final String FIELD_NAME_RETURN_TYPE = "ReturnType";
     public static final String FIELD_NAME_DEFINITION = "Definition";
     public static final String FIELD_NAME_LANGUAGE = "Language";
+    public static final String JOB_ID_PARAMETER_NAME = "jobIdParameter";
 
     public enum ChannelJobType {
         REPETITIVE

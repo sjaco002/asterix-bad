@@ -23,99 +23,25 @@ import java.io.DataOutputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.Date;
-import java.util.EnumSet;
-import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.om.base.AOrderedList;
 import org.apache.asterix.om.base.AUUID;
-import org.apache.asterix.transaction.management.service.transaction.JobIdFactory;
-import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
-import org.apache.hyracks.api.job.JobFlag;
-import org.apache.hyracks.api.job.JobId;
-import org.apache.hyracks.api.job.JobSpecification;
-import org.apache.hyracks.api.job.PreDistributedId;
 
 /**
- * Provides functionality for running channel jobs and communicating with Brokers
+ * Provides functionality for channel jobs and communicating with Brokers
  */
 public class ChannelJobService {
 
     private static final Logger LOGGER = Logger.getLogger(ChannelJobService.class.getName());
 
-    public static ScheduledExecutorService startJob(JobSpecification jobSpec, EnumSet<JobFlag> jobFlags,
-            PreDistributedId distributedId,
-            IHyracksClientConnection hcc, long duration, Map<byte[], byte[]> jobParameters, EntityId entityId)
-            throws Exception {
-        ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
-        scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    if (!executeJob(jobSpec, jobFlags, distributedId, hcc, jobParameters, duration, entityId)) {
-                        scheduledExecutorService.shutdown();
-                    }
-                } catch (Exception e) {
-                    LOGGER.log(Level.WARNING, "Job Failed to run for " + entityId.getExtensionName() + " "
-                            + entityId.getDataverse() + "." + entityId.getEntityName() + ".", e);
-                }
-            }
-        }, duration, duration, TimeUnit.MILLISECONDS);
-        return scheduledExecutorService;
-    }
-
-    public static boolean executeJob(JobSpecification jobSpec, EnumSet<JobFlag> jobFlags,
-            PreDistributedId distributedId,
-            IHyracksClientConnection hcc, Map<byte[], byte[]> jobParameters, long duration, EntityId entityId)
-            throws Exception {
-        if (LOGGER.isLoggable(Level.INFO)) {
-            LOGGER.info("Executing Distributed Job");
-        }
-        boolean onTime = true;
-        JobId jobId;
-        Date checkStartTime = new Date();
-        if (distributedId == null) {
-            jobId = hcc.startJob(jobSpec, jobFlags);
-        } else {
-            org.apache.asterix.common.transactions.JobId asterixJobId = JobIdFactory.generateJobId();
-            distributedId.setAsterixJobId(asterixJobId.getId());
-            jobId = hcc.startJob(distributedId, jobParameters);
-        }
-        hcc.waitForCompletion(jobId);
-        Date checkEndTime = new Date();
-        long executionMilliseconds = (checkEndTime.getTime() - checkStartTime.getTime());
-        if (executionMilliseconds > duration && LOGGER.isLoggable(Level.SEVERE)) {
-            LOGGER.log(Level.SEVERE,
-                    "Periodic job for " + entityId.getExtensionName() + " " + entityId.getDataverse() + "."
-                            + entityId.getEntityName() + " was unable to meet the required period of " + duration
-                            + " milliseconds. Actually took " + executionMilliseconds + " execution will shutdown"
-                            + new Date());
-            onTime = false;
-        }
-        else {
-            LOGGER.log(Level.INFO, "Job completed for " + entityId.getExtensionName() + " " + entityId.getDataverse()
-                    + "." + entityId.getEntityName() + ". Took " + executionMilliseconds + " milliseconds ");
-        }
-        return onTime;
-
-    }
-
-    public static void runChannelJob(JobSpecification channeljobSpec, IHyracksClientConnection hcc) throws Exception {
-        JobId jobId = hcc.startJob(channeljobSpec);
-        hcc.waitForCompletion(jobId);
-    }
-
     public static void sendBrokerNotificationsForChannel(EntityId activeJobId, String brokerEndpoint,
             AOrderedList subscriptionIds, String channelExecutionTime) throws HyracksDataException {
         String formattedString;
-            formattedString = formatJSON(activeJobId, subscriptionIds, channelExecutionTime);
+        formattedString = formatJSON(activeJobId, subscriptionIds, channelExecutionTime);
         sendMessage(brokerEndpoint, formattedString);
     }
 

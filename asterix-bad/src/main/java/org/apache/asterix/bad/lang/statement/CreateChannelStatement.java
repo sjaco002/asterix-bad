@@ -22,7 +22,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.StringReader;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
@@ -30,6 +29,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.asterix.active.EntityId;
+import org.apache.asterix.active.PredistributedJobService;
 import org.apache.asterix.algebra.extension.IExtensionStatement;
 import org.apache.asterix.app.active.ActiveNotificationHandler;
 import org.apache.asterix.app.translator.QueryTranslator;
@@ -76,7 +76,6 @@ import org.apache.hyracks.algebricks.common.utils.Pair;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.dataset.IHyracksDataset;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
-import org.apache.hyracks.api.job.JobFlag;
 import org.apache.hyracks.api.job.JobSpecification;
 import org.apache.hyracks.api.job.PreDistributedId;
 import org.apache.hyracks.dataflow.common.data.parsers.IValueParser;
@@ -93,16 +92,14 @@ public class CreateChannelStatement implements IExtensionStatement {
     private InsertStatement channelResultsInsertQuery;
     private String subscriptionsTableName;
     private String resultsTableName;
-    private boolean distributed;
 
     public CreateChannelStatement(Identifier dataverseName, Identifier channelName, FunctionSignature function,
-            Expression period, boolean distributed) {
+            Expression period) {
         this.channelName = channelName;
         this.dataverseName = dataverseName;
         this.function = function;
         this.period = (CallExpr) period;
         this.duration = "";
-        this.distributed = distributed;
     }
 
     public Identifier getDataverseName() {
@@ -264,15 +261,11 @@ public class CreateChannelStatement implements IExtensionStatement {
     }
 
     private void setupExecutorJob(EntityId entityId, JobSpecification channeljobSpec, IHyracksClientConnection hcc,
-            PrecompiledJobEventListener listener, boolean predistributed) throws Exception {
+            PrecompiledJobEventListener listener) throws Exception {
         if (channeljobSpec != null) {
-            //TODO: Find a way to fix optimizer tests so we don't need this check
-            PreDistributedId destributedId = null;
-            if (predistributed) {
-                destributedId = hcc.distributeJob(channeljobSpec);
-            }
-            ScheduledExecutorService ses = ChannelJobService.startJob(channeljobSpec, EnumSet.noneOf(JobFlag.class),
-                    destributedId, hcc, ChannelJobService.findPeriod(duration), new HashMap<>(), entityId);
+            PreDistributedId destributedId = hcc.distributeJob(channeljobSpec);
+            ScheduledExecutorService ses = PredistributedJobService.startRepetitivePreDistributedJob(destributedId, hcc,
+                    ChannelJobService.findPeriod(duration), new HashMap<>(), entityId);
             listener.storeDistributedInfo(destributedId, ses, null, null);
         }
 
@@ -351,11 +344,7 @@ public class CreateChannelStatement implements IExtensionStatement {
                 activeEventHandler.registerListener(listener);
             }
 
-            if (distributed) {
-                setupExecutorJob(entityId, channeljobSpec, hcc, listener, true);
-            } else {
-                setupExecutorJob(entityId, channeljobSpec, hcc, listener, false);
-            }
+            setupExecutorJob(entityId, channeljobSpec, hcc, listener);
 
             MetadataManager.INSTANCE.addEntity(mdTxnCtx, channel);
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);

@@ -21,75 +21,80 @@
              QueryOffsetPath="queries"
              QueryFileExtension=".sqlpp">
   <test-group name="channel">
-    <test-case FilePath="channel">
-        <compilation-unit name="room_occupants">
-            <output-dir compare="Text">room_occupants</output-dir>
-        </compilation-unit>
+    <test-case FilePath="procedure">
+      <compilation-unit name="insert_procedure">
+        <output-dir compare="Text">insert_procedure</output-dir>
+      </compilation-unit>
     </test-case>
     <test-case FilePath="procedure">
-        <compilation-unit name="insert_procedure">
-            <output-dir compare="Text">insert_procedure</output-dir>
-        </compilation-unit>
+      <compilation-unit name="delete_procedure">
+        <output-dir compare="Text">delete_procedure</output-dir>
+      </compilation-unit>
     </test-case>
     <test-case FilePath="procedure">
-        <compilation-unit name="delete_procedure">
-            <output-dir compare="Text">delete_procedure</output-dir>
-        </compilation-unit>
+      <compilation-unit name="delete_procedure_with_parameters">
+        <output-dir compare="Text">delete_procedure_with_parameters</output-dir>
+      </compilation-unit>
     </test-case>
     <test-case FilePath="procedure">
-        <compilation-unit name="delete_procedure_with_parameters">
-            <output-dir compare="Text">delete_procedure_with_parameters</output-dir>
-        </compilation-unit>
+      <compilation-unit name="query_procedure">
+        <output-dir compare="Text">query_procedure</output-dir>
+      </compilation-unit>
     </test-case>
     <test-case FilePath="procedure">
-        <compilation-unit name="query_procedure">
-            <output-dir compare="Text">query_procedure</output-dir>
-        </compilation-unit>
+      <compilation-unit name="query_procedure_with_parameters">
+        <output-dir compare="Text">query_procedure_with_parameters</output-dir>
+      </compilation-unit>
     </test-case>
     <test-case FilePath="procedure">
-        <compilation-unit name="query_procedure_with_parameters">
-            <output-dir compare="Text">query_procedure_with_parameters</output-dir>
-        </compilation-unit>
+      <compilation-unit name="repetitive_insert_procedure">
+        <output-dir compare="Text">repetitive_insert_procedure</output-dir>
+      </compilation-unit>
     </test-case>
     <test-case FilePath="procedure">
-        <compilation-unit name="repetitive_insert_procedure">
-            <output-dir compare="Text">repetitive_insert_procedure</output-dir>
-        </compilation-unit>
+      <compilation-unit name="concurrent_procedure">
+        <output-dir compare="Text">concurrent_procedure</output-dir>
+      </compilation-unit>
     </test-case>
     <test-case FilePath="channel">
-        <compilation-unit name="create_channel_check_datasets">
-            <output-dir compare="Text">create_channel_check_datasets</output-dir>
-        </compilation-unit>
+      <compilation-unit name="room_occupants">
+        <output-dir compare="Text">room_occupants</output-dir>
+      </compilation-unit>
     </test-case>
     <test-case FilePath="channel">
-        <compilation-unit name="create_channel_check_metadata">
-            <output-dir compare="Text">create_channel_check_metadata</output-dir>
-        </compilation-unit>
+      <compilation-unit name="create_channel_check_datasets">
+        <output-dir compare="Text">create_channel_check_datasets</output-dir>
+      </compilation-unit>
     </test-case>
     <test-case FilePath="channel">
-        <compilation-unit name="drop_channel_check_datasets">
-            <output-dir compare="Text">drop_channel_check_datasets</output-dir>
-        </compilation-unit>
+      <compilation-unit name="create_channel_check_metadata">
+        <output-dir compare="Text">create_channel_check_metadata</output-dir>
+      </compilation-unit>
     </test-case>
     <test-case FilePath="channel">
-        <compilation-unit name="drop_channel_check_metadata">
-            <output-dir compare="Text">drop_channel_check_metadata</output-dir>
-        </compilation-unit>
+      <compilation-unit name="drop_channel_check_datasets">
+        <output-dir compare="Text">drop_channel_check_datasets</output-dir>
+      </compilation-unit>
     </test-case>
     <test-case FilePath="channel">
-        <compilation-unit name="subscribe_channel_check_subscriptions">
-            <output-dir compare="Text">subscribe_channel_check_subscriptions</output-dir>
-        </compilation-unit>
+      <compilation-unit name="drop_channel_check_metadata">
+        <output-dir compare="Text">drop_channel_check_metadata</output-dir>
+      </compilation-unit>
     </test-case>
     <test-case FilePath="channel">
-        <compilation-unit name="disasters_with_friends">
-            <output-dir compare="Text">disasters_with_friends</output-dir>
-        </compilation-unit>
+      <compilation-unit name="subscribe_channel_check_subscriptions">
+        <output-dir compare="Text">subscribe_channel_check_subscriptions</output-dir>
+      </compilation-unit>
     </test-case>
     <test-case FilePath="channel">
-        <compilation-unit name="ten_minute_channel">
-            <output-dir compare="Text">ten_minute_channel</output-dir>
-        </compilation-unit>
+      <compilation-unit name="disasters_with_friends">
+        <output-dir compare="Text">disasters_with_friends</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="channel">
+      <compilation-unit name="ten_minute_channel">
+        <output-dir compare="Text">ten_minute_channel</output-dir>
+      </compilation-unit>
     </test-case>
   </test-group>
 </test-suite>

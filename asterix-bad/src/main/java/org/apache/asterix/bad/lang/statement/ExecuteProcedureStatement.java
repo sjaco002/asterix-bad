@@ -19,13 +19,13 @@
 package org.apache.asterix.bad.lang.statement;
 
 import java.io.DataOutput;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 
 import org.apache.asterix.active.EntityId;
+import org.apache.asterix.active.PredistributedJobService;
 import org.apache.asterix.algebra.extension.IExtensionStatement;
 import org.apache.asterix.api.http.server.ResultUtil;
 import org.apache.asterix.app.active.ActiveNotificationHandler;
@@ -59,7 +59,6 @@ import org.apache.asterix.translator.IStatementExecutor.Stats;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
-import org.apache.hyracks.api.job.JobFlag;
 import org.apache.hyracks.api.job.JobId;
 import org.apache.hyracks.api.job.PreDistributedId;
 import org.apache.hyracks.data.std.util.ArrayBackedValueStorage;
@@ -126,16 +125,18 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
             if (procedure == null) {
                 throw new AlgebricksException("There is no procedure with this name " + procedureName + ".");
             }
-            Map<byte[], byte[]> contextRuntimeVarMap = createContextRuntimeMap(procedure);
+            Map<byte[], byte[]> contextRuntimeVarMap = createParameterMap(procedure);
             PreDistributedId preDistributedId = listener.getPredistributedId();
             if (procedure.getDuration().equals("")) {
-                org.apache.asterix.common.transactions.JobId asterixJobId = JobIdFactory.generateJobId();
-                preDistributedId.setAsterixJobId(asterixJobId.getId());
+
+                //Add the Asterix Transaction Id to the map
+                byte[] asterixJobId = String.valueOf(JobIdFactory.generateJobId().getId()).getBytes();
+                byte[] jobIdParameter = BADConstants.JOB_ID_PARAMETER_NAME.getBytes();
+                contextRuntimeVarMap.put(jobIdParameter, asterixJobId);
                 JobId jobId = hcc.startJob(preDistributedId, contextRuntimeVarMap);
 
                 if (listener.getType() == PrecompiledType.QUERY) {
                     hcc.waitForCompletion(jobId);
-                    //ResultReader resultReader = new ResultReader(hdc, jobId, metadataProvider.getResultSetId());
                     ResultReader resultReader =
                             new ResultReader(listener.getResultDataset(), jobId, listener.getResultId());
 
@@ -145,7 +146,7 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
 
             } else {
                 ScheduledExecutorService ses =
-                        ChannelJobService.startJob(null, EnumSet.noneOf(JobFlag.class), preDistributedId, hcc,
+                        PredistributedJobService.startRepetitivePreDistributedJob(preDistributedId, hcc,
                                 ChannelJobService.findPeriod(procedure.getDuration()), contextRuntimeVarMap, entityId);
                 listener.storeDistributedInfo(preDistributedId, ses, listener.getResultDataset(),
                         listener.getResultId());
@@ -164,7 +165,7 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
         }
     }
 
-    private Map<byte[], byte[]> createContextRuntimeMap(Procedure procedure)
+    private Map<byte[], byte[]> createParameterMap(Procedure procedure)
             throws AsterixException, HyracksDataException {
         Map<byte[], byte[]> map = new HashMap<>();
         if (procedure.getParams().size() != argList.size()) {
@@ -200,6 +201,7 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
 
             map.put(key, value);
         }
+
         return map;
     }
 

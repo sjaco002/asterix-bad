@@ -101,16 +101,15 @@ CreateChannelStatement ChannelSpecification() throws ParseException:
   CreateChannelStatement ccs = null;
   String fqFunctionName = null;
   Expression period = null;
-  boolean distributed = true;
 }
 {
   (
     "repetitive" "channel"  nameComponents = QualifiedName()
     <USING> appliedFunction = FunctionSignature()
-    "period" period = FunctionCallExpr() ("nondistributed" { distributed = false; })?
+    "period" period = FunctionCallExpr()
     {
       ccs = new CreateChannelStatement(nameComponents.first,
-                                   nameComponents.second, appliedFunction, period, distributed);
+                                   nameComponents.second, appliedFunction, period);
     }
   )
     {
