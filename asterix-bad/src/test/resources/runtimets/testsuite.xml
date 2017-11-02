@@ -22,11 +22,6 @@
              QueryFileExtension=".sqlpp">
   <test-group name="channel">
     <test-case FilePath="procedure">
-      <compilation-unit name="insert_procedure">
-        <output-dir compare="Text">insert_procedure</output-dir>
-      </compilation-unit>
-    </test-case>
-    <test-case FilePath="procedure">
       <compilation-unit name="delete_procedure">
         <output-dir compare="Text">delete_procedure</output-dir>
       </compilation-unit>
@@ -47,13 +42,18 @@
       </compilation-unit>
     </test-case>
     <test-case FilePath="procedure">
-      <compilation-unit name="repetitive_insert_procedure">
-        <output-dir compare="Text">repetitive_insert_procedure</output-dir>
+      <compilation-unit name="insert_procedure">
+        <output-dir compare="Text">insert_procedure</output-dir>
       </compilation-unit>
     </test-case>
     <test-case FilePath="procedure">
       <compilation-unit name="concurrent_procedure">
         <output-dir compare="Text">concurrent_procedure</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="procedure">
+      <compilation-unit name="repetitive_insert_procedure">
+        <output-dir compare="Text">repetitive_insert_procedure</output-dir>
       </compilation-unit>
     </test-case>
     <test-case FilePath="channel">
