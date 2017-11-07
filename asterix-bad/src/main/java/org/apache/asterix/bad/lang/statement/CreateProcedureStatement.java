@@ -31,8 +31,8 @@ import org.apache.asterix.app.active.ActiveNotificationHandler;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
 import org.apache.asterix.bad.lang.BADLangExtension;
-import org.apache.asterix.bad.metadata.PrecompiledJobEventListener;
-import org.apache.asterix.bad.metadata.PrecompiledJobEventListener.PrecompiledType;
+import org.apache.asterix.bad.metadata.DeployedJobSpecEventListener;
+import org.apache.asterix.bad.metadata.DeployedJobSpecEventListener.PrecompiledType;
 import org.apache.asterix.bad.metadata.Procedure;
 import org.apache.asterix.common.dataflow.ICcApplicationContext;
 import org.apache.asterix.common.exceptions.AsterixException;
@@ -70,8 +70,8 @@ import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.dataset.IHyracksDataset;
 import org.apache.hyracks.api.dataset.ResultSetId;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.api.job.DeployedJobSpecId;
 import org.apache.hyracks.api.job.JobSpecification;
-import org.apache.hyracks.api.job.PreDistributedId;
 import org.apache.hyracks.dataflow.common.data.parsers.IValueParser;
 
 public class CreateProcedureStatement implements IExtensionStatement {
@@ -219,11 +219,11 @@ public class CreateProcedureStatement implements IExtensionStatement {
         }
     }
 
-    private void setupDistributedJob(EntityId entityId, JobSpecification jobSpec, IHyracksClientConnection hcc,
-            PrecompiledJobEventListener listener, ResultSetId resultSetId, IHyracksDataset hdc, Stats stats)
+    private void setupDeployedJobSpec(EntityId entityId, JobSpecification jobSpec, IHyracksClientConnection hcc,
+            DeployedJobSpecEventListener listener, ResultSetId resultSetId, IHyracksDataset hdc, Stats stats)
             throws Exception {
-        PreDistributedId preDistributedId = hcc.distributeJob(jobSpec);
-        listener.storeDistributedInfo(preDistributedId, null, hdc, resultSetId);
+        DeployedJobSpecId deployedJobSpecId = hcc.deployJobSpec(jobSpec);
+        listener.storeDistributedInfo(deployedJobSpecId, null, hdc, resultSetId);
     }
 
     @Override
@@ -237,7 +237,7 @@ public class CreateProcedureStatement implements IExtensionStatement {
         String dataverse =
                 ((QueryTranslator) statementExecutor).getActiveDataverse(new Identifier(signature.getNamespace()));
         EntityId entityId = new EntityId(BADConstants.PROCEDURE_KEYWORD, dataverse, signature.getName());
-        PrecompiledJobEventListener listener = (PrecompiledJobEventListener) activeEventHandler.getListener(entityId);
+        DeployedJobSpecEventListener listener = (DeployedJobSpecEventListener) activeEventHandler.getListener(entityId);
         boolean alreadyActive = false;
         Procedure procedure = null;
 
@@ -280,12 +280,12 @@ public class CreateProcedureStatement implements IExtensionStatement {
             // Now we subscribe
             if (listener == null) {
                 //TODO: Add datasets used by channel function
-                listener = new PrecompiledJobEventListener(appCtx, entityId, procedureJobSpec.second,
+                listener = new DeployedJobSpecEventListener(appCtx, entityId, procedureJobSpec.second,
                         new ArrayList<>(),
                         null, "BadListener");
                 activeEventHandler.registerListener(listener);
             }
-            setupDistributedJob(entityId, procedureJobSpec.first, hcc, listener, tempMdProvider.getResultSetId(),
+            setupDeployedJobSpec(entityId, procedureJobSpec.first, hcc, listener, tempMdProvider.getResultSetId(),
                     hdc,
                     stats);
 

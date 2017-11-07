@@ -28,7 +28,7 @@ import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
 import org.apache.asterix.bad.lang.BADLangExtension;
 import org.apache.asterix.bad.metadata.Channel;
-import org.apache.asterix.bad.metadata.PrecompiledJobEventListener;
+import org.apache.asterix.bad.metadata.DeployedJobSpecEventListener;
 import org.apache.asterix.common.dataflow.ICcApplicationContext;
 import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.lang.common.statement.DropDatasetStatement;
@@ -42,7 +42,7 @@ import org.apache.asterix.translator.IStatementExecutor;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
-import org.apache.hyracks.api.job.PreDistributedId;
+import org.apache.hyracks.api.job.DeployedJobSpecId;
 
 public class ChannelDropStatement implements IExtensionStatement {
     private static final Logger LOGGER = Logger.getLogger(ChannelDropStatement.class.getName());
@@ -94,7 +94,7 @@ public class ChannelDropStatement implements IExtensionStatement {
         ICcApplicationContext appCtx = metadataProvider.getApplicationContext();
         ActiveNotificationHandler activeEventHandler =
                 (ActiveNotificationHandler) appCtx.getActiveNotificationHandler();
-        PrecompiledJobEventListener listener = (PrecompiledJobEventListener) activeEventHandler.getListener(entityId);
+        DeployedJobSpecEventListener listener = (DeployedJobSpecEventListener) activeEventHandler.getListener(entityId);
         Channel channel = null;
 
         MetadataTransactionContext mdTxnCtx = null;
@@ -115,17 +115,17 @@ public class ChannelDropStatement implements IExtensionStatement {
             if (listener == null) {
                 //TODO: Channels need to better handle cluster failures
                 LOGGER.log(Level.SEVERE,
-                        "Tried to drop a PreDistributed Job whose listener no longer exists:  "
+                        "Tried to drop a Deployed Job  whose listener no longer exists:  "
                                 + entityId.getExtensionName() + " " + entityId.getDataverse() + "."
                                 + entityId.getEntityName() + ".");
 
             } else {
                 listener.getExecutorService().shutdownNow();
-                PreDistributedId preDistributedId = listener.getPredistributedId();
+                DeployedJobSpecId deployedJobSpecId = listener.getDeployedJobSpecId();
                 listener.deActivate();
                 activeEventHandler.unregisterListener(listener);
-                if (preDistributedId != null) {
-                    hcc.destroyJob(preDistributedId);
+                if (deployedJobSpecId != null) {
+                    hcc.undeployJobSpec(deployedJobSpecId);
                 }
             }
             //Create a metadata provider to use in nested jobs.

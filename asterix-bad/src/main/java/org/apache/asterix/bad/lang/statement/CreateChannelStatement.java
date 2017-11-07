@@ -28,8 +28,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.asterix.active.DeployedJobService;
 import org.apache.asterix.active.EntityId;
-import org.apache.asterix.active.PredistributedJobService;
 import org.apache.asterix.algebra.extension.IExtensionStatement;
 import org.apache.asterix.app.active.ActiveNotificationHandler;
 import org.apache.asterix.app.translator.QueryTranslator;
@@ -38,8 +38,8 @@ import org.apache.asterix.bad.ChannelJobService;
 import org.apache.asterix.bad.lang.BADLangExtension;
 import org.apache.asterix.bad.lang.BADParserFactory;
 import org.apache.asterix.bad.metadata.Channel;
-import org.apache.asterix.bad.metadata.PrecompiledJobEventListener;
-import org.apache.asterix.bad.metadata.PrecompiledJobEventListener.PrecompiledType;
+import org.apache.asterix.bad.metadata.DeployedJobSpecEventListener;
+import org.apache.asterix.bad.metadata.DeployedJobSpecEventListener.PrecompiledType;
 import org.apache.asterix.common.config.DatasetConfig.DatasetType;
 import org.apache.asterix.common.config.DatasetConfig.IndexType;
 import org.apache.asterix.common.dataflow.ICcApplicationContext;
@@ -76,8 +76,8 @@ import org.apache.hyracks.algebricks.common.utils.Pair;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.dataset.IHyracksDataset;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.api.job.DeployedJobSpecId;
 import org.apache.hyracks.api.job.JobSpecification;
-import org.apache.hyracks.api.job.PreDistributedId;
 import org.apache.hyracks.dataflow.common.data.parsers.IValueParser;
 
 public class CreateChannelStatement implements IExtensionStatement {
@@ -261,10 +261,10 @@ public class CreateChannelStatement implements IExtensionStatement {
     }
 
     private void setupExecutorJob(EntityId entityId, JobSpecification channeljobSpec, IHyracksClientConnection hcc,
-            PrecompiledJobEventListener listener) throws Exception {
+            DeployedJobSpecEventListener listener) throws Exception {
         if (channeljobSpec != null) {
-            PreDistributedId destributedId = hcc.distributeJob(channeljobSpec);
-            ScheduledExecutorService ses = PredistributedJobService.startRepetitivePreDistributedJob(destributedId, hcc,
+            DeployedJobSpecId destributedId = hcc.deployJobSpec(channeljobSpec);
+            ScheduledExecutorService ses = DeployedJobService.startRepetitiveDeployedJobSpec(destributedId, hcc,
                     ChannelJobService.findPeriod(duration), new HashMap<>(), entityId);
             listener.storeDistributedInfo(destributedId, ses, null, null);
         }
@@ -292,7 +292,7 @@ public class CreateChannelStatement implements IExtensionStatement {
         ICcApplicationContext appCtx = metadataProvider.getApplicationContext();
         ActiveNotificationHandler activeEventHandler =
                 (ActiveNotificationHandler) appCtx.getActiveNotificationHandler();
-        PrecompiledJobEventListener listener = (PrecompiledJobEventListener) activeEventHandler.getListener(entityId);
+        DeployedJobSpecEventListener listener = (DeployedJobSpecEventListener) activeEventHandler.getListener(entityId);
         boolean alreadyActive = false;
         Channel channel = null;
 
@@ -339,7 +339,7 @@ public class CreateChannelStatement implements IExtensionStatement {
                 datasets.add(MetadataManager.INSTANCE.getDataset(mdTxnCtx, dataverse, subscriptionsName.getValue()));
                 datasets.add(MetadataManager.INSTANCE.getDataset(mdTxnCtx, dataverse, resultsName.getValue()));
                 //TODO: Add datasets used by channel function
-                listener = new PrecompiledJobEventListener(appCtx, entityId, PrecompiledType.CHANNEL, datasets, null,
+                listener = new DeployedJobSpecEventListener(appCtx, entityId, PrecompiledType.CHANNEL, datasets, null,
                         "BadListener");
                 activeEventHandler.registerListener(listener);
             }

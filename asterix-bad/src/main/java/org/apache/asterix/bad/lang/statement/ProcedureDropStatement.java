@@ -27,7 +27,7 @@ import org.apache.asterix.app.active.ActiveNotificationHandler;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
 import org.apache.asterix.bad.lang.BADLangExtension;
-import org.apache.asterix.bad.metadata.PrecompiledJobEventListener;
+import org.apache.asterix.bad.metadata.DeployedJobSpecEventListener;
 import org.apache.asterix.bad.metadata.Procedure;
 import org.apache.asterix.common.dataflow.ICcApplicationContext;
 import org.apache.asterix.common.exceptions.CompilationException;
@@ -42,7 +42,7 @@ import org.apache.asterix.translator.IStatementExecutor;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
-import org.apache.hyracks.api.job.PreDistributedId;
+import org.apache.hyracks.api.job.DeployedJobSpecId;
 
 public class ProcedureDropStatement implements IExtensionStatement {
     private static final Logger LOGGER = Logger.getLogger(ProcedureDropStatement.class.getName());
@@ -91,7 +91,7 @@ public class ProcedureDropStatement implements IExtensionStatement {
         signature.setNamespace(dataverse);
         boolean txnActive = false;
         EntityId entityId = new EntityId(BADConstants.PROCEDURE_KEYWORD, dataverse, signature.getName());
-        PrecompiledJobEventListener listener = (PrecompiledJobEventListener) activeEventHandler.getListener(entityId);
+        DeployedJobSpecEventListener listener = (DeployedJobSpecEventListener) activeEventHandler.getListener(entityId);
         Procedure procedure = null;
 
         MetadataTransactionContext mdTxnCtx = null;
@@ -113,18 +113,18 @@ public class ProcedureDropStatement implements IExtensionStatement {
             if (listener == null) {
                 //TODO: Channels need to better handle cluster failures
                 LOGGER.log(Level.SEVERE,
-                        "Tried to drop a PreDistributed Job whose listener no longer exists:  "
+                        "Tried to drop a Deployed Job  whose listener no longer exists:  "
                                 + entityId.getExtensionName() + " " + entityId.getDataverse() + "."
                                 + entityId.getEntityName() + ".");
             } else {
                 if (listener.getExecutorService() != null) {
                     listener.getExecutorService().shutdownNow();
                 }
-                PreDistributedId preDistributedId = listener.getPredistributedId();
+                DeployedJobSpecId deployedJobSpecId = listener.getDeployedJobSpecId();
                 listener.deActivate();
                 activeEventHandler.unregisterListener(listener);
-                if (preDistributedId != null) {
-                    hcc.destroyJob(preDistributedId);
+                if (deployedJobSpecId != null) {
+                    hcc.undeployJobSpec(deployedJobSpecId);
                 }
 
             }

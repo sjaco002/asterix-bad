@@ -37,14 +37,14 @@ import org.apache.hyracks.algebricks.common.constraints.AlgebricksAbsolutePartit
 import org.apache.hyracks.api.dataset.IHyracksDataset;
 import org.apache.hyracks.api.dataset.ResultSetId;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.api.job.DeployedJobSpecId;
 import org.apache.hyracks.api.job.JobId;
-import org.apache.hyracks.api.job.PreDistributedId;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
-public class PrecompiledJobEventListener implements IActiveEntityEventsListener {
+public class DeployedJobSpecEventListener implements IActiveEntityEventsListener {
 
-    private static final Logger LOGGER = Logger.getLogger(PrecompiledJobEventListener.class);
+    private static final Logger LOGGER = Logger.getLogger(DeployedJobSpecEventListener.class);
 
 
     public enum PrecompiledType {
@@ -60,7 +60,7 @@ public class PrecompiledJobEventListener implements IActiveEntityEventsListener 
         FINISHED
     }
 
-    private PreDistributedId preDistributedId;
+    private DeployedJobSpecId deployedJobSpecId;
     private ScheduledExecutorService executorService = null;
     private ResultReader resultReader;
     private final PrecompiledType type;
@@ -82,7 +82,7 @@ public class PrecompiledJobEventListener implements IActiveEntityEventsListener 
     protected final AlgebricksAbsolutePartitionConstraint locations;
     protected int numRegistered;
 
-    public PrecompiledJobEventListener(ICcApplicationContext appCtx, EntityId entityId, PrecompiledType type,
+    public DeployedJobSpecEventListener(ICcApplicationContext appCtx, EntityId entityId, PrecompiledType type,
             List<IDataset> datasets, AlgebricksAbsolutePartitionConstraint locations, String runtimeName) {
         this.appCtx = appCtx;
         this.entityId = entityId;
@@ -108,8 +108,8 @@ public class PrecompiledJobEventListener implements IActiveEntityEventsListener 
         return resultSetId;
     }
 
-    public PreDistributedId getPredistributedId() {
-        return preDistributedId;
+    public DeployedJobSpecId getDeployedJobSpecId() {
+        return deployedJobSpecId;
     }
 
     protected synchronized void handle(ActivePartitionMessage message) {
@@ -192,9 +192,9 @@ public class PrecompiledJobEventListener implements IActiveEntityEventsListener 
         return type;
     }
 
-    public void storeDistributedInfo(PreDistributedId preDistributedId, ScheduledExecutorService ses,
+    public void storeDistributedInfo(DeployedJobSpecId deployedJobSpecId, ScheduledExecutorService ses,
             IHyracksDataset hdc, ResultSetId resultSetId) {
-        this.preDistributedId = preDistributedId;
+        this.deployedJobSpecId = deployedJobSpecId;
         this.executorService = ses;
         this.hdc = hdc;
         this.resultSetId = resultSetId;

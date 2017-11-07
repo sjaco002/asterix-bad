@@ -24,8 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 
+import org.apache.asterix.active.DeployedJobService;
 import org.apache.asterix.active.EntityId;
-import org.apache.asterix.active.PredistributedJobService;
 import org.apache.asterix.algebra.extension.IExtensionStatement;
 import org.apache.asterix.api.http.server.ResultUtil;
 import org.apache.asterix.app.active.ActiveNotificationHandler;
@@ -34,8 +34,8 @@ import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
 import org.apache.asterix.bad.ChannelJobService;
 import org.apache.asterix.bad.lang.BADLangExtension;
-import org.apache.asterix.bad.metadata.PrecompiledJobEventListener;
-import org.apache.asterix.bad.metadata.PrecompiledJobEventListener.PrecompiledType;
+import org.apache.asterix.bad.metadata.DeployedJobSpecEventListener;
+import org.apache.asterix.bad.metadata.DeployedJobSpecEventListener.PrecompiledType;
 import org.apache.asterix.bad.metadata.Procedure;
 import org.apache.asterix.common.dataflow.ICcApplicationContext;
 import org.apache.asterix.common.exceptions.AsterixException;
@@ -59,8 +59,8 @@ import org.apache.asterix.translator.IStatementExecutor.Stats;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.api.job.DeployedJobSpecId;
 import org.apache.hyracks.api.job.JobId;
-import org.apache.hyracks.api.job.PreDistributedId;
 import org.apache.hyracks.data.std.util.ArrayBackedValueStorage;
 
 public class ExecuteProcedureStatement implements IExtensionStatement {
@@ -114,7 +114,7 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
         String dataverse = ((QueryTranslator) statementExecutor).getActiveDataverse(new Identifier(dataverseName));
         boolean txnActive = false;
         EntityId entityId = new EntityId(BADConstants.PROCEDURE_KEYWORD, dataverse, procedureName);
-        PrecompiledJobEventListener listener = (PrecompiledJobEventListener) activeEventHandler.getListener(entityId);
+        DeployedJobSpecEventListener listener = (DeployedJobSpecEventListener) activeEventHandler.getListener(entityId);
         Procedure procedure = null;
 
         MetadataTransactionContext mdTxnCtx = null;
@@ -126,14 +126,14 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
                 throw new AlgebricksException("There is no procedure with this name " + procedureName + ".");
             }
             Map<byte[], byte[]> contextRuntimeVarMap = createParameterMap(procedure);
-            PreDistributedId preDistributedId = listener.getPredistributedId();
+            DeployedJobSpecId deployedJobSpecId = listener.getDeployedJobSpecId();
             if (procedure.getDuration().equals("")) {
 
                 //Add the Asterix Transaction Id to the map
                 byte[] asterixJobId = String.valueOf(JobIdFactory.generateJobId().getId()).getBytes();
                 byte[] jobIdParameter = BADConstants.JOB_ID_PARAMETER_NAME.getBytes();
                 contextRuntimeVarMap.put(jobIdParameter, asterixJobId);
-                JobId jobId = hcc.startJob(preDistributedId, contextRuntimeVarMap);
+                JobId jobId = hcc.startJob(deployedJobSpecId, contextRuntimeVarMap);
 
                 if (listener.getType() == PrecompiledType.QUERY) {
                     hcc.waitForCompletion(jobId);
@@ -146,9 +146,9 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
 
             } else {
                 ScheduledExecutorService ses =
-                        PredistributedJobService.startRepetitivePreDistributedJob(preDistributedId, hcc,
+                        DeployedJobService.startRepetitiveDeployedJobSpec(deployedJobSpecId, hcc,
                                 ChannelJobService.findPeriod(procedure.getDuration()), contextRuntimeVarMap, entityId);
-                listener.storeDistributedInfo(preDistributedId, ses, listener.getResultDataset(),
+                listener.storeDistributedInfo(deployedJobSpecId, ses, listener.getResultDataset(),
                         listener.getResultId());
             }
 
