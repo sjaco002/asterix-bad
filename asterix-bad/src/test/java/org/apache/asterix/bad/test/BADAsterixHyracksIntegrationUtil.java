@@ -47,9 +47,8 @@ public class BADAsterixHyracksIntegrationUtil extends AsterixHyracksIntegrationU
                 }
             }
         });
-
         System.setProperty(GlobalConfig.CONFIG_FILE_PROPERTY,
-                "/Users/stevenjacobs/asterix/asertixdb/asterixdb/asterix-opt/asterix-bad/src/main/resources/asterix-build-configuration.xml");
+                "asterixdb/asterix-opt/asterix-bad/src/main/resources/asterix-build-configuration.xml");
 
         init(cleanupOnStart);
         while (true) {
