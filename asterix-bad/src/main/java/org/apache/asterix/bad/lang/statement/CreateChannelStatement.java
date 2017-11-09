@@ -144,7 +144,7 @@ public class CreateChannelStatement implements IExtensionStatement {
     }
 
     public void initialize(MetadataTransactionContext mdTxnCtx, String subscriptionsTableName, String resultsTableName)
-            throws MetadataException, HyracksDataException {
+            throws AlgebricksException, HyracksDataException {
         Function lookup = MetadataManager.INSTANCE.getFunction(mdTxnCtx, function);
         if (lookup == null) {
             throw new MetadataException(" Unknown function " + function.getName());
