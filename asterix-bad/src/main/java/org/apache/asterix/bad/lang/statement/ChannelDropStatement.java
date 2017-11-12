@@ -38,6 +38,7 @@ import org.apache.asterix.translator.IRequestParameters;
 import org.apache.asterix.translator.IStatementExecutor;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
+import org.apache.hyracks.api.exceptions.ErrorCode;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.job.JobId;
 
@@ -114,6 +115,8 @@ public class ChannelDropStatement implements IExtensionStatement {
             activeEventHandler.unregisterListener(listener);
             if (hyracksJobId != null) {
                 hcc.destroyJob(hyracksJobId);
+                // wait for job completion to release any resources to be dropped
+                ensureJobDestroyed(hcc, hyracksJobId);
             }
 
             //Create a metadata provider to use in nested jobs.
@@ -144,4 +147,19 @@ public class ChannelDropStatement implements IExtensionStatement {
         }
     }
 
+    private void ensureJobDestroyed(IHyracksClientConnection hcc, JobId hyracksJobId) throws Exception {
+        try {
+            hcc.waitForCompletion(hyracksJobId);
+        } catch (Exception e) {
+            // if the job has already been destroyed, it is safe to complete
+            if (e instanceof HyracksDataException) {
+                HyracksDataException hde = (HyracksDataException) e;
+                if (hde.getComponent().equals(ErrorCode.HYRACKS)
+                        && hde.getErrorCode() == ErrorCode.JOB_HAS_BEEN_CLEARED_FROM_HISTORY) {
+                    return;
+                }
+            }
+            throw e;
+        }
+    }
 }
