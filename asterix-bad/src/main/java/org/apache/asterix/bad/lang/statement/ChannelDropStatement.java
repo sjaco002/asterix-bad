@@ -18,6 +18,7 @@
  */
 package org.apache.asterix.bad.lang.statement;
 
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -120,7 +121,8 @@ public class ChannelDropStatement implements IExtensionStatement {
                                 + entityId.getEntityName() + ".");
 
             } else {
-                listener.getExecutorService().shutdownNow();
+                listener.getExecutorService().shutdown();
+                listener.getExecutorService().awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
                 DeployedJobSpecId deployedJobSpecId = listener.getDeployedJobSpecId();
                 listener.deActivate();
                 activeEventHandler.unregisterListener(listener);
@@ -134,6 +136,7 @@ public class ChannelDropStatement implements IExtensionStatement {
             //Drop the Channel Datasets
             //TODO: Need to find some way to handle if this fails.
             //TODO: Prevent datasets for Channels from being dropped elsewhere
+
             DropDatasetStatement dropStmt = new DropDatasetStatement(new Identifier(dataverse),
                     new Identifier(channel.getResultsDatasetName()), true);
             ((QueryTranslator) statementExecutor).handleDatasetDropStatement(tempMdProvider, dropStmt, hcc, null);

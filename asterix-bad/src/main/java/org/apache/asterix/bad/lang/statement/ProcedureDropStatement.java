@@ -18,6 +18,7 @@
  */
 package org.apache.asterix.bad.lang.statement;
 
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -118,7 +119,8 @@ public class ProcedureDropStatement implements IExtensionStatement {
                                 + entityId.getEntityName() + ".");
             } else {
                 if (listener.getExecutorService() != null) {
-                    listener.getExecutorService().shutdownNow();
+                    listener.getExecutorService().shutdown();
+                    listener.getExecutorService().awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
                 }
                 DeployedJobSpecId deployedJobSpecId = listener.getDeployedJobSpecId();
                 listener.deActivate();

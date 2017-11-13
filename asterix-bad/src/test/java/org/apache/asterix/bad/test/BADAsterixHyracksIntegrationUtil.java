@@ -29,14 +29,15 @@ public class BADAsterixHyracksIntegrationUtil extends AsterixHyracksIntegrationU
     public static void main(String[] args) throws Exception {
         BADAsterixHyracksIntegrationUtil integrationUtil = new BADAsterixHyracksIntegrationUtil();
         try {
-            integrationUtil.run(Boolean.getBoolean("cleanup.start"), Boolean.getBoolean("cleanup.shutdown"));
+            integrationUtil.run(Boolean.getBoolean("cleanup.start"), Boolean.getBoolean("cleanup.shutdown"),
+                    System.getProperty("external.lib", ""));
         } catch (Exception e) {
             System.exit(1);
         }
     }
 
     @Override
-    protected void run(boolean cleanupOnStart, boolean cleanupOnShutdown) throws Exception {
+    protected void run(boolean cleanupOnStart, boolean cleanupOnShutdown, String loadExternalLibs) throws Exception {
         Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
             public void run() {
