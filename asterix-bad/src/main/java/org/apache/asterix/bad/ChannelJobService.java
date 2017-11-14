@@ -23,66 +23,25 @@ import java.io.DataOutputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.EnumSet;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.om.base.AOrderedList;
 import org.apache.asterix.om.base.AUUID;
-import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
-import org.apache.hyracks.api.job.JobFlag;
-import org.apache.hyracks.api.job.JobId;
-import org.apache.hyracks.api.job.JobSpecification;
 
 /**
- * Provides functionality for running channel jobs and communicating with Brokers
+ * Provides functionality for channel jobs and communicating with Brokers
  */
 public class ChannelJobService {
 
     private static final Logger LOGGER = Logger.getLogger(ChannelJobService.class.getName());
 
-    public static ScheduledExecutorService startJob(JobSpecification jobSpec, EnumSet<JobFlag> jobFlags, JobId jobId,
-            IHyracksClientConnection hcc, long duration)
-            throws Exception {
-        ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
-        scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    executeJob(jobSpec, jobFlags, jobId, hcc);
-                } catch (Exception e) {
-                    LOGGER.log(Level.WARNING, "Channel Job Failed to run.", e);
-                }
-            }
-        }, duration, duration, TimeUnit.MILLISECONDS);
-        return scheduledExecutorService;
-    }
-
-    public static void executeJob(JobSpecification jobSpec, EnumSet<JobFlag> jobFlags, JobId jobId,
-            IHyracksClientConnection hcc)
-            throws Exception {
-        LOGGER.info("Executing Channel Job");
-        if (jobId == null) {
-            hcc.startJob(jobSpec, jobFlags);
-        } else {
-            hcc.startJob(jobId);
-        }
-    }
-
-    public static void runChannelJob(JobSpecification channeljobSpec, IHyracksClientConnection hcc) throws Exception {
-        JobId jobId = hcc.startJob(channeljobSpec);
-        hcc.waitForCompletion(jobId);
-    }
-
     public static void sendBrokerNotificationsForChannel(EntityId activeJobId, String brokerEndpoint,
             AOrderedList subscriptionIds, String channelExecutionTime) throws HyracksDataException {
         String formattedString;
-            formattedString = formatJSON(activeJobId, subscriptionIds, channelExecutionTime);
+        formattedString = formatJSON(activeJobId, subscriptionIds, channelExecutionTime);
         sendMessage(brokerEndpoint, formattedString);
     }
 

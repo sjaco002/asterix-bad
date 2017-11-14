@@ -101,16 +101,15 @@ CreateChannelStatement ChannelSpecification() throws ParseException:
   CreateChannelStatement ccs = null;
   String fqFunctionName = null;
   Expression period = null;
-  boolean distributed = true;
 }
 {
   (
     "repetitive" "channel"  nameComponents = QualifiedName()
     <USING> appliedFunction = FunctionSignature()
-    "period" period = FunctionCallExpr() ("nondistributed" { distributed = false; })?
+    "period" period = FunctionCallExpr()
     {
       ccs = new CreateChannelStatement(nameComponents.first,
-                                   nameComponents.second, appliedFunction, period, distributed);
+                                   nameComponents.second, appliedFunction, period);
     }
   )
     {
@@ -124,6 +123,7 @@ CreateProcedureStatement ProcedureSpecification() throws ParseException:
   FunctionName fctName = null;
   FunctionSignature signature;
   List<VarIdentifier> paramList = new ArrayList<VarIdentifier>();
+  List<Integer> paramIds = new ArrayList<Integer>();
   String functionBody;
   Token beginPos;
   Token endPos;
@@ -135,7 +135,13 @@ CreateProcedureStatement ProcedureSpecification() throws ParseException:
      paramList = ParameterList()
     <LEFTBRACE>
   {
-     beginPos = token;
+    for (VarIdentifier param : paramList)
+    {
+      VarIdentifier v = new VarIdentifier(param.toString());
+      getCurrentScope().addNewVarSymbolToScope(v);
+      paramIds.add(v.getId());
+    }
+    beginPos = token;
   }
   functionBodyExpr = SingleStatement() <RIGHTBRACE>
     {
@@ -146,7 +152,7 @@ CreateProcedureStatement ProcedureSpecification() throws ParseException:
     }
   ("period" period = FunctionCallExpr())?
   {
-  return new CreateProcedureStatement(signature, paramList, functionBody, period);
+  return new CreateProcedureStatement(signature, paramList, paramIds, functionBody, functionBodyExpr, period);
   }
 }
 
@@ -176,7 +182,7 @@ ExecuteProcedureStatement ProcedureExecution() throws ParseException:
   )*)? <RIGHTPAREN>
     {
       String fqFunctionName =  funcName.function;
-      return new ExecuteProcedureStatement(funcName.dataverse, fqFunctionName, arity);
+      return new ExecuteProcedureStatement(funcName.dataverse, fqFunctionName, arity, argList);
     }
 }
 

@@ -18,9 +18,13 @@
  */
 package org.apache.asterix.bad.lang.statement;
 
-import java.util.EnumSet;
+import java.io.DataOutput;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 
+import org.apache.asterix.active.DeployedJobService;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.algebra.extension.IExtensionStatement;
 import org.apache.asterix.api.http.server.ResultUtil;
@@ -30,35 +34,47 @@ import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
 import org.apache.asterix.bad.ChannelJobService;
 import org.apache.asterix.bad.lang.BADLangExtension;
-import org.apache.asterix.bad.metadata.PrecompiledJobEventListener;
-import org.apache.asterix.bad.metadata.PrecompiledJobEventListener.PrecompiledType;
+import org.apache.asterix.bad.metadata.DeployedJobSpecEventListener;
+import org.apache.asterix.bad.metadata.DeployedJobSpecEventListener.PrecompiledType;
 import org.apache.asterix.bad.metadata.Procedure;
 import org.apache.asterix.common.dataflow.ICcApplicationContext;
+import org.apache.asterix.common.exceptions.AsterixException;
 import org.apache.asterix.common.exceptions.CompilationException;
+import org.apache.asterix.common.exceptions.ErrorCode;
+import org.apache.asterix.formats.nontagged.SerializerDeserializerProvider;
+import org.apache.asterix.lang.common.base.Expression;
+import org.apache.asterix.lang.common.expression.LiteralExpr;
 import org.apache.asterix.lang.common.struct.Identifier;
 import org.apache.asterix.lang.common.visitor.base.ILangVisitor;
 import org.apache.asterix.metadata.MetadataManager;
 import org.apache.asterix.metadata.MetadataTransactionContext;
 import org.apache.asterix.metadata.declared.MetadataProvider;
+import org.apache.asterix.om.base.AString;
+import org.apache.asterix.om.base.IAObject;
+import org.apache.asterix.transaction.management.service.transaction.TxnIdFactory;
+import org.apache.asterix.translator.ConstantHelper;
 import org.apache.asterix.translator.IRequestParameters;
 import org.apache.asterix.translator.IStatementExecutor;
 import org.apache.asterix.translator.IStatementExecutor.Stats;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
-import org.apache.hyracks.api.job.JobFlag;
+import org.apache.hyracks.api.job.DeployedJobSpecId;
 import org.apache.hyracks.api.job.JobId;
+import org.apache.hyracks.data.std.util.ArrayBackedValueStorage;
 
 public class ExecuteProcedureStatement implements IExtensionStatement {
 
     private final String dataverseName;
     private final String procedureName;
     private final int arity;
+    private final List<Expression> argList;
 
-    public ExecuteProcedureStatement(String dataverseName, String procedureName, int arity) {
+    public ExecuteProcedureStatement(String dataverseName, String procedureName, int arity, List<Expression> argList) {
         this.dataverseName = dataverseName;
         this.procedureName = procedureName;
         this.arity = arity;
+        this.argList = argList;
     }
 
     public String getDataverseName() {
@@ -98,7 +114,7 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
         String dataverse = ((QueryTranslator) statementExecutor).getActiveDataverse(new Identifier(dataverseName));
         boolean txnActive = false;
         EntityId entityId = new EntityId(BADConstants.PROCEDURE_KEYWORD, dataverse, procedureName);
-        PrecompiledJobEventListener listener = (PrecompiledJobEventListener) activeEventHandler.getListener(entityId);
+        DeployedJobSpecEventListener listener = (DeployedJobSpecEventListener) activeEventHandler.getListener(entityId);
         Procedure procedure = null;
 
         MetadataTransactionContext mdTxnCtx = null;
@@ -109,22 +125,30 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
             if (procedure == null) {
                 throw new AlgebricksException("There is no procedure with this name " + procedureName + ".");
             }
-
-            JobId hyracksJobId = listener.getJobId();
+            Map<byte[], byte[]> contextRuntimeVarMap = createParameterMap(procedure);
+            DeployedJobSpecId deployedJobSpecId = listener.getDeployedJobSpecId();
             if (procedure.getDuration().equals("")) {
-                hcc.startJob(hyracksJobId);
+
+                //Add the Asterix Transaction Id to the map
+                contextRuntimeVarMap.put(BADConstants.TRANSACTION_ID_PARAMETER_NAME,
+                        String.valueOf(TxnIdFactory.create().getId()).getBytes());
+                JobId jobId = hcc.startJob(deployedJobSpecId, contextRuntimeVarMap);
 
                 if (listener.getType() == PrecompiledType.QUERY) {
-                    hcc.waitForCompletion(hyracksJobId);
-                    ResultReader resultReader = listener.getResultReader();
+                    hcc.waitForCompletion(jobId);
+                    ResultReader resultReader =
+                            new ResultReader(listener.getResultDataset(), jobId, listener.getResultId());
+
                     ResultUtil.printResults(appCtx, resultReader,
                             ((QueryTranslator) statementExecutor).getSessionOutput(), new Stats(), null);
                 }
 
             } else {
-                ScheduledExecutorService ses = ChannelJobService.startJob(null, EnumSet.noneOf(JobFlag.class),
-                        hyracksJobId, hcc, ChannelJobService.findPeriod(procedure.getDuration()));
-                listener.storeDistributedInfo(hyracksJobId, ses, listener.getResultReader());
+                ScheduledExecutorService ses =
+                        DeployedJobService.startRepetitiveDeployedJobSpec(deployedJobSpecId, hcc,
+                                ChannelJobService.findPeriod(procedure.getDuration()), contextRuntimeVarMap, entityId);
+                listener.storeDistributedInfo(deployedJobSpecId, ses, listener.getResultDataset(),
+                        listener.getResultId());
             }
 
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
@@ -138,6 +162,46 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
         } finally {
             metadataProvider.getLocks().unlock();
         }
+    }
+
+    private Map<byte[], byte[]> createParameterMap(Procedure procedure)
+            throws AsterixException, HyracksDataException {
+        Map<byte[], byte[]> map = new HashMap<>();
+        if (procedure.getParams().size() != argList.size()) {
+            throw AsterixException.create(ErrorCode.COMPILATION_INVALID_PARAMETER_NUMBER,
+                    procedure.getEntityId().getEntityName(), argList.size());
+        }
+        ArrayBackedValueStorage abvsKey = new ArrayBackedValueStorage();
+        DataOutput dosKey = abvsKey.getDataOutput();
+        ArrayBackedValueStorage abvsValue = new ArrayBackedValueStorage();
+        DataOutput dosValue = abvsValue.getDataOutput();
+
+        for (int i = 0; i < procedure.getParams().size(); i++) {
+            if (!(argList.get(i) instanceof LiteralExpr)) {
+                //TODO handle nonliteral arguments to procedure
+                throw AsterixException.create(ErrorCode.TYPE_UNSUPPORTED, procedure.getEntityId().getEntityName(),
+                        argList.get(i).getClass());
+            }
+            //Turn the argument name into a byte array
+            IAObject str = new AString(procedure.getParams().get(i));
+            abvsKey.reset();
+            SerializerDeserializerProvider.INSTANCE.getSerializerDeserializer(str.getType()).serialize(str, dosKey);
+            //We do not save the type tag of the string key
+            byte[] key = new byte[abvsKey.getLength() - 1];
+            System.arraycopy(abvsKey.getByteArray(), 1, key, 0, abvsKey.getLength() - 1);
+
+            //Turn the argument value into a byte array
+            IAObject object = ConstantHelper.objectFromLiteral(((LiteralExpr) argList.get(i)).getValue());
+            abvsValue.reset();
+            SerializerDeserializerProvider.INSTANCE.getSerializerDeserializer(object.getType()).serialize(object,
+                    dosValue);
+            byte[] value = new byte[abvsValue.getLength()];
+            System.arraycopy(abvsValue.getByteArray(), abvsValue.getStartOffset(), value, 0, abvsValue.getLength());
+
+            map.put(key, value);
+        }
+
+        return map;
     }
 
 }

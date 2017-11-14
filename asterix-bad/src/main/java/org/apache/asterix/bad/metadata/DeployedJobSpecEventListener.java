@@ -30,19 +30,22 @@ import org.apache.asterix.active.EntityId;
 import org.apache.asterix.active.IActiveEntityEventSubscriber;
 import org.apache.asterix.active.IActiveEntityEventsListener;
 import org.apache.asterix.active.message.ActivePartitionMessage;
-import org.apache.asterix.active.message.ActivePartitionMessage.Event;
 import org.apache.asterix.app.result.ResultReader;
 import org.apache.asterix.common.dataflow.ICcApplicationContext;
 import org.apache.asterix.common.metadata.IDataset;
 import org.apache.hyracks.algebricks.common.constraints.AlgebricksAbsolutePartitionConstraint;
+import org.apache.hyracks.api.dataset.IHyracksDataset;
+import org.apache.hyracks.api.dataset.ResultSetId;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.api.job.DeployedJobSpecId;
 import org.apache.hyracks.api.job.JobId;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
-public class PrecompiledJobEventListener implements IActiveEntityEventsListener {
+public class DeployedJobSpecEventListener implements IActiveEntityEventsListener {
 
-    private static final Logger LOGGER = Logger.getLogger(PrecompiledJobEventListener.class);
+    private static final Logger LOGGER = Logger.getLogger(DeployedJobSpecEventListener.class);
+
 
     public enum PrecompiledType {
         CHANNEL,
@@ -57,9 +60,13 @@ public class PrecompiledJobEventListener implements IActiveEntityEventsListener 
         FINISHED
     }
 
+    private DeployedJobSpecId deployedJobSpecId;
     private ScheduledExecutorService executorService = null;
     private ResultReader resultReader;
     private final PrecompiledType type;
+
+    private IHyracksDataset hdc;
+    private ResultSetId resultSetId;
     // members
     protected volatile ActivityState state;
     protected JobId jobId;
@@ -75,7 +82,7 @@ public class PrecompiledJobEventListener implements IActiveEntityEventsListener 
     protected final AlgebricksAbsolutePartitionConstraint locations;
     protected int numRegistered;
 
-    public PrecompiledJobEventListener(ICcApplicationContext appCtx, EntityId entityId, PrecompiledType type,
+    public DeployedJobSpecEventListener(ICcApplicationContext appCtx, EntityId entityId, PrecompiledType type,
             List<IDataset> datasets, AlgebricksAbsolutePartitionConstraint locations, String runtimeName) {
         this.appCtx = appCtx;
         this.entityId = entityId;
@@ -92,8 +99,21 @@ public class PrecompiledJobEventListener implements IActiveEntityEventsListener 
         this.type = type;
     }
 
+
+    public IHyracksDataset getResultDataset() {
+        return hdc;
+    }
+
+    public ResultSetId getResultId() {
+        return resultSetId;
+    }
+
+    public DeployedJobSpecId getDeployedJobSpecId() {
+        return deployedJobSpecId;
+    }
+
     protected synchronized void handle(ActivePartitionMessage message) {
-        if (message.getEvent() == Event.RUNTIME_REGISTERED) {
+        if (message.getEvent() == ActivePartitionMessage.Event.RUNTIME_REGISTERED) {
             numRegistered++;
             if (numRegistered == locations.getLocations().length) {
                 state = ActivityState.RUNNING;
@@ -172,10 +192,12 @@ public class PrecompiledJobEventListener implements IActiveEntityEventsListener 
         return type;
     }
 
-    public void storeDistributedInfo(JobId jobId, ScheduledExecutorService ses, ResultReader resultReader) {
-        this.jobId = jobId;
+    public void storeDistributedInfo(DeployedJobSpecId deployedJobSpecId, ScheduledExecutorService ses,
+            IHyracksDataset hdc, ResultSetId resultSetId) {
+        this.deployedJobSpecId = deployedJobSpecId;
         this.executorService = ses;
-        this.resultReader = resultReader;
+        this.hdc = hdc;
+        this.resultSetId = resultSetId;
     }
 
     public ScheduledExecutorService getExecutorService() {

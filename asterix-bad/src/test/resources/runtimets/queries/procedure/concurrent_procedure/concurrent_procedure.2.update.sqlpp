@@ -17,30 +17,16 @@
  * under the License.
  */
 /*
-* Description  : Room Occupants Long Term Test
+* Description  : Simple Insert Procedure
 * Expected Res : Success
-* Date         : Sep 2016
+* Date         : Jan 2017
 * Author       : Steven Jacobs
 */
 
-drop dataverse channels if exists;
-create dataverse channels;
 use channels;
-
-create type userLocation as {
-  userId: int,
-  roomNumber: int
-};
-
-create dataset UserLocations(userLocation)
-primary key userId;
-
-create function RoomOccupants(room) {
-  (select location.userId
-  from UserLocations location
-  where location.roomNumber = room)
-};
-
-create broker brokerA at "http://www.notifyA.com";
-
-create repetitive channel roomRecords using RoomOccupants@1 period duration("PT30S");
+execute addMe();
+execute addMe();
+execute addMe();
+execute addMe();
+execute addMe();
+execute addMe();

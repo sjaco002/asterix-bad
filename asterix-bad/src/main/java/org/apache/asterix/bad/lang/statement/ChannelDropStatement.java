@@ -18,6 +18,10 @@
  */
 package org.apache.asterix.bad.lang.statement;
 
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.algebra.extension.IExtensionStatement;
 import org.apache.asterix.app.active.ActiveNotificationHandler;
@@ -25,7 +29,7 @@ import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
 import org.apache.asterix.bad.lang.BADLangExtension;
 import org.apache.asterix.bad.metadata.Channel;
-import org.apache.asterix.bad.metadata.PrecompiledJobEventListener;
+import org.apache.asterix.bad.metadata.DeployedJobSpecEventListener;
 import org.apache.asterix.common.dataflow.ICcApplicationContext;
 import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.lang.common.statement.DropDatasetStatement;
@@ -38,11 +42,11 @@ import org.apache.asterix.translator.IRequestParameters;
 import org.apache.asterix.translator.IStatementExecutor;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
-import org.apache.hyracks.api.exceptions.ErrorCode;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
-import org.apache.hyracks.api.job.JobId;
+import org.apache.hyracks.api.job.DeployedJobSpecId;
 
 public class ChannelDropStatement implements IExtensionStatement {
+    private static final Logger LOGGER = Logger.getLogger(ChannelDropStatement.class.getName());
 
     private final Identifier dataverseName;
     private final Identifier channelName;
@@ -91,7 +95,7 @@ public class ChannelDropStatement implements IExtensionStatement {
         ICcApplicationContext appCtx = metadataProvider.getApplicationContext();
         ActiveNotificationHandler activeEventHandler =
                 (ActiveNotificationHandler) appCtx.getActiveNotificationHandler();
-        PrecompiledJobEventListener listener = (PrecompiledJobEventListener) activeEventHandler.getListener(entityId);
+        DeployedJobSpecEventListener listener = (DeployedJobSpecEventListener) activeEventHandler.getListener(entityId);
         Channel channel = null;
 
         MetadataTransactionContext mdTxnCtx = null;
@@ -109,22 +113,30 @@ public class ChannelDropStatement implements IExtensionStatement {
                 }
             }
 
-            listener.getExecutorService().shutdownNow();
-            JobId hyracksJobId = listener.getJobId();
-            listener.deActivate();
-            activeEventHandler.unregisterListener(listener);
-            if (hyracksJobId != null) {
-                hcc.destroyJob(hyracksJobId);
-                // wait for job completion to release any resources to be dropped
-                ensureJobDestroyed(hcc, hyracksJobId);
-            }
+            if (listener == null) {
+                //TODO: Channels need to better handle cluster failures
+                LOGGER.log(Level.SEVERE,
+                        "Tried to drop a Deployed Job  whose listener no longer exists:  "
+                                + entityId.getExtensionName() + " " + entityId.getDataverse() + "."
+                                + entityId.getEntityName() + ".");
 
+            } else {
+                listener.getExecutorService().shutdown();
+                listener.getExecutorService().awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
+                DeployedJobSpecId deployedJobSpecId = listener.getDeployedJobSpecId();
+                listener.deActivate();
+                activeEventHandler.unregisterListener(listener);
+                if (deployedJobSpecId != null) {
+                    hcc.undeployJobSpec(deployedJobSpecId);
+                }
+            }
             //Create a metadata provider to use in nested jobs.
             MetadataProvider tempMdProvider = new MetadataProvider(appCtx, metadataProvider.getDefaultDataverse());
             tempMdProvider.getConfig().putAll(metadataProvider.getConfig());
             //Drop the Channel Datasets
             //TODO: Need to find some way to handle if this fails.
             //TODO: Prevent datasets for Channels from being dropped elsewhere
+
             DropDatasetStatement dropStmt = new DropDatasetStatement(new Identifier(dataverse),
                     new Identifier(channel.getResultsDatasetName()), true);
             ((QueryTranslator) statementExecutor).handleDatasetDropStatement(tempMdProvider, dropStmt, hcc, null);
@@ -147,19 +159,4 @@ public class ChannelDropStatement implements IExtensionStatement {
         }
     }
 
-    private void ensureJobDestroyed(IHyracksClientConnection hcc, JobId hyracksJobId) throws Exception {
-        try {
-            hcc.waitForCompletion(hyracksJobId);
-        } catch (Exception e) {
-            // if the job has already been destroyed, it is safe to complete
-            if (e instanceof HyracksDataException) {
-                HyracksDataException hde = (HyracksDataException) e;
-                if (hde.getComponent().equals(ErrorCode.HYRACKS)
-                        && hde.getErrorCode() == ErrorCode.JOB_HAS_BEEN_CLEARED_FROM_HISTORY) {
-                    return;
-                }
-            }
-            throw e;
-        }
-    }
 }

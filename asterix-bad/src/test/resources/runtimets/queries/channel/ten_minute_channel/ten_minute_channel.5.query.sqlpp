@@ -25,6 +25,4 @@
 
 use channels;
 
-count (from $result in dataset roomRecordsResults
-order by $result.result
-select $result.result) > 599;
+(select value count(result) from roomRecordsResults)[0] > 19;

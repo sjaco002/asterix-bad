@@ -17,30 +17,28 @@
  * under the License.
  */
 /*
-* Description  : Room Occupants Long Term Test
+* Description  : Simple Delete Procedure with parameters
 * Expected Res : Success
-* Date         : Sep 2016
+* Date         : May 2017
 * Author       : Steven Jacobs
 */
 
 drop dataverse channels if exists;
 create dataverse channels;
 use channels;
-
-create type userLocation as {
-  userId: int,
-  roomNumber: int
+create type myLocation as {
+  id: int
 };
-
-create dataset UserLocations(userLocation)
-primary key userId;
-
-create function RoomOccupants(room) {
-  (select location.userId
-  from UserLocations location
-  where location.roomNumber = room)
+create dataset UserLocations(myLocation)
+primary key id;
+insert into UserLocations(
+  [{"id":0, "roomNumber":4815162342},
+  {"id":1, "roomNumber":"lost"},
+  {"id":2, "roomNumber":108},
+  {"id":3, "roomNumber":"jacob"}]
+);
+create procedure deleteSome(r, otherRoom) {
+delete from UserLocations
+where roomNumber = r
+or roomNumber = otherRoom
 };
-
-create broker brokerA at "http://www.notifyA.com";
-
-create repetitive channel roomRecords using RoomOccupants@1 period duration("PT30S");
