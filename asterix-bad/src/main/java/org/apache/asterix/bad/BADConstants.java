@@ -49,7 +49,8 @@ public interface BADConstants {
     public static final String FIELD_NAME_RETURN_TYPE = "ReturnType";
     public static final String FIELD_NAME_DEFINITION = "Definition";
     public static final String FIELD_NAME_LANGUAGE = "Language";
-    public static final String JOB_ID_PARAMETER_NAME = "jobIdParameter";
+    //To enable new Asterix TxnId for separate deployed job spec invocations
+    public static final byte[] TRANSACTION_ID_PARAMETER_NAME = "TxnIdParameter".getBytes();
 
     public enum ChannelJobType {
         REPETITIVE
