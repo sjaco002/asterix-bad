@@ -182,7 +182,7 @@ public class CreateChannelStatement implements IExtensionStatement {
         List<String> fieldNames = new ArrayList<>();
         fieldNames.add(BADConstants.SubscriptionId);
         partitionFields.add(fieldNames);
-        IDatasetDetailsDecl idd = new InternalDetailsDecl(partitionFields, keyIndicators, true, null, false);
+        IDatasetDetailsDecl idd = new InternalDetailsDecl(partitionFields, keyIndicators, true, null);
         DatasetDecl createSubscriptionsDataset = new DatasetDecl(new Identifier(dataverse), subscriptionsName,
                 new Identifier(BADConstants.BAD_DATAVERSE_NAME), subscriptionsTypeName, null, null, null, null,
                 new HashMap<String, String>(), new HashMap<String, String>(), DatasetType.INTERNAL, idd, true);
@@ -192,7 +192,7 @@ public class CreateChannelStatement implements IExtensionStatement {
         fieldNames = new ArrayList<>();
         fieldNames.add(BADConstants.ResultId);
         partitionFields.add(fieldNames);
-        idd = new InternalDetailsDecl(partitionFields, keyIndicators, true, null, false);
+        idd = new InternalDetailsDecl(partitionFields, keyIndicators, true, null);
         DatasetDecl createResultsDataset = new DatasetDecl(new Identifier(dataverse), resultsName,
                 new Identifier(BADConstants.BAD_DATAVERSE_NAME), resultsTypeName, null, null, null, null,
                 new HashMap<String, String>(), new HashMap<String, String>(), DatasetType.INTERNAL, idd, true);
