@@ -184,8 +184,8 @@ public class CreateChannelStatement implements IExtensionStatement {
         partitionFields.add(fieldNames);
         IDatasetDetailsDecl idd = new InternalDetailsDecl(partitionFields, keyIndicators, true, null);
         DatasetDecl createSubscriptionsDataset = new DatasetDecl(new Identifier(dataverse), subscriptionsName,
-                new Identifier(BADConstants.BAD_DATAVERSE_NAME), subscriptionsTypeName, null, null, null, null,
-                new HashMap<String, String>(), new HashMap<String, String>(), DatasetType.INTERNAL, idd, true);
+                new Identifier(BADConstants.BAD_DATAVERSE_NAME), subscriptionsTypeName, null, null, null,
+                new HashMap<String, String>(), DatasetType.INTERNAL, idd, null, true);
 
         //Setup the results dataset
         partitionFields = new ArrayList<>();
@@ -194,8 +194,8 @@ public class CreateChannelStatement implements IExtensionStatement {
         partitionFields.add(fieldNames);
         idd = new InternalDetailsDecl(partitionFields, keyIndicators, true, null);
         DatasetDecl createResultsDataset = new DatasetDecl(new Identifier(dataverse), resultsName,
-                new Identifier(BADConstants.BAD_DATAVERSE_NAME), resultsTypeName, null, null, null, null,
-                new HashMap<String, String>(), new HashMap<String, String>(), DatasetType.INTERNAL, idd, true);
+                new Identifier(BADConstants.BAD_DATAVERSE_NAME), resultsTypeName, null, null, null,
+                new HashMap<String, String>(), DatasetType.INTERNAL, idd, null, true);
 
         //Create an index on timestamp for results
         CreateIndexStatement createTimeIndex = new CreateIndexStatement();
