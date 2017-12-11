@@ -1,17 +1,17 @@
 -- NOTIFY_BROKERS  |PARTITIONED|
   -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
-    -- PRE_CLUSTERED_GROUP_BY[$$52, $$channelExecutionTime]  |PARTITIONED|
+    -- PRE_CLUSTERED_GROUP_BY[$$86, $$channelExecutionTime]  |PARTITIONED|
             {
               -- AGGREGATE  |LOCAL|
                 -- NESTED_TUPLE_SOURCE  |LOCAL|
             }
       -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
-        -- STABLE_SORT [$$52(ASC), $$channelExecutionTime(ASC)]  |PARTITIONED|
-          -- HASH_PARTITION_EXCHANGE [$$52, $$channelExecutionTime]  |PARTITIONED|
+        -- STABLE_SORT [$$86(ASC), $$channelExecutionTime(ASC)]  |PARTITIONED|
+          -- HASH_PARTITION_EXCHANGE [$$86, $$channelExecutionTime]  |PARTITIONED|
             -- PRE_SORTED_DISTINCT_BY  |PARTITIONED|
               -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
-                -- STABLE_SORT [$$37(ASC)]  |PARTITIONED|
-                  -- HASH_PARTITION_EXCHANGE [$$37]  |PARTITIONED|
+                -- STABLE_SORT [$$71(ASC)]  |PARTITIONED|
+                  -- HASH_PARTITION_EXCHANGE [$$71]  |PARTITIONED|
                     -- STREAM_PROJECT  |PARTITIONED|
                       -- COMMIT  |PARTITIONED|
                         -- STREAM_PROJECT  |PARTITIONED|
@@ -21,7 +21,7 @@
                                 -- STREAM_PROJECT  |PARTITIONED|
                                   -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
                                     -- INSERT_DELETE  |PARTITIONED|
-                                      -- HASH_PARTITION_EXCHANGE [$$32]  |PARTITIONED|
+                                      -- HASH_PARTITION_EXCHANGE [$$66]  |PARTITIONED|
                                         -- ASSIGN  |PARTITIONED|
                                           -- STREAM_PROJECT  |PARTITIONED|
                                             -- ASSIGN  |PARTITIONED|
@@ -35,8 +35,8 @@
                                                             -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
                                                               -- STREAM_PROJECT  |PARTITIONED|
                                                                 -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
-                                                                  -- HYBRID_HASH_JOIN [$$44, $$42][$$38, $$39]  |PARTITIONED|
-                                                                    -- HASH_PARTITION_EXCHANGE [$$44, $$42]  |PARTITIONED|
+                                                                  -- HYBRID_HASH_JOIN [$$78, $$76][$$72, $$73]  |PARTITIONED|
+                                                                    -- HASH_PARTITION_EXCHANGE [$$78, $$76]  |PARTITIONED|
                                                                       -- STREAM_PROJECT  |PARTITIONED|
                                                                         -- ASSIGN  |PARTITIONED|
                                                                           -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
@@ -44,7 +44,7 @@
                                                                               -- BROADCAST_EXCHANGE  |PARTITIONED|
                                                                                 -- ASSIGN  |UNPARTITIONED|
                                                                                   -- EMPTY_TUPLE_SOURCE  |UNPARTITIONED|
-                                                                    -- HASH_PARTITION_EXCHANGE [$$38, $$39]  |PARTITIONED|
+                                                                    -- HASH_PARTITION_EXCHANGE [$$72, $$73]  |PARTITIONED|
                                                                       -- STREAM_PROJECT  |PARTITIONED|
                                                                         -- ASSIGN  |PARTITIONED|
                                                                           -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
