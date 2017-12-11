@@ -122,7 +122,11 @@ public class ChannelDropStatement implements IExtensionStatement {
 
             } else {
                 listener.getExecutorService().shutdown();
-                listener.getExecutorService().awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
+                if (!listener.getExecutorService().awaitTermination(BADConstants.EXECUTOR_TIMEOUT, TimeUnit.SECONDS)) {
+                    LOGGER.log(Level.SEVERE,
+                            "Executor Service is terminating non-gracefully for: " + entityId.getExtensionName() + " "
+                                    + entityId.getDataverse() + "." + entityId.getEntityName());
+                }
                 DeployedJobSpecId deployedJobSpecId = listener.getDeployedJobSpecId();
                 listener.deActivate();
                 activeEventHandler.unregisterListener(listener);
