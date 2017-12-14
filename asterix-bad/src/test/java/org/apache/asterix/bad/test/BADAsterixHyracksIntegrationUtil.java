@@ -36,7 +36,6 @@ public class BADAsterixHyracksIntegrationUtil extends AsterixHyracksIntegrationU
         }
     }
 
-    @Override
     protected void run(boolean cleanupOnStart, boolean cleanupOnShutdown, String loadExternalLibs) throws Exception {
         Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
@@ -48,10 +47,7 @@ public class BADAsterixHyracksIntegrationUtil extends AsterixHyracksIntegrationU
                 }
             }
         });
-        System.setProperty(GlobalConfig.CONFIG_FILE_PROPERTY,
-                "asterixdb/asterix-opt/asterix-bad/src/main/resources/asterix-build-configuration.xml");
-
-        init(cleanupOnStart);
+        init(cleanupOnStart, "asterixdb/asterix-opt/asterix-bad/src/main/resources/cc.conf");
         while (true) {
             Thread.sleep(10000);
         }

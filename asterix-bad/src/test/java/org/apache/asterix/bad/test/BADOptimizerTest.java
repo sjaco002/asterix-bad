@@ -38,15 +38,13 @@ public class BADOptimizerTest extends OptimizerTest {
 
     @BeforeClass
     public static void setUp() throws Exception {
-        TEST_CONFIG_FILE_NAME = "src/main/resources/asterix-build-configuration.xml";
-        System.setProperty(GlobalConfig.CONFIG_FILE_PROPERTY, TEST_CONFIG_FILE_NAME);
         final File outdir = new File(PATH_ACTUAL);
         outdir.mkdirs();
 
         extensionLangCompilationProvider = new BADCompilationProvider();
         statementExecutorFactory = new BADQueryTranslatorFactory();
 
-        integrationUtil.init(true);
+        integrationUtil.init(true,TEST_CONFIG_FILE_NAME);
         // Set the node resolver to be the identity resolver that expects node names
         // to be node controller ids; a valid assumption in test environment.
         System.setProperty(ExternalDataConstants.NODE_RESOLVER_FACTORY_PROPERTY,
