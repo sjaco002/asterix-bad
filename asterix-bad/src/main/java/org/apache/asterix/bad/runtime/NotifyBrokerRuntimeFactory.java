@@ -49,7 +49,8 @@ public class NotifyBrokerRuntimeFactory implements IPushRuntimeFactory {
     }
 
     @Override
-    public IPushRuntime createPushRuntime(IHyracksTaskContext ctx) throws HyracksDataException {
-        return new NotifyBrokerRuntime(ctx, brokerEvalFactory, subEvalFactory, channelExecutionEvalFactory, entityId);
+    public IPushRuntime[] createPushRuntime(IHyracksTaskContext ctx) throws HyracksDataException {
+        return new IPushRuntime[] { new NotifyBrokerRuntime(ctx, brokerEvalFactory, subEvalFactory,
+                channelExecutionEvalFactory, entityId) };
     }
 }
