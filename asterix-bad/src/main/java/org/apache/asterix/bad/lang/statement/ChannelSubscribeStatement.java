@@ -187,7 +187,7 @@ public class ChannelSubscribeStatement implements IExtensionStatement {
                     metadataProvider.getDefaultDataverse());
             tempMdProvider.getConfig().putAll(metadataProvider.getConfig());
 
-            final ResultDelivery resultDelivery = requestParameters.getResultDelivery();
+            final ResultDelivery resultDelivery = requestParameters.getResultProperties().getDelivery();
             final IHyracksDataset hdc = requestParameters.getHyracksDataset();
             final Stats stats = requestParameters.getStats();
             if (subscriptionId == null) {
@@ -207,6 +207,7 @@ public class ChannelSubscribeStatement implements IExtensionStatement {
                 tempMdProvider
                         .setResultSerializerFactoryProvider(metadataProvider.getResultSerializerFactoryProvider());
                 tempMdProvider.setOutputFile(metadataProvider.getOutputFile());
+                tempMdProvider.setMaxResultReads(requestParameters.getResultProperties().getMaxReads());
 
                 InsertStatement insert = new InsertStatement(new Identifier(dataverse),
                         new Identifier(subscriptionsDatasetName), subscriptionTuple, varCounter, resultVar, accessor);

@@ -262,7 +262,7 @@ public class CreateProcedureStatement implements IExtensionStatement {
                     metadataProvider.getDefaultDataverse());
             tempMdProvider.getConfig().putAll(metadataProvider.getConfig());
             metadataProvider.setResultSetId(new ResultSetId(resultSetId++));
-            final ResultDelivery resultDelivery = requestParameters.getResultDelivery();
+            final ResultDelivery resultDelivery = requestParameters.getResultProperties().getDelivery();
             final IHyracksDataset hdc = requestParameters.getHyracksDataset();
             final Stats stats = requestParameters.getStats();
             boolean resultsAsync = resultDelivery == ResultDelivery.ASYNC || resultDelivery == ResultDelivery.DEFERRED;
@@ -272,7 +272,7 @@ public class CreateProcedureStatement implements IExtensionStatement {
             tempMdProvider.setWriterFactory(metadataProvider.getWriterFactory());
             tempMdProvider.setResultSerializerFactoryProvider(metadataProvider.getResultSerializerFactoryProvider());
             tempMdProvider.setOutputFile(metadataProvider.getOutputFile());
-
+            tempMdProvider.setMaxResultReads(requestParameters.getResultProperties().getMaxReads());
             //Create Procedure Internal Job
             Pair<JobSpecification, PrecompiledType> procedureJobSpec =
                     createProcedureJob(statementExecutor, tempMdProvider, hcc, hdc, stats);
