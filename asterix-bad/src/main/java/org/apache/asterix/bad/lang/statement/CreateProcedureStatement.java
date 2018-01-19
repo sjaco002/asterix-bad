@@ -215,12 +215,13 @@ public class CreateProcedureStatement implements IExtensionStatement {
             Query s = (Query) getProcedureBodyStatement();
             addLets((SelectExpression) s.getBody());
             SqlppRewriterFactory fact = new SqlppRewriterFactory();
-            dependencies = FunctionUtil.getFunctionDependencies(fact.createQueryRewriter(),
-                    ((Query) getProcedureBodyStatement()).getBody(), metadataProvider);
+            dependencies.get(1).addAll(FunctionUtil.getFunctionDependencies(fact.createQueryRewriter(),
+                    ((Query) getProcedureBodyStatement()).getBody(), metadataProvider).get(1));
             Pair<JobSpecification, PrecompiledType> pair = new Pair<>(
                     compileQueryJob(statementExecutor, metadataProvider, hcc, (Query) getProcedureBodyStatement()),
                     PrecompiledType.QUERY);
-
+            dependencies.get(0).addAll(FunctionUtil.getFunctionDependencies(fact.createQueryRewriter(),
+                    ((Query) getProcedureBodyStatement()).getBody(), metadataProvider).get(0));
             metadataProvider.getLocks().unlock();
             return pair;
         } else if (getProcedureBodyStatement().getKind() == Statement.Kind.DELETE) {

@@ -41,7 +41,7 @@ create dataverse two;
 use two;
 
 create procedure addMe() {
-  insert into UserLocations([
+  insert into channels.UserLocations([
     {"timeStamp":current_datetime(), "roomNumber":222}]
   )
 };

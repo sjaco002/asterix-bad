@@ -129,9 +129,14 @@ CreateProcedureStatement ProcedureSpecification() throws ParseException:
   Token endPos;
   Statement functionBodyExpr;
   Expression period = null;
+  String currentDataverse = defaultDataverse;
+  createNewScope();
 }
 {
      "procedure" fctName = FunctionName()
+     {
+        defaultDataverse = fctName.dataverse;
+     }
      paramList = ParameterList()
     <LEFTBRACE>
   {
@@ -149,6 +154,7 @@ CreateProcedureStatement ProcedureSpecification() throws ParseException:
       functionBody = extractFragment(beginPos.beginLine, beginPos.beginColumn, endPos.beginLine, endPos.beginColumn);
       signature = new FunctionSignature(fctName.dataverse, fctName.function, paramList.size());
       removeCurrentScope();
+      defaultDataverse = currentDataverse;
     }
   ("period" period = FunctionCallExpr())?
   {

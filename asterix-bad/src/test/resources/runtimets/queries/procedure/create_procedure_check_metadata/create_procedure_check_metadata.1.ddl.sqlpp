@@ -40,23 +40,8 @@ contains(word,letter)
 create dataverse two;
 use two;
 
-create procedure selectSome(r, otherRoom) {
-select roomNumber from channels.UserLocations
-where roomNumber = r
-or roomNumber = otherRoom
-and channels.really_contains(roomNumber,"l")
-order by id
-};
-
 create function really_contains(word,letter){
 contains(word,letter)
-};
-
-create procedure deleteSome(r, otherRoom) {
-delete from channels.UserLocations
-where roomNumber = r
-or roomNumber = otherRoom
-and really_contains(roomNumber,"l")
 };
 
 create type myLocation as {
@@ -65,7 +50,43 @@ create type myLocation as {
 create dataset UserLocations(myLocation)
 primary key id;
 
+create procedure selectSome(r, otherRoom) {
+select roomNumber from channels.UserLocations
+where roomNumber = r
+or roomNumber = otherRoom
+and channels.really_contains(roomNumber,"l")
+order by id
+};
+
+create procedure deleteSome(r, otherRoom) {
+delete from channels.UserLocations
+where roomNumber = r
+or roomNumber = otherRoom
+and channels.really_contains(roomNumber,"l")
+};
+
 create procedure addMe() {
+  insert into channels.UserLocations([
+    {"timeStamp":current_datetime(), "roomNumber":222}]
+  )
+};
+
+create procedure localSelectSome(r, otherRoom) {
+select roomNumber from UserLocations
+where roomNumber = r
+or roomNumber = otherRoom
+and really_contains(roomNumber,"l")
+order by id
+};
+
+create procedure localDeleteSome(r, otherRoom) {
+delete from UserLocations
+where roomNumber = r
+or roomNumber = otherRoom
+and really_contains(roomNumber,"l")
+};
+
+create procedure localAddMe() {
   insert into UserLocations([
     {"timeStamp":current_datetime(), "roomNumber":222}]
   )

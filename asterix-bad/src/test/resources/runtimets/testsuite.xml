@@ -59,8 +59,7 @@
     <test-case FilePath="procedure">
       <compilation-unit name="insert_procedure_drop_dataset">
         <output-dir compare="Text">insert_procedure_drop_dataset</output-dir>
-        <expected-error>Cannot alter dataset channels.UserLocations. two.addMe(Procedure) depends on it!
-        </expected-error>
+        <expected-error>Cannot alter dataset channels.UserLocations. two.addMe(Procedure) depends on it!</expected-error>
       </compilation-unit>
     </test-case>
     <test-case FilePath="procedure">
@@ -72,36 +71,31 @@
     <test-case FilePath="procedure">
       <compilation-unit name="delete_procedure_drop_dataset">
         <output-dir compare="Text">delete_procedure_drop_dataset</output-dir>
-        <expected-error>Cannot alter dataset channels.UserLocations. two.deleteAll(Procedure) depends on it!
-        </expected-error>
+        <expected-error>Cannot alter dataset channels.UserLocations. two.deleteAll(Procedure) depends on it!</expected-error>
       </compilation-unit>
     </test-case>
     <test-case FilePath="procedure">
       <compilation-unit name="delete_procedure_drop_function">
         <output-dir compare="Text">delete_procedure_drop_function</output-dir>
-        <expected-error>Cannot drop function two.really_contains@2. two.deleteSome(Procedure) depends on it!
-        </expected-error>
+        <expected-error>Cannot drop function two.really_contains@2. two.deleteSome(Procedure) depends on it!</expected-error>
       </compilation-unit>
     </test-case>
     <test-case FilePath="procedure">
       <compilation-unit name="delete_procedure_drop_index">
         <output-dir compare="Text">delete_procedure_drop_index</output-dir>
-        <expected-error>Cannot alter dataset channels.UserLocations. two.deleteAll(Procedure) depends on it!
-        </expected-error>
+        <expected-error>Cannot alter dataset channels.UserLocations. two.deleteAll(Procedure) depends on it!</expected-error>
       </compilation-unit>
     </test-case>
     <test-case FilePath="procedure">
       <compilation-unit name="query_procedure_drop_dataset">
         <output-dir compare="Text">query_procedure_drop_dataset</output-dir>
-        <expected-error>Cannot alter dataset channels.UserLocations. two.findMe(Procedure) depends on it!
-        </expected-error>
+        <expected-error>Cannot alter dataset channels.UserLocations. two.findMe(Procedure) depends on it!</expected-error>
       </compilation-unit>
     </test-case>
     <test-case FilePath="procedure">
       <compilation-unit name="query_procedure_drop_function">
         <output-dir compare="Text">query_procedure_drop_function</output-dir>
-        <expected-error>Cannot drop function channels.really_contains@2. two.selectSome(Procedure) depends on it!
-        </expected-error>
+        <expected-error>Cannot drop function channels.really_contains@2. two.selectSome(Procedure) depends on it!</expected-error>
       </compilation-unit>
     </test-case>
     <test-case FilePath="procedure">
@@ -137,26 +131,19 @@
     <test-case FilePath="channel">
       <compilation-unit name="drop_function">
         <output-dir compare="Text">drop_function</output-dir>
-        <expected-error>Cannot drop function channels.NearbyTweetsContainingText@2. two.nearbyTweetChannel(Channel)
-          depends on it!
-        </expected-error>
+        <expected-error>Cannot drop function channels.NearbyTweetsContainingText@2. two.nearbyTweetChannel(Channel) depends on it!</expected-error>
       </compilation-unit>
     </test-case>
     <test-case FilePath="channel">
       <compilation-unit name="drop_results">
         <output-dir compare="Text">drop_results</output-dir>
-        <expected-error>Cannot alter dataset two.nearbyTweetChannelResults. two.nearbyTweetChannel(Channel) depends on
-          it!
-        </expected-error>
+        <expected-error>Cannot alter dataset two.nearbyTweetChannelResults. two.nearbyTweetChannel(Channel) depends on it!</expected-error>
       </compilation-unit>
     </test-case>
     <test-case FilePath="channel">
       <compilation-unit name="drop_subscriptions">
         <output-dir compare="Text">drop_subscriptions</output-dir>
-        <expected-error>Cannot alter dataset two.nearbyTweetChannelSubscriptions. two.nearbyTweetChannel(Channel)
-          depends
-          on it!
-        </expected-error>
+        <expected-error>Cannot alter dataset two.nearbyTweetChannelSubscriptions. two.nearbyTweetChannel(Channel) depends on it!</expected-error>
       </compilation-unit>
     </test-case>
     <test-case FilePath="channel">
