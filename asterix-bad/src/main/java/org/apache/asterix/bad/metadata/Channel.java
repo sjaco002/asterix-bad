@@ -15,6 +15,10 @@
 
 package org.apache.asterix.bad.metadata;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.bad.BADConstants;
 import org.apache.asterix.common.functions.FunctionSignature;
@@ -34,18 +38,41 @@ public class Channel implements IExtensionMetadataEntity {
     private final String resultsDatasetName;
     private final String duration;
     private final FunctionSignature function;
+    private final List<String> functionAsPath;
+    private final List<List<List<String>>> dependencies;
 
     public Channel(String dataverseName, String channelName, String subscriptionsDataset, String resultsDataset,
-            FunctionSignature function, String duration) {
+            FunctionSignature function, String duration, List<List<List<String>>> dependencies) {
         this.channelId = new EntityId(BADConstants.CHANNEL_EXTENSION_NAME, dataverseName, channelName);
         this.function = function;
         this.duration = duration;
         this.resultsDatasetName = resultsDataset;
         this.subscriptionsDatasetName = subscriptionsDataset;
+        if (this.function.getNamespace() == null) {
+            this.function.setNamespace(dataverseName);
+        }
+        functionAsPath = Arrays.asList(this.function.getNamespace(), this.function.getName(),
+                Integer.toString(this.function.getArity()));
+        if (dependencies == null) {
+            this.dependencies = new ArrayList<>();
+            this.dependencies.add(new ArrayList<>());
+            this.dependencies.add(new ArrayList<>());
+            List<String> resultsList = Arrays.asList(dataverseName, resultsDatasetName);
+            List<String> subscriptionList = Arrays.asList(dataverseName, subscriptionsDatasetName);
+            this.dependencies.get(0).add(resultsList);
+            this.dependencies.get(0).add(subscriptionList);
+            this.dependencies.get(1).add(functionAsPath);
+        } else {
+            this.dependencies = dependencies;
+        }
     }
 
     public EntityId getChannelId() {
         return channelId;
+    }
+
+    public List<List<List<String>>> getDependencies() {
+        return dependencies;
     }
 
     public String getSubscriptionsDataset() {
@@ -58,6 +85,10 @@ public class Channel implements IExtensionMetadataEntity {
 
     public String getDuration() {
         return duration;
+    }
+
+    public List<String> getFunctionAsPath() {
+        return functionAsPath;
     }
 
     public FunctionSignature getFunction() {

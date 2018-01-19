@@ -18,6 +18,7 @@
  */
 package org.apache.asterix.bad.metadata;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.asterix.active.EntityId;
@@ -39,9 +40,10 @@ public class Procedure implements IExtensionMetadataEntity {
     private final String returnType;
     private final String language;
     private final String duration;
+    private final List<List<List<String>>> dependencies;
 
     public Procedure(String dataverseName, String functionName, int arity, List<String> params, String returnType,
-            String functionBody, String language, String duration) {
+            String functionBody, String language, String duration, List<List<List<String>>> dependencies) {
         this.procedureId = new EntityId(BADConstants.PROCEDURE_KEYWORD, dataverseName, functionName);
         this.params = params;
         this.body = functionBody;
@@ -49,6 +51,13 @@ public class Procedure implements IExtensionMetadataEntity {
         this.language = language;
         this.arity = arity;
         this.duration = duration;
+        if (dependencies == null) {
+            this.dependencies = new ArrayList<>();
+            this.dependencies.add(new ArrayList<>());
+            this.dependencies.add(new ArrayList<>());
+        } else {
+            this.dependencies = dependencies;
+        }
     }
 
     public EntityId getEntityId() {
@@ -77,6 +86,10 @@ public class Procedure implements IExtensionMetadataEntity {
 
     public String getDuration() {
         return duration;
+    }
+
+    public List<List<List<String>>> getDependencies() {
+        return dependencies;
     }
 
     @Override

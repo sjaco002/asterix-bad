@@ -47,7 +47,6 @@ import org.apache.asterix.common.exceptions.AsterixException;
 import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.common.exceptions.MetadataException;
 import org.apache.asterix.common.functions.FunctionSignature;
-import org.apache.asterix.common.metadata.IDataset;
 import org.apache.asterix.lang.common.base.Expression;
 import org.apache.asterix.lang.common.base.Statement;
 import org.apache.asterix.lang.common.expression.CallExpr;
@@ -83,15 +82,15 @@ import org.apache.hyracks.dataflow.common.data.parsers.IValueParser;
 public class CreateChannelStatement implements IExtensionStatement {
 
     private static final Logger LOGGER = Logger.getLogger(CreateChannelStatement.class.getName());
-
-    private final Identifier dataverseName;
     private final Identifier channelName;
     private final FunctionSignature function;
     private final CallExpr period;
+    private Identifier dataverseName;
     private String duration;
     private InsertStatement channelResultsInsertQuery;
     private String subscriptionsTableName;
     private String resultsTableName;
+    private String dataverse;
 
     public CreateChannelStatement(Identifier dataverseName, Identifier channelName, FunctionSignature function,
             Expression period) {
@@ -144,7 +143,7 @@ public class CreateChannelStatement implements IExtensionStatement {
         return null;
     }
 
-    public void initialize(MetadataTransactionContext mdTxnCtx, String subscriptionsTableName, String resultsTableName)
+    public void initialize(MetadataTransactionContext mdTxnCtx)
             throws AlgebricksException, HyracksDataException {
         Function lookup = MetadataManager.INSTANCE.getFunction(mdTxnCtx, function);
         if (lookup == null) {
@@ -160,8 +159,6 @@ public class CreateChannelStatement implements IExtensionStatement {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         DataOutputStream outputStream = new DataOutputStream(bos);
         durationParser.parse(duration.toCharArray(), 0, duration.toCharArray().length, outputStream);
-        this.resultsTableName = resultsTableName;
-        this.subscriptionsTableName = subscriptionsTableName;
     }
 
     @Override
@@ -169,9 +166,8 @@ public class CreateChannelStatement implements IExtensionStatement {
         return Kind.EXTENSION;
     }
 
-    private void createDatasets(IStatementExecutor statementExecutor, Identifier subscriptionsName,
-            Identifier resultsName, MetadataProvider metadataProvider, IHyracksClientConnection hcc,
-            IHyracksDataset hdc, String dataverse) throws AsterixException, Exception {
+    private void createDatasets(IStatementExecutor statementExecutor, MetadataProvider metadataProvider,
+            IHyracksClientConnection hcc) throws AsterixException, Exception {
 
         Identifier subscriptionsTypeName = new Identifier(BADConstants.ChannelSubscriptionsType);
         Identifier resultsTypeName = new Identifier(BADConstants.ChannelResultsType);
@@ -183,7 +179,7 @@ public class CreateChannelStatement implements IExtensionStatement {
         fieldNames.add(BADConstants.SubscriptionId);
         partitionFields.add(fieldNames);
         IDatasetDetailsDecl idd = new InternalDetailsDecl(partitionFields, keyIndicators, true, null);
-        DatasetDecl createSubscriptionsDataset = new DatasetDecl(new Identifier(dataverse), subscriptionsName,
+        DatasetDecl createSubscriptionsDataset = new DatasetDecl(dataverseName, new Identifier(subscriptionsTableName),
                 new Identifier(BADConstants.BAD_DATAVERSE_NAME), subscriptionsTypeName, null, null, null,
                 new HashMap<String, String>(), DatasetType.INTERNAL, idd, null, true);
 
@@ -193,15 +189,15 @@ public class CreateChannelStatement implements IExtensionStatement {
         fieldNames.add(BADConstants.ResultId);
         partitionFields.add(fieldNames);
         idd = new InternalDetailsDecl(partitionFields, keyIndicators, true, null);
-        DatasetDecl createResultsDataset = new DatasetDecl(new Identifier(dataverse), resultsName,
+        DatasetDecl createResultsDataset = new DatasetDecl(dataverseName, new Identifier(resultsTableName),
                 new Identifier(BADConstants.BAD_DATAVERSE_NAME), resultsTypeName, null, null, null,
                 new HashMap<String, String>(), DatasetType.INTERNAL, idd, null, true);
 
         //Create an index on timestamp for results
         CreateIndexStatement createTimeIndex = new CreateIndexStatement();
-        createTimeIndex.setDatasetName(resultsName);
-        createTimeIndex.setDataverseName(new Identifier(dataverse));
-        createTimeIndex.setIndexName(new Identifier(resultsName + "TimeIndex"));
+        createTimeIndex.setDatasetName(new Identifier(resultsTableName));
+        createTimeIndex.setDataverseName(dataverseName);
+        createTimeIndex.setIndexName(new Identifier(resultsTableName + "TimeIndex"));
         createTimeIndex.setIfNotExists(false);
         createTimeIndex.setIndexType(IndexType.BTREE);
         createTimeIndex.setEnforced(false);
@@ -226,18 +222,17 @@ public class CreateChannelStatement implements IExtensionStatement {
 
     }
 
-    private JobSpecification createChannelJob(IStatementExecutor statementExecutor, Identifier subscriptionsName,
-            Identifier resultsName, MetadataProvider metadataProvider, IHyracksClientConnection hcc,
-            IHyracksDataset hdc, Stats stats, String dataverse) throws Exception {
+    private JobSpecification createChannelJob(IStatementExecutor statementExecutor, MetadataProvider metadataProvider,
+            IHyracksClientConnection hcc, IHyracksDataset hdc, Stats stats) throws Exception {
         StringBuilder builder = new StringBuilder();
         builder.append("SET inline_with \"false\";\n");
-        builder.append("insert into " + dataverse + "." + resultsName);
+        builder.append("insert into " + dataverse + "." + resultsTableName);
         builder.append(" as a (\n" + "with " + BADConstants.ChannelExecutionTime + " as current_datetime() \n");
         builder.append("select result, ");
         builder.append(BADConstants.ChannelExecutionTime + ", ");
         builder.append("sub." + BADConstants.SubscriptionId + " as " + BADConstants.SubscriptionId + ",");
         builder.append("current_datetime() as " + BADConstants.DeliveryTime + "\n");
-        builder.append("from " + dataverse + "." + subscriptionsName + " sub,\n");
+        builder.append("from " + dataverse + "." + subscriptionsTableName + " sub,\n");
         builder.append(BADConstants.BAD_DATAVERSE_NAME + "." + BADConstants.BROKER_KEYWORD + " b, \n");
         builder.append(function.getNamespace() + "." + function.getName() + "(");
         int i = 0;
@@ -281,13 +276,12 @@ public class CreateChannelStatement implements IExtensionStatement {
         //3. Create the metadata entry for the channel
 
         //TODO: Figure out how to handle when a subset of the 3 tasks fails
-        //TODO: The compiled job will break if anything changes on the function or two datasets
-        // Need to make sure we do proper checking when altering these things
 
-        String dataverse = ((QueryTranslator) statementExecutor).getActiveDataverse(dataverseName);
+        dataverseName = new Identifier(((QueryTranslator) statementExecutor).getActiveDataverse(dataverseName));
+        dataverse = dataverseName.getValue();
+        subscriptionsTableName = channelName + BADConstants.subscriptionEnding;
+        resultsTableName = channelName + BADConstants.resultsEnding;
 
-        Identifier subscriptionsName = new Identifier(channelName + BADConstants.subscriptionEnding);
-        Identifier resultsName = new Identifier(channelName + BADConstants.resultsEnding);
         EntityId entityId = new EntityId(BADConstants.CHANNEL_EXTENSION_NAME, dataverse, channelName.getValue());
         ICcApplicationContext appCtx = metadataProvider.getApplicationContext();
         ActiveNotificationHandler activeEventHandler =
@@ -310,15 +304,13 @@ public class CreateChannelStatement implements IExtensionStatement {
             if (alreadyActive) {
                 throw new AsterixException("Channel " + channelName + " is already running");
             }
-            initialize(mdTxnCtx, subscriptionsName.getValue(), resultsName.getValue());
-            channel = new Channel(dataverse, channelName.getValue(), subscriptionsTableName, resultsTableName, function,
-                    duration);
+            initialize(mdTxnCtx);
 
             //check if names are available before creating anything
-            if (MetadataManager.INSTANCE.getDataset(mdTxnCtx, dataverse, subscriptionsName.getValue()) != null) {
+            if (MetadataManager.INSTANCE.getDataset(mdTxnCtx, dataverse, subscriptionsTableName) != null) {
                 throw new AsterixException("The channel name:" + channelName + " is not available.");
             }
-            if (MetadataManager.INSTANCE.getDataset(mdTxnCtx, dataverse, resultsName.getValue()) != null) {
+            if (MetadataManager.INSTANCE.getDataset(mdTxnCtx, dataverse, resultsTableName) != null) {
                 throw new AsterixException("The channel name:" + channelName + " is not available.");
             }
             MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getApplicationContext(),
@@ -327,24 +319,21 @@ public class CreateChannelStatement implements IExtensionStatement {
             final IHyracksDataset hdc = requestContext.getHyracksDataset();
             final Stats stats = requestContext.getStats();
             //Create Channel Datasets
-            createDatasets(statementExecutor, subscriptionsName, resultsName, tempMdProvider, hcc, hdc, dataverse);
+            createDatasets(statementExecutor, tempMdProvider, hcc);
             tempMdProvider.getLocks().reset();
             //Create Channel Internal Job
-            JobSpecification channeljobSpec = createChannelJob(statementExecutor, subscriptionsName, resultsName,
-                    tempMdProvider, hcc, hdc, stats, dataverse);
+            JobSpecification channeljobSpec = createChannelJob(statementExecutor, tempMdProvider, hcc, hdc, stats);
 
             // Now we subscribe
             if (listener == null) {
-                List<IDataset> datasets = new ArrayList<>();
-                datasets.add(MetadataManager.INSTANCE.getDataset(mdTxnCtx, dataverse, subscriptionsName.getValue()));
-                datasets.add(MetadataManager.INSTANCE.getDataset(mdTxnCtx, dataverse, resultsName.getValue()));
-                //TODO: Add datasets used by channel function
-                listener = new DeployedJobSpecEventListener(appCtx, entityId, PrecompiledType.CHANNEL, datasets, null,
+                listener = new DeployedJobSpecEventListener(appCtx, entityId, PrecompiledType.CHANNEL, null,
                         "BadListener");
                 activeEventHandler.registerListener(listener);
             }
 
             setupExecutorJob(entityId, channeljobSpec, hcc, listener);
+            channel = new Channel(dataverse, channelName.getValue(), subscriptionsTableName, resultsTableName, function,
+                    duration, null);
 
             MetadataManager.INSTANCE.addEntity(mdTxnCtx, channel);
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);

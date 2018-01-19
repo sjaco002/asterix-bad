@@ -139,8 +139,9 @@ public class ChannelDropStatement implements IExtensionStatement {
             tempMdProvider.getConfig().putAll(metadataProvider.getConfig());
             //Drop the Channel Datasets
             //TODO: Need to find some way to handle if this fails.
-            //TODO: Prevent datasets for Channels from being dropped elsewhere
 
+            //Remove the Channel Metadata
+            MetadataManager.INSTANCE.deleteEntity(mdTxnCtx, channel);
             DropDatasetStatement dropStmt = new DropDatasetStatement(new Identifier(dataverse),
                     new Identifier(channel.getResultsDatasetName()), true);
             ((QueryTranslator) statementExecutor).handleDatasetDropStatement(tempMdProvider, dropStmt, hcc, null);
@@ -148,9 +149,6 @@ public class ChannelDropStatement implements IExtensionStatement {
             dropStmt = new DropDatasetStatement(new Identifier(dataverse),
                     new Identifier(channel.getSubscriptionsDataset()), true);
             ((QueryTranslator) statementExecutor).handleDatasetDropStatement(tempMdProvider, dropStmt, hcc, null);
-
-            //Remove the Channel Metadata
-            MetadataManager.INSTANCE.deleteEntity(mdTxnCtx, channel);
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
         } catch (Exception e) {
             e.printStackTrace();

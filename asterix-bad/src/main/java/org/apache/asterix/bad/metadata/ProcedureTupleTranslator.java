@@ -34,6 +34,7 @@ import org.apache.asterix.om.base.ARecord;
 import org.apache.asterix.om.base.AString;
 import org.apache.asterix.om.base.IACursor;
 import org.apache.asterix.om.types.AOrderedListType;
+import org.apache.asterix.om.types.BuiltinType;
 import org.apache.hyracks.api.dataflow.value.ISerializerDeserializer;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.data.std.util.ArrayBackedValueStorage;
@@ -54,9 +55,15 @@ public class ProcedureTupleTranslator extends AbstractTupleTranslator<Procedure>
     // Payload field containing serialized Procedure.
     public static final int PROCEDURE_PAYLOAD_TUPLE_FIELD_INDEX = 3;
 
-    @SuppressWarnings("unchecked")
     private ISerializerDeserializer<ARecord> recordSerDes = SerializerDeserializerProvider.INSTANCE
             .getSerializerDeserializer(BADMetadataRecordTypes.PROCEDURE_RECORDTYPE);
+
+    private transient OrderedListBuilder dependenciesListBuilder = new OrderedListBuilder();
+    private transient OrderedListBuilder dependencyListBuilder = new OrderedListBuilder();
+    private transient OrderedListBuilder dependencyNameListBuilder = new OrderedListBuilder();
+    private transient AOrderedListType stringList = new AOrderedListType(BuiltinType.ASTRING, null);
+    private transient AOrderedListType ListofLists =
+            new AOrderedListType(new AOrderedListType(BuiltinType.ASTRING, null), null);
 
     protected ProcedureTupleTranslator(boolean getTuple) {
         super(getTuple, BADMetadataIndexes.NUM_FIELDS_PROCEDURE_IDX);
@@ -104,8 +111,32 @@ public class ProcedureTupleTranslator extends AbstractTupleTranslator<Procedure>
                 .getValueByPos(BADMetadataRecordTypes.PROCEDURE_ARECORD_PROCEDURE_DURATION_FIELD_INDEX))
                         .getStringValue();
 
+        IACursor dependenciesCursor = ((AOrderedList) procedureRecord
+                .getValueByPos(BADMetadataRecordTypes.PROCEDURE_ARECORD_DEPENDENCIES_FIELD_INDEX)).getCursor();
+        List<List<List<String>>> dependencies = new ArrayList<>();
+        AOrderedList dependencyList;
+        AOrderedList qualifiedList;
+        int i = 0;
+        while (dependenciesCursor.next()) {
+            dependencies.add(new ArrayList<>());
+            dependencyList = (AOrderedList) dependenciesCursor.get();
+            IACursor qualifiedDependencyCursor = dependencyList.getCursor();
+            int j = 0;
+            while (qualifiedDependencyCursor.next()) {
+                qualifiedList = (AOrderedList) qualifiedDependencyCursor.get();
+                IACursor qualifiedNameCursor = qualifiedList.getCursor();
+                dependencies.get(i).add(new ArrayList<>());
+                while (qualifiedNameCursor.next()) {
+                    dependencies.get(i).get(j).add(((AString) qualifiedNameCursor.get()).getStringValue());
+                }
+                j++;
+            }
+            i++;
+
+        }
+
         return new Procedure(dataverseName, procedureName, Integer.parseInt(arity), params, returnType, definition,
-                language, duration);
+                language, duration, dependencies);
 
     }
 
@@ -184,6 +215,33 @@ public class ProcedureTupleTranslator extends AbstractTupleTranslator<Procedure>
         aString.setValue(procedure.getDuration());
         stringSerde.serialize(aString, fieldValue.getDataOutput());
         recordBuilder.addField(BADMetadataRecordTypes.PROCEDURE_ARECORD_PROCEDURE_DURATION_FIELD_INDEX, fieldValue);
+
+        // write field 8
+        dependenciesListBuilder.reset((AOrderedListType) BADMetadataRecordTypes.PROCEDURE_RECORDTYPE
+                .getFieldTypes()[BADMetadataRecordTypes.PROCEDURE_ARECORD_DEPENDENCIES_FIELD_INDEX]);
+        List<List<List<String>>> dependenciesList = procedure.getDependencies();
+        for (List<List<String>> dependencies : dependenciesList) {
+            dependencyListBuilder.reset(ListofLists);
+            for (List<String> dependency : dependencies) {
+                dependencyNameListBuilder.reset(stringList);
+                for (String subName : dependency) {
+                    itemValue.reset();
+                    aString.setValue(subName);
+                    stringSerde.serialize(aString, itemValue.getDataOutput());
+                    dependencyNameListBuilder.addItem(itemValue);
+                }
+                itemValue.reset();
+                dependencyNameListBuilder.write(itemValue.getDataOutput(), true);
+                dependencyListBuilder.addItem(itemValue);
+
+            }
+            itemValue.reset();
+            dependencyListBuilder.write(itemValue.getDataOutput(), true);
+            dependenciesListBuilder.addItem(itemValue);
+        }
+        fieldValue.reset();
+        dependenciesListBuilder.write(fieldValue.getDataOutput(), true);
+        recordBuilder.addField(BADMetadataRecordTypes.PROCEDURE_ARECORD_DEPENDENCIES_FIELD_INDEX, fieldValue);
 
         // write record
         recordBuilder.write(tupleBuilder.getDataOutput(), true);
