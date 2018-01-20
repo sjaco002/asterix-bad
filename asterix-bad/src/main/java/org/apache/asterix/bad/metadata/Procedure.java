@@ -40,6 +40,14 @@ public class Procedure implements IExtensionMetadataEntity {
     private final String returnType;
     private final String language;
     private final String duration;
+    /*
+    Dependencies are stored as an array of size two:
+    element 0 is a list of dataset dependencies 
+    stored as lists of [DataverseName, Dataset] for the datasets
+    
+    element 1 is a list of function dependencies
+    stored as lists of [DataverseName, FunctionName, Arity] for the functions
+     */
     private final List<List<List<String>>> dependencies;
 
     public Procedure(String dataverseName, String functionName, int arity, List<String> params, String returnType,
