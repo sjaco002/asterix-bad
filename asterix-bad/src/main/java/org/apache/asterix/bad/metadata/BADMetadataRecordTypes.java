@@ -49,15 +49,19 @@ public class BADMetadataRecordTypes {
     public static final int CHANNEL_ARECORD_RESULTS_NAME_FIELD_INDEX = 3;
     public static final int CHANNEL_ARECORD_FUNCTION_FIELD_INDEX = 4;
     public static final int CHANNEL_ARECORD_DURATION_FIELD_INDEX = 5;
+    public static final int CHANNEL_ARECORD_DEPENDENCIES_FIELD_INDEX = 6;
     public static final ARecordType CHANNEL_RECORDTYPE = MetadataRecordTypes.createRecordType(
             // RecordTypeName
             BADConstants.RECORD_TYPENAME_CHANNEL,
             // FieldNames
             new String[] { BADConstants.DataverseName, BADConstants.ChannelName, BADConstants.SubscriptionsDatasetName,
-                    BADConstants.ResultsDatasetName, BADConstants.Function, BADConstants.Duration },
+                    BADConstants.ResultsDatasetName, BADConstants.Function, BADConstants.Duration,
+                    BADConstants.FIELD_NAME_DEPENDENCIES },
             // FieldTypes
             new IAType[] { BuiltinType.ASTRING, BuiltinType.ASTRING, BuiltinType.ASTRING, BuiltinType.ASTRING,
-                    BuiltinType.ASTRING, BuiltinType.ASTRING },
+                    new AOrderedListType(BuiltinType.ASTRING, null), BuiltinType.ASTRING,
+                    new AOrderedListType(new AOrderedListType(new AOrderedListType(BuiltinType.ASTRING, null), null),
+                            null) },
             //IsOpen?
             true);
     //------------------------------------------ Broker ----------------------------------------//
@@ -84,17 +88,21 @@ public class BADMetadataRecordTypes {
     public static final int PROCEDURE_ARECORD_PROCEDURE_DEFINITION_FIELD_INDEX = 5;
     public static final int PROCEDURE_ARECORD_PROCEDURE_LANGUAGE_FIELD_INDEX = 6;
     public static final int PROCEDURE_ARECORD_PROCEDURE_DURATION_FIELD_INDEX = 7;
+    public static final int PROCEDURE_ARECORD_DEPENDENCIES_FIELD_INDEX = 8;
     public static final ARecordType PROCEDURE_RECORDTYPE = MetadataRecordTypes.createRecordType(
             // RecordTypeName
             BADConstants.RECORD_TYPENAME_PROCEDURE,
             // FieldNames
             new String[] { BADConstants.DataverseName, BADConstants.ProcedureName, BADConstants.FIELD_NAME_ARITY,
                     BADConstants.FIELD_NAME_PARAMS, BADConstants.FIELD_NAME_RETURN_TYPE,
-                    BADConstants.FIELD_NAME_DEFINITION, BADConstants.FIELD_NAME_LANGUAGE, BADConstants.Duration },
+                    BADConstants.FIELD_NAME_DEFINITION, BADConstants.FIELD_NAME_LANGUAGE, BADConstants.Duration,
+                    BADConstants.FIELD_NAME_DEPENDENCIES },
             // FieldTypes
             new IAType[] { BuiltinType.ASTRING, BuiltinType.ASTRING, BuiltinType.ASTRING,
                     new AOrderedListType(BuiltinType.ASTRING, null), BuiltinType.ASTRING, BuiltinType.ASTRING,
-                    BuiltinType.ASTRING, BuiltinType.ASTRING },
+                    BuiltinType.ASTRING, BuiltinType.ASTRING,
+                    new AOrderedListType(new AOrderedListType(new AOrderedListType(BuiltinType.ASTRING, null), null),
+                            null) },
             //IsOpen?
             true);
 

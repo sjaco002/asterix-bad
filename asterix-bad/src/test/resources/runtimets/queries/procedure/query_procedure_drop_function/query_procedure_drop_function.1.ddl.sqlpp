@@ -17,9 +17,9 @@
  * under the License.
  */
 /*
-* Description  : Simple Insert Procedure
-* Expected Res : Success
-* Date         : Jan 2017
+* Description  : Query Procedure drop function
+* Expected Res : Error
+* Date         : Jan 2018
 * Author       : Steven Jacobs
 */
 
@@ -27,18 +27,33 @@ drop dataverse two if exists;
 drop dataverse channels if exists;
 create dataverse channels;
 use channels;
-
 create type myLocation as {
-  timeStamp: datetime,
-  roomNumber: int
+  id: int
+};
+create dataset UserLocations(myLocation)
+primary key id;
+insert into UserLocations(
+  [{"id":0, "roomNumber":4815162342},
+  {"id":1, "roomNumber":"lost"},
+  {"id":2, "roomNumber":108},
+  {"id":3, "roomNumber":"jacob"}]
+);
+
+create function really_contains(word,letter){
+contains(word,letter)
+};
+
+create dataverse two;
+use two;
+
+create procedure selectSome(r, otherRoom) {
+select roomNumber from channels.UserLocations
+where roomNumber = r
+or roomNumber = otherRoom
+and channels.really_contains(roomNumber,"l")
+order by id
 };
 
 
-create dataset UserLocations(myLocation)
-primary key timeStamp;
-
-create procedure addMe() {
-  insert into UserLocations([
-    {"timeStamp":current_datetime(), "roomNumber":222}]
-  )
-} period duration("PT5S");
+use channels;
+drop function really_contains@2;

@@ -17,9 +17,9 @@
  * under the License.
  */
 /*
-* Description  : Simple Insert Procedure
-* Expected Res : Success
-* Date         : Jan 2017
+* Description  : Drop Procedure Dataset
+* Expected Res : Error
+* Date         : Jan 2018
 * Author       : Steven Jacobs
 */
 
@@ -37,8 +37,14 @@ create type myLocation as {
 create dataset UserLocations(myLocation)
 primary key timeStamp;
 
+create dataverse two;
+use two;
+
 create procedure addMe() {
-  insert into UserLocations([
+  insert into channels.UserLocations([
     {"timeStamp":current_datetime(), "roomNumber":222}]
   )
-} period duration("PT5S");
+};
+
+use channels;
+drop dataset UserLocations;

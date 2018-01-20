@@ -21,6 +21,8 @@ package org.apache.asterix.bad.lang;
 import java.util.List;
 
 import org.apache.asterix.algebra.base.ILangExtension;
+import org.apache.asterix.bad.metadata.AllChannelsSearchKey;
+import org.apache.asterix.bad.metadata.AllProceduresSearchKey;
 import org.apache.asterix.bad.metadata.Broker;
 import org.apache.asterix.bad.metadata.BrokerSearchKey;
 import org.apache.asterix.bad.metadata.Channel;
@@ -111,6 +113,11 @@ public class BADLangExtension implements ILangExtension {
         return MetadataManager.INSTANCE.getEntities(mdTxnCtx, brokerSearchKey);
     }
 
+    public static List<Channel> getAllChannels(MetadataTransactionContext mdTxnCtx) throws AlgebricksException {
+        AllChannelsSearchKey channelSearchKey = new AllChannelsSearchKey();
+        return MetadataManager.INSTANCE.getEntities(mdTxnCtx, channelSearchKey);
+    }
+
     public static List<Channel> getChannels(MetadataTransactionContext mdTxnCtx, String dataverseName)
             throws AlgebricksException {
         DataverseChannelsSearchKey channelSearchKey = new DataverseChannelsSearchKey(dataverseName);
@@ -120,6 +127,11 @@ public class BADLangExtension implements ILangExtension {
     public static List<Procedure> getProcedures(MetadataTransactionContext mdTxnCtx, String dataverseName)
             throws AlgebricksException {
         DataverseProceduresSearchKey proceduresSearchKey = new DataverseProceduresSearchKey(dataverseName);
+        return MetadataManager.INSTANCE.getEntities(mdTxnCtx, proceduresSearchKey);
+    }
+
+    public static List<Procedure> getAllProcedures(MetadataTransactionContext mdTxnCtx) throws AlgebricksException {
+        AllProceduresSearchKey proceduresSearchKey = new AllProceduresSearchKey();
         return MetadataManager.INSTANCE.getEntities(mdTxnCtx, proceduresSearchKey);
     }
 

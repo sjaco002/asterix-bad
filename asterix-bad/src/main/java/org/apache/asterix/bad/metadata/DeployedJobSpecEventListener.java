@@ -73,7 +73,6 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
     protected final List<IActiveEntityEventSubscriber> subscribers = new ArrayList<>();
     protected final ICcApplicationContext appCtx;
     protected final EntityId entityId;
-    protected final List<IDataset> datasets;
     protected final ActiveEvent statsUpdatedEvent;
     protected long statsTimestamp;
     protected String stats;
@@ -83,10 +82,9 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
     protected int numRegistered;
 
     public DeployedJobSpecEventListener(ICcApplicationContext appCtx, EntityId entityId, PrecompiledType type,
-            List<IDataset> datasets, AlgebricksAbsolutePartitionConstraint locations, String runtimeName) {
+            AlgebricksAbsolutePartitionConstraint locations, String runtimeName) {
         this.appCtx = appCtx;
         this.entityId = entityId;
-        this.datasets = datasets;
         this.state = ActivityState.STOPPED;
         this.statsTimestamp = -1;
         this.statsRequestState = RequestState.INIT;
@@ -133,7 +131,7 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
 
     @Override
     public boolean isEntityUsingDataset(IDataset dataset) {
-        return datasets.contains(dataset);
+        return false;
     }
 
     public JobId getJobId() {

@@ -22,6 +22,11 @@
              QueryFileExtension=".sqlpp">
   <test-group name="channel">
     <test-case FilePath="procedure">
+      <compilation-unit name="create_procedure_check_metadata">
+        <output-dir compare="Text">create_procedure_check_metadata</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="procedure">
       <compilation-unit name="delete_procedure">
         <output-dir compare="Text">delete_procedure</output-dir>
       </compilation-unit>
@@ -52,13 +57,50 @@
       </compilation-unit>
     </test-case>
     <test-case FilePath="procedure">
-      <compilation-unit name="repetitive_insert_procedure">
-        <output-dir compare="Text">repetitive_insert_procedure</output-dir>
+      <compilation-unit name="insert_procedure_drop_dataset">
+        <output-dir compare="Text">insert_procedure_drop_dataset</output-dir>
+        <expected-error>Cannot alter dataset channels.UserLocations. two.addMe(Procedure) depends on it!</expected-error>
       </compilation-unit>
     </test-case>
-    <test-case FilePath="channel">
-      <compilation-unit name="room_occupants">
-        <output-dir compare="Text">room_occupants</output-dir>
+    <test-case FilePath="procedure">
+      <compilation-unit name="insert_procedure_drop_dataverse">
+        <output-dir compare="Text">insert_procedure_drop_dataverse</output-dir>
+        <expected-error>Cannot drop dataverse channels. two.addMe(Procedure) depends on it!</expected-error>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="procedure">
+      <compilation-unit name="delete_procedure_drop_dataset">
+        <output-dir compare="Text">delete_procedure_drop_dataset</output-dir>
+        <expected-error>Cannot alter dataset channels.UserLocations. two.deleteAll(Procedure) depends on it!</expected-error>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="procedure">
+      <compilation-unit name="delete_procedure_drop_function">
+        <output-dir compare="Text">delete_procedure_drop_function</output-dir>
+        <expected-error>Cannot drop function two.really_contains@2. two.deleteSome(Procedure) depends on it!</expected-error>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="procedure">
+      <compilation-unit name="delete_procedure_drop_index">
+        <output-dir compare="Text">delete_procedure_drop_index</output-dir>
+        <expected-error>Cannot alter dataset channels.UserLocations. two.deleteAll(Procedure) depends on it!</expected-error>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="procedure">
+      <compilation-unit name="query_procedure_drop_dataset">
+        <output-dir compare="Text">query_procedure_drop_dataset</output-dir>
+        <expected-error>Cannot alter dataset channels.UserLocations. two.findMe(Procedure) depends on it!</expected-error>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="procedure">
+      <compilation-unit name="query_procedure_drop_function">
+        <output-dir compare="Text">query_procedure_drop_function</output-dir>
+        <expected-error>Cannot drop function channels.really_contains@2. two.selectSome(Procedure) depends on it!</expected-error>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="procedure">
+      <compilation-unit name="repetitive_insert_procedure">
+        <output-dir compare="Text">repetitive_insert_procedure</output-dir>
       </compilation-unit>
     </test-case>
     <test-case FilePath="channel">
@@ -84,6 +126,35 @@
     <test-case FilePath="channel">
       <compilation-unit name="subscribe_channel_check_subscriptions">
         <output-dir compare="Text">subscribe_channel_check_subscriptions</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="channel">
+      <compilation-unit name="drop_function">
+        <output-dir compare="Text">drop_function</output-dir>
+        <expected-error>Cannot drop function channels.NearbyTweetsContainingText@2. two.nearbyTweetChannel(Channel) depends on it!</expected-error>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="channel">
+      <compilation-unit name="drop_results">
+        <output-dir compare="Text">drop_results</output-dir>
+        <expected-error>Cannot alter dataset two.nearbyTweetChannelResults. two.nearbyTweetChannel(Channel) depends on it!</expected-error>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="channel">
+      <compilation-unit name="drop_subscriptions">
+        <output-dir compare="Text">drop_subscriptions</output-dir>
+        <expected-error>Cannot alter dataset two.nearbyTweetChannelSubscriptions. two.nearbyTweetChannel(Channel) depends on it!</expected-error>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="channel">
+      <compilation-unit name="drop_function_dataverse">
+        <output-dir compare="Text">drop_function_dataverse</output-dir>
+        <expected-error>Cannot drop dataverse channels. two.nearbyTweetChannel(Channel) depends on it!</expected-error>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="channel">
+      <compilation-unit name="room_occupants">
+        <output-dir compare="Text">room_occupants</output-dir>
       </compilation-unit>
     </test-case>
     <test-case FilePath="channel">

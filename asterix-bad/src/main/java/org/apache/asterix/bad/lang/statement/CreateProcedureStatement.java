@@ -21,6 +21,7 @@ package org.apache.asterix.bad.lang.statement;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -47,11 +48,14 @@ import org.apache.asterix.lang.common.expression.LiteralExpr;
 import org.apache.asterix.lang.common.expression.VariableExpr;
 import org.apache.asterix.lang.common.literal.StringLiteral;
 import org.apache.asterix.lang.common.statement.DeleteStatement;
+import org.apache.asterix.lang.common.statement.InsertStatement;
 import org.apache.asterix.lang.common.statement.Query;
 import org.apache.asterix.lang.common.struct.Identifier;
 import org.apache.asterix.lang.common.struct.VarIdentifier;
+import org.apache.asterix.lang.common.util.FunctionUtil;
 import org.apache.asterix.lang.common.visitor.base.ILangVisitor;
 import org.apache.asterix.lang.sqlpp.expression.SelectExpression;
+import org.apache.asterix.lang.sqlpp.rewrites.SqlppRewriterFactory;
 import org.apache.asterix.lang.sqlpp.visitor.SqlppDeleteRewriteVisitor;
 import org.apache.asterix.metadata.MetadataManager;
 import org.apache.asterix.metadata.MetadataTransactionContext;
@@ -85,6 +89,7 @@ public class CreateProcedureStatement implements IExtensionStatement {
     private final List<VariableExpr> varList;
     private final CallExpr period;
     private String duration = "";
+    private List<List<List<String>>> dependencies;
 
     public CreateProcedureStatement(FunctionSignature signature, List<VarIdentifier> parameterList,
             List<Integer> paramIds, String functionBody, Statement procedureBodyStatement, Expression period) {
@@ -98,6 +103,9 @@ public class CreateProcedureStatement implements IExtensionStatement {
             this.varList.add(new VariableExpr(new VarIdentifier(parameterList.get(i).toString(), paramIds.get(i))));
         }
         this.period = (CallExpr) period;
+        this.dependencies = new ArrayList<>();
+        this.dependencies.add(new ArrayList<>());
+        this.dependencies.add(new ArrayList<>());
     }
 
     public String getProcedureBody() {
@@ -195,6 +203,10 @@ public class CreateProcedureStatement implements IExtensionStatement {
             if (!varList.isEmpty()) {
                 throw new CompilationException("Insert procedures cannot have parameters");
             }
+            InsertStatement insertStatement = (InsertStatement) getProcedureBodyStatement();
+            dependencies.get(0).add(Arrays.asList(
+                    ((QueryTranslator) statementExecutor).getActiveDataverse(insertStatement.getDataverseName()),
+                    insertStatement.getDatasetName().getValue()));
             return new Pair<>(
                     ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider,
                             getProcedureBodyStatement(), hcc, hdc, ResultDelivery.ASYNC, null, stats, true, null),
@@ -202,9 +214,14 @@ public class CreateProcedureStatement implements IExtensionStatement {
         } else if (getProcedureBodyStatement().getKind() == Statement.Kind.QUERY) {
             Query s = (Query) getProcedureBodyStatement();
             addLets((SelectExpression) s.getBody());
+            SqlppRewriterFactory fact = new SqlppRewriterFactory();
+            dependencies.get(1).addAll(FunctionUtil.getFunctionDependencies(fact.createQueryRewriter(),
+                    ((Query) getProcedureBodyStatement()).getBody(), metadataProvider).get(1));
             Pair<JobSpecification, PrecompiledType> pair = new Pair<>(
                     compileQueryJob(statementExecutor, metadataProvider, hcc, (Query) getProcedureBodyStatement()),
                     PrecompiledType.QUERY);
+            dependencies.get(0).addAll(FunctionUtil.getFunctionDependencies(fact.createQueryRewriter(),
+                    ((Query) getProcedureBodyStatement()).getBody(), metadataProvider).get(0));
             metadataProvider.getLocks().unlock();
             return pair;
         } else if (getProcedureBodyStatement().getKind() == Statement.Kind.DELETE) {
@@ -212,8 +229,15 @@ public class CreateProcedureStatement implements IExtensionStatement {
             getProcedureBodyStatement().accept(visitor, null);
             DeleteStatement delete = (DeleteStatement) getProcedureBodyStatement();
             addLets((SelectExpression) delete.getQuery().getBody());
-            return new Pair<>(((QueryTranslator) statementExecutor).handleDeleteStatement(metadataProvider,
+
+            SqlppRewriterFactory fact = new SqlppRewriterFactory();
+            dependencies = FunctionUtil.getFunctionDependencies(fact.createQueryRewriter(), delete.getQuery().getBody(),
+                    metadataProvider);
+
+            Pair<JobSpecification, PrecompiledType> pair =
+                    new Pair<>(((QueryTranslator) statementExecutor).handleDeleteStatement(metadataProvider,
                     getProcedureBodyStatement(), hcc, true), PrecompiledType.DELETE);
+            return pair;
         } else {
             throw new CompilationException("Procedure can only execute a single delete, insert, or query");
         }
@@ -256,8 +280,6 @@ public class CreateProcedureStatement implements IExtensionStatement {
             if (alreadyActive) {
                 throw new AsterixException("Procedure " + signature.getName() + " is already running");
             }
-            procedure = new Procedure(dataverse, signature.getName(), signature.getArity(), getParamList(),
-                    Function.RETURNTYPE_VOID, getProcedureBody(), Function.LANGUAGE_AQL, duration);
             MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getApplicationContext(),
                     metadataProvider.getDefaultDataverse());
             tempMdProvider.getConfig().putAll(metadataProvider.getConfig());
@@ -279,15 +301,15 @@ public class CreateProcedureStatement implements IExtensionStatement {
 
             // Now we subscribe
             if (listener == null) {
-                //TODO: Add datasets used by channel function
-                listener = new DeployedJobSpecEventListener(appCtx, entityId, procedureJobSpec.second,
-                        new ArrayList<>(),
-                        null, "BadListener");
+                listener = new DeployedJobSpecEventListener(appCtx, entityId, procedureJobSpec.second, null,
+                        "BadListener");
                 activeEventHandler.registerListener(listener);
             }
-            setupDeployedJobSpec(entityId, procedureJobSpec.first, hcc, listener, tempMdProvider.getResultSetId(),
-                    hdc,
+            setupDeployedJobSpec(entityId, procedureJobSpec.first, hcc, listener, tempMdProvider.getResultSetId(), hdc,
                     stats);
+
+            procedure = new Procedure(dataverse, signature.getName(), signature.getArity(), getParamList(),
+                    Function.RETURNTYPE_VOID, getProcedureBody(), Function.LANGUAGE_AQL, duration, dependencies);
 
             MetadataManager.INSTANCE.addEntity(mdTxnCtx, procedure);
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);

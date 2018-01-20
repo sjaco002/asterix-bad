@@ -16,29 +16,25 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-/*
-* Description  : Simple Insert Procedure
-* Expected Res : Success
-* Date         : Jan 2017
-* Author       : Steven Jacobs
-*/
+package org.apache.asterix.bad.metadata;
 
-drop dataverse two if exists;
-drop dataverse channels if exists;
-create dataverse channels;
-use channels;
+import org.apache.asterix.metadata.api.ExtensionMetadataDatasetId;
+import org.apache.asterix.metadata.api.IExtensionMetadataSearchKey;
+import org.apache.hyracks.dataflow.common.data.accessors.ITupleReference;
 
-create type myLocation as {
-  timeStamp: datetime,
-  roomNumber: int
-};
+public class AllProceduresSearchKey implements IExtensionMetadataSearchKey {
+    private static final long serialVersionUID = 1L;
 
+    public AllProceduresSearchKey() {
+    }
 
-create dataset UserLocations(myLocation)
-primary key timeStamp;
+    @Override
+    public ExtensionMetadataDatasetId getDatasetId() {
+        return BADMetadataIndexes.BAD_PROCEDURE_INDEX_ID;
+    }
 
-create procedure addMe() {
-  insert into UserLocations([
-    {"timeStamp":current_datetime(), "roomNumber":222}]
-  )
-} period duration("PT5S");
+    @Override
+    public ITupleReference getSearchKey() {
+        return null;
+    }
+}

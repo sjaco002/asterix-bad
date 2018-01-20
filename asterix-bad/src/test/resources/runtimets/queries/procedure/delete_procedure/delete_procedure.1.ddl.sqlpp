@@ -23,6 +23,7 @@
 * Author       : Steven Jacobs
 */
 
+drop dataverse two if exists;
 drop dataverse channels if exists;
 create dataverse channels;
 use channels;
