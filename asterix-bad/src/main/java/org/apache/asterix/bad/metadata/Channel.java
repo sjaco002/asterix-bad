@@ -42,10 +42,9 @@ public class Channel implements IExtensionMetadataEntity {
     /*
     Dependencies are stored as an array of size two:
     element 0 is a list of dataset dependencies
-    stored as lists of [DataverseName, Dataset] for the datasets
-    
+    -stored as lists of [DataverseName, Dataset] for the datasets
     element 1 is a list of function dependencies
-    stored as lists of [DataverseName, FunctionName, Arity] for the functions
+    -stored as lists of [DataverseName, FunctionName, Arity] for the functions
     */
     private final List<List<List<String>>> dependencies;
 
