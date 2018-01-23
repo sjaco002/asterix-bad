@@ -27,6 +27,7 @@
     <properties>
     <asterix.version>0.9.3-SNAPSHOT</asterix.version>
     <hyracks.version>0.3.3-SNAPSHOT</hyracks.version>
+    <source-format.skip>true</source-format.skip>
   </properties>
     <build>
     <plugins>
