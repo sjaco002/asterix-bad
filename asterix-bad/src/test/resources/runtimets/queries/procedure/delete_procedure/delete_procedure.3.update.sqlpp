@@ -24,4 +24,5 @@
 */
 
 use channels;
+set `wait-for-completion-procedure` "true";
 execute deleteAll();

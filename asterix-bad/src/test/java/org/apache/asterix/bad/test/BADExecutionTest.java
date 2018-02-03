@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.logging.Logger;
 
+import org.apache.asterix.api.common.AsterixHyracksIntegrationUtil;
 import org.apache.asterix.common.config.TransactionProperties;
 import org.apache.asterix.test.common.TestExecutor;
 import org.apache.asterix.test.runtime.ExecutionTestUtil;
@@ -61,7 +62,7 @@ public class BADExecutionTest {
     public static void setUp() throws Exception {
         File outdir = new File(PATH_ACTUAL);
         outdir.mkdirs();
-        ExecutionTestUtil.setUp(cleanupOnStart, TEST_CONFIG_FILE_NAME);
+        ExecutionTestUtil.setUp(cleanupOnStart, TEST_CONFIG_FILE_NAME, new AsterixHyracksIntegrationUtil(), false, null);
     }
 
     @AfterClass

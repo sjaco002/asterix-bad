@@ -246,6 +246,7 @@ public class CreateProcedureStatement implements IExtensionStatement {
     private void setupDeployedJobSpec(EntityId entityId, JobSpecification jobSpec, IHyracksClientConnection hcc,
             DeployedJobSpecEventListener listener, ResultSetId resultSetId, IHyracksDataset hdc, Stats stats)
             throws Exception {
+        jobSpec.setProperty(ActiveNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, entityId);
         DeployedJobSpecId deployedJobSpecId = hcc.deployJobSpec(jobSpec);
         listener.storeDistributedInfo(deployedJobSpecId, null, hdc, resultSetId);
     }

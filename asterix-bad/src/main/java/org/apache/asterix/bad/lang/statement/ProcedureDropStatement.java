@@ -93,7 +93,13 @@ public class ProcedureDropStatement implements IExtensionStatement {
         boolean txnActive = false;
         EntityId entityId = new EntityId(BADConstants.PROCEDURE_KEYWORD, dataverse, signature.getName());
         DeployedJobSpecEventListener listener = (DeployedJobSpecEventListener) activeEventHandler.getListener(entityId);
-        Procedure procedure = null;
+
+        if (listener.isActive()) {
+            throw new AlgebricksException("Cannot drop running procedure. There are " + listener.getRunningInstance()
+                    + " running instances.");
+        }
+
+        Procedure procedure;
 
         MetadataTransactionContext mdTxnCtx = null;
         try {

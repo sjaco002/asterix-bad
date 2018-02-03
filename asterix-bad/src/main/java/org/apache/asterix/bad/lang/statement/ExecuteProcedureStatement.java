@@ -18,12 +18,6 @@
  */
 package org.apache.asterix.bad.lang.statement;
 
-import java.io.DataOutput;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ScheduledExecutorService;
-
 import org.apache.asterix.active.DeployedJobService;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.algebra.extension.IExtensionStatement;
@@ -63,7 +57,15 @@ import org.apache.hyracks.api.job.DeployedJobSpecId;
 import org.apache.hyracks.api.job.JobId;
 import org.apache.hyracks.data.std.util.ArrayBackedValueStorage;
 
+import java.io.DataOutput;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ScheduledExecutorService;
+
 public class ExecuteProcedureStatement implements IExtensionStatement {
+
+    public static final String WAIT_FOR_COMPLETION = "wait-for-completion-procedure";
 
     private final String dataverseName;
     private final String procedureName;
@@ -118,6 +120,7 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
         Procedure procedure = null;
 
         MetadataTransactionContext mdTxnCtx = null;
+        JobId jobId;
         try {
             mdTxnCtx = MetadataManager.INSTANCE.beginTransaction();
             txnActive = true;
@@ -130,12 +133,18 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
             if (procedure.getDuration().equals("")) {
 
                 //Add the Asterix Transaction Id to the map
+                long newTxId = TxnIdFactory.create().getId();
                 contextRuntimeVarMap.put(BADConstants.TRANSACTION_ID_PARAMETER_NAME,
-                        String.valueOf(TxnIdFactory.create().getId()).getBytes());
-                JobId jobId = hcc.startJob(deployedJobSpecId, contextRuntimeVarMap);
+                        String.valueOf(newTxId).getBytes());
+                jobId = hcc.startJob(deployedJobSpecId, contextRuntimeVarMap);
+
+                boolean wait = Boolean.parseBoolean(metadataProvider.getConfig().get(
+                        ExecuteProcedureStatement.WAIT_FOR_COMPLETION));
+                if (wait || listener.getType() == PrecompiledType.QUERY) {
+                    hcc.waitForCompletion(jobId);
+                }
 
                 if (listener.getType() == PrecompiledType.QUERY) {
-                    hcc.waitForCompletion(jobId);
                     ResultReader resultReader =
                             new ResultReader(listener.getResultDataset(), jobId, listener.getResultId());
 
@@ -150,7 +159,6 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
                 listener.storeDistributedInfo(deployedJobSpecId, ses, listener.getResultDataset(),
                         listener.getResultId());
             }
-
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
             txnActive = false;
         } catch (Exception e) {

@@ -25,4 +25,4 @@
 
 use channels;
 
-(select value count(result) from roomRecordsResults)[0] > 19;
+(select value count(result) from roomRecordsResults)[0] > 9;

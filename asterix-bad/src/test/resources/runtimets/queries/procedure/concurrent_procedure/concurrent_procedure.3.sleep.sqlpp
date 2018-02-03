@@ -17,12 +17,9 @@
  * under the License.
  */
 /*
-* Description  : Simple Delete Procedure with parameters
-* Expected Res : Success
-* Date         : May 2017
+* Description  : Simple Insert Procedure
+* Expected Res : 3
+* Date         : Jan 2017
 * Author       : Steven Jacobs
 */
-
-use channels;
-set `wait-for-completion-procedure` "true";
-execute deleteSome(108,"jacob");
+3000

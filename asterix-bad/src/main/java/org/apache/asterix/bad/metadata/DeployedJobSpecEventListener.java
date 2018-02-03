@@ -18,19 +18,12 @@
  */
 package org.apache.asterix.bad.metadata;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.concurrent.ScheduledExecutorService;
-
 import org.apache.asterix.active.ActiveEvent;
 import org.apache.asterix.active.ActiveEvent.Kind;
 import org.apache.asterix.active.ActivityState;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.active.IActiveEntityEventSubscriber;
 import org.apache.asterix.active.IActiveEntityEventsListener;
-import org.apache.asterix.active.message.ActivePartitionMessage;
-import org.apache.asterix.app.result.ResultReader;
 import org.apache.asterix.common.dataflow.ICcApplicationContext;
 import org.apache.asterix.common.metadata.IDataset;
 import org.apache.hyracks.algebricks.common.constraints.AlgebricksAbsolutePartitionConstraint;
@@ -41,6 +34,11 @@ import org.apache.hyracks.api.job.DeployedJobSpecId;
 import org.apache.hyracks.api.job.JobId;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.ScheduledExecutorService;
 
 public class DeployedJobSpecEventListener implements IActiveEntityEventsListener {
 
@@ -62,11 +60,11 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
 
     private DeployedJobSpecId deployedJobSpecId;
     private ScheduledExecutorService executorService = null;
-    private ResultReader resultReader;
     private final PrecompiledType type;
 
     private IHyracksDataset hdc;
     private ResultSetId resultSetId;
+
     // members
     protected volatile ActivityState state;
     protected JobId jobId;
@@ -79,7 +77,7 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
     protected RequestState statsRequestState;
     protected final String runtimeName;
     protected final AlgebricksAbsolutePartitionConstraint locations;
-    protected int numRegistered;
+    private int runningInstance;
 
     public DeployedJobSpecEventListener(ICcApplicationContext appCtx, EntityId entityId, PrecompiledType type,
             AlgebricksAbsolutePartitionConstraint locations, String runtimeName) {
@@ -92,7 +90,6 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
         this.stats = "{\"Stats\":\"N/A\"}";
         this.runtimeName = runtimeName;
         this.locations = locations;
-        this.numRegistered = 0;
         state = ActivityState.STOPPED;
         this.type = type;
     }
@@ -108,15 +105,6 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
 
     public DeployedJobSpecId getDeployedJobSpecId() {
         return deployedJobSpecId;
-    }
-
-    protected synchronized void handle(ActivePartitionMessage message) {
-        if (message.getEvent() == ActivePartitionMessage.Event.RUNTIME_REGISTERED) {
-            numRegistered++;
-            if (numRegistered == locations.getLocations().length) {
-                state = ActivityState.RUNNING;
-            }
-        }
     }
 
     @Override
@@ -182,10 +170,6 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
         return locations;
     }
 
-    public ResultReader getResultReader() {
-        return resultReader;
-    }
-
     public PrecompiledType getType() {
         return type;
     }
@@ -234,12 +218,17 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("Channel Job started for  " + entityId);
         }
+        runningInstance++;
         state = ActivityState.RUNNING;
     }
 
     private synchronized void handleJobFinishEvent(ActiveEvent message) throws Exception {
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("Channel Job finished for  " + entityId);
+        }
+        runningInstance--;
+        if (runningInstance == 0) {
+            state = ActivityState.STOPPED;
         }
     }
 
@@ -265,5 +254,9 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
     @Override
     public String getDisplayName() throws HyracksDataException {
         return this.entityId.toString();
+    }
+
+    public int getRunningInstance() {
+        return runningInstance;
     }
 }
