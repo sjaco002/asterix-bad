@@ -40,6 +40,7 @@ import org.apache.asterix.bad.lang.BADParserFactory;
 import org.apache.asterix.bad.metadata.Channel;
 import org.apache.asterix.bad.metadata.DeployedJobSpecEventListener;
 import org.apache.asterix.bad.metadata.DeployedJobSpecEventListener.PrecompiledType;
+import org.apache.asterix.common.transactions.ITxnIdFactory;
 import org.apache.asterix.common.config.DatasetConfig.DatasetType;
 import org.apache.asterix.common.config.DatasetConfig.IndexType;
 import org.apache.asterix.common.dataflow.ICcApplicationContext;
@@ -256,11 +257,11 @@ public class CreateChannelStatement implements IExtensionStatement {
     }
 
     private void setupExecutorJob(EntityId entityId, JobSpecification channeljobSpec, IHyracksClientConnection hcc,
-            DeployedJobSpecEventListener listener) throws Exception {
+            DeployedJobSpecEventListener listener, ITxnIdFactory txnIdFactory) throws Exception {
         if (channeljobSpec != null) {
             DeployedJobSpecId destributedId = hcc.deployJobSpec(channeljobSpec);
             ScheduledExecutorService ses = DeployedJobService.startRepetitiveDeployedJobSpec(destributedId, hcc,
-                    ChannelJobService.findPeriod(duration), new HashMap<>(), entityId);
+                    ChannelJobService.findPeriod(duration), new HashMap<>(), entityId, txnIdFactory);
             listener.storeDistributedInfo(destributedId, ses, null, null);
         }
 
@@ -331,7 +332,7 @@ public class CreateChannelStatement implements IExtensionStatement {
                 activeEventHandler.registerListener(listener);
             }
 
-            setupExecutorJob(entityId, channeljobSpec, hcc, listener);
+            setupExecutorJob(entityId, channeljobSpec, hcc, listener, metadataProvider.getTxnIdFactory());
             channel = new Channel(dataverse, channelName.getValue(), subscriptionsTableName, resultsTableName, function,
                     duration, null);
 

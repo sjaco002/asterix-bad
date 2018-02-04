@@ -18,6 +18,12 @@
  */
 package org.apache.asterix.bad.lang.statement;
 
+import java.io.DataOutput;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ScheduledExecutorService;
+
 import org.apache.asterix.active.DeployedJobService;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.algebra.extension.IExtensionStatement;
@@ -45,7 +51,6 @@ import org.apache.asterix.metadata.MetadataTransactionContext;
 import org.apache.asterix.metadata.declared.MetadataProvider;
 import org.apache.asterix.om.base.AString;
 import org.apache.asterix.om.base.IAObject;
-import org.apache.asterix.transaction.management.service.transaction.TxnIdFactory;
 import org.apache.asterix.translator.ConstantHelper;
 import org.apache.asterix.translator.IRequestParameters;
 import org.apache.asterix.translator.IStatementExecutor;
@@ -56,12 +61,6 @@ import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.job.DeployedJobSpecId;
 import org.apache.hyracks.api.job.JobId;
 import org.apache.hyracks.data.std.util.ArrayBackedValueStorage;
-
-import java.io.DataOutput;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ScheduledExecutorService;
 
 public class ExecuteProcedureStatement implements IExtensionStatement {
 
@@ -133,7 +132,7 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
             if (procedure.getDuration().equals("")) {
 
                 //Add the Asterix Transaction Id to the map
-                long newTxId = TxnIdFactory.create().getId();
+                long newTxId = metadataProvider.getTxnIdFactory().create().getId();
                 contextRuntimeVarMap.put(BADConstants.TRANSACTION_ID_PARAMETER_NAME,
                         String.valueOf(newTxId).getBytes());
                 jobId = hcc.startJob(deployedJobSpecId, contextRuntimeVarMap);
@@ -153,9 +152,9 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
                 }
 
             } else {
-                ScheduledExecutorService ses =
-                        DeployedJobService.startRepetitiveDeployedJobSpec(deployedJobSpecId, hcc,
-                                ChannelJobService.findPeriod(procedure.getDuration()), contextRuntimeVarMap, entityId);
+                ScheduledExecutorService ses = DeployedJobService.startRepetitiveDeployedJobSpec(deployedJobSpecId, hcc,
+                        ChannelJobService.findPeriod(procedure.getDuration()), contextRuntimeVarMap, entityId,
+                        metadataProvider.getTxnIdFactory());
                 listener.storeDistributedInfo(deployedJobSpecId, ses, listener.getResultDataset(),
                         listener.getResultId());
             }

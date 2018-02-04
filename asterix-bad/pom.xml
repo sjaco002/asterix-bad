@@ -282,22 +282,12 @@
     </dependency>
     <dependency>
       <groupId>org.apache.asterix</groupId>
-      <artifactId>asterix-lang-common</artifactId>
-      <version>${asterix.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.asterix</groupId>
       <artifactId>asterix-metadata</artifactId>
       <version>${asterix.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.asterix</groupId>
       <artifactId>asterix-external-data</artifactId>
-      <version>${asterix.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.asterix</groupId>
-      <artifactId>asterix-transactions</artifactId>
       <version>${asterix.version}</version>
     </dependency>
     <dependency>
