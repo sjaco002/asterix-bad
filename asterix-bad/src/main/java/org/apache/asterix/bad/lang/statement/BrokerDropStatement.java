@@ -18,7 +18,7 @@
  */
 package org.apache.asterix.bad.lang.statement;
 
-import org.apache.asterix.algebra.extension.IExtensionStatement;
+import org.apache.asterix.algebra.extension.ExtensionStatement;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.lang.BADLangExtension;
 import org.apache.asterix.bad.metadata.Broker;
@@ -34,7 +34,7 @@ import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
-public class BrokerDropStatement implements IExtensionStatement {
+public class BrokerDropStatement extends ExtensionStatement {
 
     private final Identifier dataverseName;
     private final Identifier brokerName;
@@ -56,11 +56,6 @@ public class BrokerDropStatement implements IExtensionStatement {
 
     public Identifier getBrokerName() {
         return brokerName;
-    }
-
-    @Override
-    public byte getKind() {
-        return Kind.EXTENSION;
     }
 
     @Override

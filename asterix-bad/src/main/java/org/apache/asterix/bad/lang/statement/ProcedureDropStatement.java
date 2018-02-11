@@ -23,7 +23,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.asterix.active.EntityId;
-import org.apache.asterix.algebra.extension.IExtensionStatement;
+import org.apache.asterix.algebra.extension.ExtensionStatement;
 import org.apache.asterix.app.active.ActiveNotificationHandler;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
@@ -45,7 +45,7 @@ import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.job.DeployedJobSpecId;
 
-public class ProcedureDropStatement implements IExtensionStatement {
+public class ProcedureDropStatement extends ExtensionStatement {
     private static final Logger LOGGER = Logger.getLogger(ProcedureDropStatement.class.getName());
 
     private final FunctionSignature signature;
@@ -62,11 +62,6 @@ public class ProcedureDropStatement implements IExtensionStatement {
 
     public boolean getIfExists() {
         return ifExists;
-    }
-
-    @Override
-    public byte getKind() {
-        return Kind.EXTENSION;
     }
 
     @Override

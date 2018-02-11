@@ -26,7 +26,7 @@ import java.util.concurrent.ScheduledExecutorService;
 
 import org.apache.asterix.active.DeployedJobService;
 import org.apache.asterix.active.EntityId;
-import org.apache.asterix.algebra.extension.IExtensionStatement;
+import org.apache.asterix.algebra.extension.ExtensionStatement;
 import org.apache.asterix.api.http.server.ResultUtil;
 import org.apache.asterix.app.active.ActiveNotificationHandler;
 import org.apache.asterix.app.result.ResultReader;
@@ -62,7 +62,7 @@ import org.apache.hyracks.api.job.DeployedJobSpecId;
 import org.apache.hyracks.api.job.JobId;
 import org.apache.hyracks.data.std.util.ArrayBackedValueStorage;
 
-public class ExecuteProcedureStatement implements IExtensionStatement {
+public class ExecuteProcedureStatement extends ExtensionStatement {
 
     public static final String WAIT_FOR_COMPLETION = "wait-for-completion-procedure";
 
@@ -88,11 +88,6 @@ public class ExecuteProcedureStatement implements IExtensionStatement {
 
     public int getArity() {
         return arity;
-    }
-
-    @Override
-    public byte getKind() {
-        return Kind.EXTENSION;
     }
 
     @Override

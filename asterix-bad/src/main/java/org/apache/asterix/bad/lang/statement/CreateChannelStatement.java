@@ -30,7 +30,7 @@ import java.util.logging.Logger;
 
 import org.apache.asterix.active.DeployedJobService;
 import org.apache.asterix.active.EntityId;
-import org.apache.asterix.algebra.extension.IExtensionStatement;
+import org.apache.asterix.algebra.extension.ExtensionStatement;
 import org.apache.asterix.app.active.ActiveNotificationHandler;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
@@ -80,7 +80,7 @@ import org.apache.hyracks.api.job.DeployedJobSpecId;
 import org.apache.hyracks.api.job.JobSpecification;
 import org.apache.hyracks.dataflow.common.data.parsers.IValueParser;
 
-public class CreateChannelStatement implements IExtensionStatement {
+public class CreateChannelStatement extends ExtensionStatement {
 
     private static final Logger LOGGER = Logger.getLogger(CreateChannelStatement.class.getName());
     private final Identifier channelName;
@@ -160,11 +160,6 @@ public class CreateChannelStatement implements IExtensionStatement {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         DataOutputStream outputStream = new DataOutputStream(bos);
         durationParser.parse(duration.toCharArray(), 0, duration.toCharArray().length, outputStream);
-    }
-
-    @Override
-    public byte getKind() {
-        return Kind.EXTENSION;
     }
 
     private void createDatasets(IStatementExecutor statementExecutor, MetadataProvider metadataProvider,

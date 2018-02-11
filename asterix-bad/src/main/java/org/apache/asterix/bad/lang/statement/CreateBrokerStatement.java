@@ -21,7 +21,7 @@ package org.apache.asterix.bad.lang.statement;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.asterix.algebra.extension.IExtensionStatement;
+import org.apache.asterix.algebra.extension.ExtensionStatement;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.lang.BADLangExtension;
 import org.apache.asterix.bad.metadata.Broker;
@@ -37,7 +37,7 @@ import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
-public class CreateBrokerStatement implements IExtensionStatement {
+public class CreateBrokerStatement extends ExtensionStatement {
 
     private static final Logger LOGGER = Logger.getLogger(CreateBrokerStatement.class.getName());
     private final Identifier dataverseName;
@@ -60,11 +60,6 @@ public class CreateBrokerStatement implements IExtensionStatement {
 
     public Identifier getBrokerName() {
         return brokerName;
-    }
-
-    @Override
-    public byte getKind() {
-        return Kind.EXTENSION;
     }
 
     @Override

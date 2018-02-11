@@ -21,7 +21,7 @@ package org.apache.asterix.bad.lang.statement;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.asterix.algebra.extension.IExtensionStatement;
+import org.apache.asterix.algebra.extension.ExtensionStatement;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
 import org.apache.asterix.bad.lang.BADLangExtension;
@@ -51,7 +51,7 @@ import org.apache.hyracks.algebricks.core.algebra.functions.FunctionIdentifier;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
-public class ChannelUnsubscribeStatement implements IExtensionStatement {
+public class ChannelUnsubscribeStatement extends ExtensionStatement {
 
     private final Identifier dataverseName;
     private final Identifier channelName;
@@ -86,11 +86,6 @@ public class ChannelUnsubscribeStatement implements IExtensionStatement {
 
     public int getVarCounter() {
         return varCounter;
-    }
-
-    @Override
-    public byte getKind() {
-        return Kind.EXTENSION;
     }
 
     @Override

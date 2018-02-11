@@ -27,7 +27,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.asterix.active.EntityId;
-import org.apache.asterix.algebra.extension.IExtensionStatement;
+import org.apache.asterix.algebra.extension.ExtensionStatement;
 import org.apache.asterix.app.active.ActiveNotificationHandler;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
@@ -78,7 +78,7 @@ import org.apache.hyracks.api.job.DeployedJobSpecId;
 import org.apache.hyracks.api.job.JobSpecification;
 import org.apache.hyracks.dataflow.common.data.parsers.IValueParser;
 
-public class CreateProcedureStatement implements IExtensionStatement {
+public class CreateProcedureStatement extends ExtensionStatement {
 
     private static final Logger LOGGER = Logger.getLogger(CreateProcedureStatement.class.getName());
 
@@ -114,11 +114,6 @@ public class CreateProcedureStatement implements IExtensionStatement {
 
     public Statement getProcedureBodyStatement() {
         return procedureBodyStatement;
-    }
-
-    @Override
-    public byte getKind() {
-        return Kind.EXTENSION;
     }
 
     public List<String> getParamList() {
