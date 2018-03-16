@@ -106,6 +106,7 @@ public class ChannelJobService {
 
             connection.setUseCaches(false);
             connection.setDoOutput(true);
+            connection.setConnectTimeout(500);
 
             if (connection.getOutputStream() != null) {
                 //Send message
@@ -113,7 +114,7 @@ public class ChannelJobService {
                 wr.writeBytes(urlParameters);
                 wr.close();
             } else {
-                LOGGER.log(Level.WARNING, "Channel Failed to connect to Broker.");
+                throw new Exception();
             }
 
             if (LOGGER.isLoggable(Level.INFO)) {
