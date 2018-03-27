@@ -145,7 +145,7 @@ public class ProcedureDropStatement extends ExtensionStatement {
             if (txnActive) {
                 QueryTranslator.abort(e, e, mdTxnCtx);
             }
-            throw new HyracksDataException(e);
+            throw HyracksDataException.create(e);
         } finally {
             metadataProvider.getLocks().unlock();
         }

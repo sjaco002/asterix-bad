@@ -338,7 +338,7 @@ public class CreateChannelStatement extends ExtensionStatement {
                 QueryTranslator.abort(e, e, mdTxnCtx);
             }
             LOGGER.log(Level.WARNING, "Failed creating a channel", e);
-            throw new HyracksDataException(e);
+            throw HyracksDataException.create(e);
         } finally {
             metadataProvider.getLocks().unlock();
         }

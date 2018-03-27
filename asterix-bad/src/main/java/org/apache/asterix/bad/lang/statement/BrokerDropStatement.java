@@ -86,7 +86,7 @@ public class BrokerDropStatement extends ExtensionStatement {
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
         } catch (Exception e) {
             QueryTranslator.abort(e, e, mdTxnCtx);
-            throw new HyracksDataException(e);
+            throw HyracksDataException.create(e);
         } finally {
             metadataProvider.getLocks().unlock();
         }

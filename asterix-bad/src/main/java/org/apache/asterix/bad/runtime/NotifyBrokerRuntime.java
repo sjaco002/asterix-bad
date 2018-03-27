@@ -106,7 +106,7 @@ public class NotifyBrokerRuntime extends AbstractOneInputOneOutputOneFramePushRu
             try {
                 executionTimeString = executionTime.toSimpleString();
             } catch (IOException e) {
-                throw new HyracksDataException(e);
+                throw HyracksDataException.create(e);
             }
 
             ChannelJobService.sendBrokerNotificationsForChannel(entityId, endpoint.getStringValue(), subs,
