@@ -20,6 +20,7 @@ package org.apache.asterix.bad.runtime;
 
 import java.util.Collection;
 
+import org.apache.asterix.om.types.IAType;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.algebricks.core.algebra.base.LogicalVariable;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractDelegatedLogicalOperator;
@@ -27,22 +28,26 @@ import org.apache.hyracks.algebricks.core.algebra.operators.logical.IOperatorDel
 import org.apache.hyracks.algebricks.core.algebra.visitors.ILogicalExpressionReferenceTransform;
 
 /**
- * A repetitive channel operator, which uses a Java timer to run a given query periodically
+ * An operator for sending broker notifications
  */
 public class NotifyBrokerOperator extends AbstractDelegatedLogicalOperator {
-    private final LogicalVariable subscriptionIdVar;
     private final LogicalVariable brokerEndpointVar;
     private final LogicalVariable channelExecutionVar;
+    private final LogicalVariable pushListVar;
+    private final boolean push;
+    private final IAType recordType;
 
-    public NotifyBrokerOperator(LogicalVariable brokerEndpointVar, LogicalVariable subscriptionIdVar,
-            LogicalVariable resultSetVar) {
+    public NotifyBrokerOperator(LogicalVariable brokerEndpointVar, LogicalVariable pushListVar,
+            LogicalVariable resultSetVar, boolean push, IAType recordType) {
         this.brokerEndpointVar = brokerEndpointVar;
-        this.subscriptionIdVar = subscriptionIdVar;
         this.channelExecutionVar = resultSetVar;
+        this.pushListVar = pushListVar;
+        this.push = push;
+        this.recordType = recordType;
     }
 
-    public LogicalVariable getSubscriptionVariable() {
-        return subscriptionIdVar;
+    public LogicalVariable getPushListVar() {
+        return pushListVar;
     }
 
     public LogicalVariable getBrokerEndpointVariable() {
@@ -53,9 +58,18 @@ public class NotifyBrokerOperator extends AbstractDelegatedLogicalOperator {
         return channelExecutionVar;
     }
 
+    public IAType getRecordType() {
+        return recordType;
+    }
+
+    public boolean getPush() {
+        return push;
+    }
+
     @Override
     public String toString() {
-        return "notify-brokers";
+        return "notify-brokers (" + brokerEndpointVar.toString() + "," + channelExecutionVar.toString() + ","
+                + pushListVar.toString() + ")";
     }
 
     @Override
@@ -65,7 +79,7 @@ public class NotifyBrokerOperator extends AbstractDelegatedLogicalOperator {
 
     @Override
     public IOperatorDelegate newInstance() {
-        return new NotifyBrokerOperator(brokerEndpointVar, subscriptionIdVar, channelExecutionVar);
+        return new NotifyBrokerOperator(brokerEndpointVar, pushListVar, channelExecutionVar, push, recordType);
     }
 
     @Override
@@ -76,7 +90,7 @@ public class NotifyBrokerOperator extends AbstractDelegatedLogicalOperator {
 
     @Override
     public void getUsedVariables(Collection<LogicalVariable> usedVars) {
-        usedVars.add(subscriptionIdVar);
+        usedVars.add(pushListVar);
         usedVars.add(brokerEndpointVar);
         usedVars.add(channelExecutionVar);
     }

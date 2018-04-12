@@ -20,6 +20,7 @@
 package org.apache.asterix.bad.runtime;
 
 import org.apache.asterix.active.EntityId;
+import org.apache.asterix.om.types.IAType;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.algebricks.core.algebra.base.IHyracksJobBuilder;
 import org.apache.hyracks.algebricks.core.algebra.base.ILogicalOperator;
@@ -74,20 +75,22 @@ public class NotifyBrokerPOperator extends AbstractPhysicalOperator {
             IOperatorSchema propagatedSchema, IOperatorSchema[] inputSchemas, IOperatorSchema outerPlanSchema)
                     throws AlgebricksException {
         DelegateOperator notify = (DelegateOperator) op;
-        LogicalVariable subVar = ((NotifyBrokerOperator) notify.getDelegate()).getSubscriptionVariable();
+        LogicalVariable pushListVar = ((NotifyBrokerOperator) notify.getDelegate()).getPushListVar();
         LogicalVariable brokerVar = ((NotifyBrokerOperator) notify.getDelegate()).getBrokerEndpointVariable();
         LogicalVariable executionVar = ((NotifyBrokerOperator) notify.getDelegate()).getChannelExecutionVariable();
+        IAType recordType = ((NotifyBrokerOperator) notify.getDelegate()).getRecordType();
+        boolean push = ((NotifyBrokerOperator) notify.getDelegate()).getPush();
 
         int brokerColumn = inputSchemas[0].findVariable(brokerVar);
-        int subColumn = inputSchemas[0].findVariable(subVar);
+        int pushColumn = inputSchemas[0].findVariable(pushListVar);
         int executionColumn = inputSchemas[0].findVariable(executionVar);
 
         IScalarEvaluatorFactory brokerEvalFactory = new ColumnAccessEvalFactory(brokerColumn);
-        IScalarEvaluatorFactory subEvalFactory = new ColumnAccessEvalFactory(subColumn);
+        IScalarEvaluatorFactory pushListEvalFactory = new ColumnAccessEvalFactory(pushColumn);
         IScalarEvaluatorFactory channelExecutionEvalFactory = new ColumnAccessEvalFactory(executionColumn);
 
-        NotifyBrokerRuntimeFactory runtime = new NotifyBrokerRuntimeFactory(brokerEvalFactory, subEvalFactory,
-                channelExecutionEvalFactory, entityId);
+        NotifyBrokerRuntimeFactory runtime = new NotifyBrokerRuntimeFactory(brokerEvalFactory, pushListEvalFactory,
+                channelExecutionEvalFactory, entityId, push, recordType);
 
         RecordDescriptor recDesc = JobGenHelper.mkRecordDescriptor(context.getTypeEnvironment(op), propagatedSchema,
                 context);

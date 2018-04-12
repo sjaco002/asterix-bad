@@ -18,51 +18,16 @@
  */
 package org.apache.asterix.bad;
 
-import java.io.BufferedReader;
-import java.io.DataOutputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.asterix.active.EntityId;
-import org.apache.asterix.om.base.AOrderedList;
-import org.apache.asterix.om.base.AUUID;
-import org.apache.hyracks.api.exceptions.HyracksDataException;
 
 /**
- * Provides functionality for channel jobs and communicating with Brokers
+ * Provides functionality for channel jobs
  */
 public class ChannelJobService {
 
     private static final Logger LOGGER = Logger.getLogger(ChannelJobService.class.getName());
 
-    public static void sendBrokerNotificationsForChannel(EntityId activeJobId, String brokerEndpoint,
-            AOrderedList subscriptionIds, String channelExecutionTime) throws HyracksDataException {
-        String formattedString;
-        formattedString = formatJSON(activeJobId, subscriptionIds, channelExecutionTime);
-        sendMessage(brokerEndpoint, formattedString);
-    }
-
-    public static String formatJSON(EntityId activeJobId, AOrderedList subscriptionIds, String channelExecutionTime) {
-        String JSON = "{ \"dataverseName\":\"" + activeJobId.getDataverse() + "\", \"channelName\":\""
-                + activeJobId.getEntityName() + "\", \"" + BADConstants.ChannelExecutionTime + "\":\""
-                + channelExecutionTime + "\", \"subscriptionIds\":[";
-        for (int i = 0; i < subscriptionIds.size(); i++) {
-            AUUID subId = (AUUID) subscriptionIds.getItem(i);
-            String subscriptionString = subId.toString();
-            //Broker code currently cannot handle the "uuid {}" part of the string, so we parse just the value
-            subscriptionString = subscriptionString.substring(8, subscriptionString.length() - 2);
-            JSON += "\"" + subscriptionString + "\"";
-            if (i < subscriptionIds.size() - 1) {
-                JSON += ",";
-            }
-        }
-        JSON += "]}";
-        return JSON;
-
-    }
 
     public static long findPeriod(String duration) {
         //TODO: Allow Repetitive Channels to use YMD durations
@@ -92,61 +57,6 @@ public class ChannelJobService {
         return (long) (seconds * 1000);
     }
 
-    public static void sendMessage(String targetURL, String urlParameters) {
-        HttpURLConnection connection = null;
-        try {
-            //Create connection
-            URL url = new URL(targetURL);
-            connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("POST");
-            connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-
-            connection.setRequestProperty("Content-Length", Integer.toString(urlParameters.getBytes().length));
-            connection.setRequestProperty("Content-Language", "en-US");
-
-            connection.setUseCaches(false);
-            connection.setDoOutput(true);
-            connection.setConnectTimeout(500);
-
-            if (connection.getOutputStream() != null) {
-                //Send message
-                DataOutputStream wr = new DataOutputStream(connection.getOutputStream());
-                wr.writeBytes(urlParameters);
-                wr.close();
-            } else {
-                throw new Exception();
-            }
-
-            if (LOGGER.isLoggable(Level.INFO)) {
-                int responseCode = connection.getResponseCode();
-                LOGGER.info("\nSending 'POST' request to URL : " + url);
-                LOGGER.info("Post parameters : " + urlParameters);
-                LOGGER.info("Response Code : " + responseCode);
-            }
-
-            if (connection.getInputStream() != null) {
-                BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-                String inputLine;
-                StringBuffer response = new StringBuffer();
-                while ((inputLine = in.readLine()) != null) {
-                    response.append(inputLine);
-                }
-                in.close();
-                if (LOGGER.isLoggable(Level.INFO)) {
-                    LOGGER.log(Level.INFO, response.toString());
-                }
-            } else {
-                LOGGER.log(Level.WARNING, "Channel Failed to get response from Broker.");
-            }
-
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Channel Failed to connect to Broker.");
-        } finally {
-            if (connection != null) {
-                connection.disconnect();
-            }
-        }
-    }
 
     @Override
     public String toString() {

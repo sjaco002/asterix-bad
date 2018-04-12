@@ -20,6 +20,7 @@
 package org.apache.asterix.bad.runtime;
 
 import org.apache.asterix.active.EntityId;
+import org.apache.asterix.om.types.IAType;
 import org.apache.hyracks.algebricks.runtime.base.IPushRuntime;
 import org.apache.hyracks.algebricks.runtime.base.IPushRuntimeFactory;
 import org.apache.hyracks.algebricks.runtime.base.IScalarEvaluatorFactory;
@@ -31,16 +32,21 @@ public class NotifyBrokerRuntimeFactory implements IPushRuntimeFactory {
     private static final long serialVersionUID = 1L;
 
     private final IScalarEvaluatorFactory brokerEvalFactory;
-    private final IScalarEvaluatorFactory subEvalFactory;
+    private final IScalarEvaluatorFactory pushListEvalFactory;
     private final IScalarEvaluatorFactory channelExecutionEvalFactory;
     private final EntityId entityId;
+    private final boolean push;
+    private final IAType recordType;
 
-    public NotifyBrokerRuntimeFactory(IScalarEvaluatorFactory brokerEvalFactory, IScalarEvaluatorFactory subEvalFactory,
-            IScalarEvaluatorFactory channelExecutionEvalFactory, EntityId entityId) {
+    public NotifyBrokerRuntimeFactory(IScalarEvaluatorFactory brokerEvalFactory,
+            IScalarEvaluatorFactory pushListEvalFactory, IScalarEvaluatorFactory channelExecutionEvalFactory,
+            EntityId entityId, boolean push, IAType recordType) {
         this.brokerEvalFactory = brokerEvalFactory;
-        this.subEvalFactory = subEvalFactory;
+        this.pushListEvalFactory = pushListEvalFactory;
         this.channelExecutionEvalFactory = channelExecutionEvalFactory;
         this.entityId = entityId;
+        this.push = push;
+        this.recordType = recordType;
     }
 
     @Override
@@ -50,7 +56,7 @@ public class NotifyBrokerRuntimeFactory implements IPushRuntimeFactory {
 
     @Override
     public IPushRuntime[] createPushRuntime(IHyracksTaskContext ctx) throws HyracksDataException {
-        return new IPushRuntime[] { new NotifyBrokerRuntime(ctx, brokerEvalFactory, subEvalFactory,
-                channelExecutionEvalFactory, entityId) };
+        return new IPushRuntime[] { new NotifyBrokerRuntime(ctx, brokerEvalFactory, pushListEvalFactory,
+                channelExecutionEvalFactory, entityId, push, recordType) };
     }
 }

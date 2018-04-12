@@ -31,6 +31,7 @@ import org.apache.asterix.metadata.declared.DatasetDataSource;
 import org.apache.asterix.om.base.AString;
 import org.apache.asterix.om.constants.AsterixConstantValue;
 import org.apache.asterix.om.functions.BuiltinFunctions;
+import org.apache.asterix.om.types.IAType;
 import org.apache.commons.lang3.mutable.Mutable;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
@@ -43,6 +44,7 @@ import org.apache.hyracks.algebricks.core.algebra.base.LogicalOperatorTag;
 import org.apache.hyracks.algebricks.core.algebra.base.LogicalVariable;
 import org.apache.hyracks.algebricks.core.algebra.expressions.AggregateFunctionCallExpression;
 import org.apache.hyracks.algebricks.core.algebra.expressions.ConstantExpression;
+import org.apache.hyracks.algebricks.core.algebra.expressions.IVariableTypeEnvironment;
 import org.apache.hyracks.algebricks.core.algebra.expressions.ScalarFunctionCallExpression;
 import org.apache.hyracks.algebricks.core.algebra.expressions.VariableReferenceExpression;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractLogicalOperator;
@@ -74,133 +76,197 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
         if (op1.getOperatorTag() != LogicalOperatorTag.DISTRIBUTE_RESULT) {
             return false;
         }
+        boolean push = false;
+
         AbstractLogicalOperator op = (AbstractLogicalOperator) op1.getInputs().get(0).getValue();
         if (op.getOperatorTag() != LogicalOperatorTag.DELEGATE_OPERATOR) {
-            return false;
+            if (op.getOperatorTag() != LogicalOperatorTag.PROJECT) {
+                return false;
+            }
+            push = true;
         }
-        DelegateOperator eOp = (DelegateOperator) op;
-        if (!(eOp.getDelegate() instanceof CommitOperator)) {
-            return false;
-        }
-        AbstractLogicalOperator descendantOp = (AbstractLogicalOperator) eOp.getInputs().get(0).getValue();
-        if (descendantOp.getOperatorTag() != LogicalOperatorTag.INSERT_DELETE_UPSERT) {
-            return false;
-        }
-        InsertDeleteUpsertOperator insertOp = (InsertDeleteUpsertOperator) descendantOp;
-        if (insertOp.getOperation() != InsertDeleteUpsertOperator.Kind.INSERT) {
-            return false;
-        }
-        DatasetDataSource dds = (DatasetDataSource) insertOp.getDataSource();
-        String datasetName = dds.getDataset().getDatasetName();
-        if (!dds.getDataset().getItemTypeDataverseName().equals("Metadata")
-                || !dds.getDataset().getItemTypeName().equals("ChannelResultsType")
-                || !datasetName.endsWith("Results")) {
-            return false;
-        }
-        String channelDataverse = dds.getDataset().getDataverseName();
-        //Now we know that we are inserting into results
+        DataSourceScanOperator subscriptionsScan;
+        String channelDataverse;
+        String channelName;
 
-        String channelName = datasetName.substring(0, datasetName.length() - 7);
-        String subscriptionsName = channelName + "Subscriptions";
-        //TODO: Can we check here to see if there is a channel with such a name?
+        if (!push) {
+            DelegateOperator eOp = (DelegateOperator) op;
+            if (!(eOp.getDelegate() instanceof CommitOperator)) {
+                return false;
+            }
+            AbstractLogicalOperator descendantOp = (AbstractLogicalOperator) eOp.getInputs().get(0).getValue();
+            if (descendantOp.getOperatorTag() != LogicalOperatorTag.INSERT_DELETE_UPSERT) {
+                return false;
+            }
+            InsertDeleteUpsertOperator insertOp = (InsertDeleteUpsertOperator) descendantOp;
+            if (insertOp.getOperation() != InsertDeleteUpsertOperator.Kind.INSERT) {
+                return false;
+            }
+            DatasetDataSource dds = (DatasetDataSource) insertOp.getDataSource();
+            String datasetName = dds.getDataset().getDatasetName();
+            if (!dds.getDataset().getItemTypeDataverseName().equals("Metadata")
+                    || !dds.getDataset().getItemTypeName().equals("ChannelResultsType")
+                    || !datasetName.endsWith("Results")) {
+                return false;
+            }
+            channelDataverse = dds.getDataset().getDataverseName();
+            //Now we know that we are inserting into results
 
-        DataSourceScanOperator subscriptionsScan = (DataSourceScanOperator) findOp(op, subscriptionsName);
-        if (subscriptionsScan == null) {
-            return false;
+            channelName = datasetName.substring(0, datasetName.length() - 7);
+            String subscriptionsName = channelName + "Subscriptions";
+            subscriptionsScan = (DataSourceScanOperator) findOp(op, subscriptionsName);
+            if (subscriptionsScan == null) {
+                return false;
+            }
+
+        } else {
+            //if push, get the channel name here instead
+            subscriptionsScan = (DataSourceScanOperator) findOp(op, "");
+            if (subscriptionsScan == null) {
+                return false;
+            }
+            DatasetDataSource dds = (DatasetDataSource) subscriptionsScan.getDataSource();
+            String datasetName = dds.getDataset().getDatasetName();
+            channelDataverse = dds.getDataset().getDataverseName();
+            channelName = datasetName.substring(0, datasetName.length() - 13);
         }
 
-        //Now we want to make sure and set the commit to be a nonsink commit
-        ((CommitOperator) eOp.getDelegate()).setSink(false);
-
-        //Now we need to get the broker EndPoint 
+        //Now we need to get the broker EndPoint
         LogicalVariable brokerEndpointVar = context.newVar();
         AbstractLogicalOperator opAboveBrokersScan = findOp(op, "brokers");
-        AssignOperator assignOp = createbrokerEndPointAssignOperator(brokerEndpointVar, opAboveBrokersScan);
-        //now brokerNameVar holds the brokerName for use farther up in the plan
-
-        context.computeAndSetTypeEnvironmentForOperator(assignOp);
-        context.computeAndSetTypeEnvironmentForOperator(opAboveBrokersScan);
-        context.computeAndSetTypeEnvironmentForOperator(eOp);
+        if (opAboveBrokersScan == null) {
+            return false;
+        }
 
         //get subscriptionIdVar
         LogicalVariable subscriptionIdVar = subscriptionsScan.getVariables().get(0);
 
         //The channelExecutionTime is created just before the scan
-        LogicalVariable channelExecutionVar = ((AssignOperator) subscriptionsScan.getInputs().get(0).getValue())
-                .getVariables().get(0);
+        ILogicalOperator channelExecutionAssign = subscriptionsScan.getInputs().get(0).getValue();
+        if (channelExecutionAssign.getOperatorTag() != LogicalOperatorTag.ASSIGN) {
+            return false;
+        }
+        LogicalVariable channelExecutionVar = ((AssignOperator) channelExecutionAssign).getVariables().get(0);
+        if (!channelExecutionVar.toString().equals("$$" + BADConstants.ChannelExecutionTime)) {
+            return false;
+        }
 
-        ProjectOperator badProject = (ProjectOperator) findOp(op, "project");
+        if (!push) {
+            ((CommitOperator) ((DelegateOperator) op).getDelegate()).setSink(false);
+        }
+
+        AssignOperator assignOp = createbrokerEndPointAssignOperator(brokerEndpointVar, opAboveBrokersScan);
+        //now brokerNameVar holds the brokerName for use farther up in the plan
+
+        context.computeAndSetTypeEnvironmentForOperator(assignOp);
+        context.computeAndSetTypeEnvironmentForOperator(opAboveBrokersScan);
+        context.computeAndSetTypeEnvironmentForOperator(op);
+
+        ProjectOperator badProject = (ProjectOperator) findOp(op1, "project");
         badProject.getVariables().add(subscriptionIdVar);
         badProject.getVariables().add(brokerEndpointVar);
         badProject.getVariables().add(channelExecutionVar);
         context.computeAndSetTypeEnvironmentForOperator(badProject);
 
+
         //Create my brokerNotify plan above the extension Operator
-        DelegateOperator dOp = createNotifyBrokerPlan(brokerEndpointVar, subscriptionIdVar, channelExecutionVar,
-                context, eOp, (DistributeResultOperator) op1, channelDataverse, channelName);
+        DelegateOperator dOp = push
+                ? createNotifyBrokerPushPlan(brokerEndpointVar, badProject.getVariables().get(0), channelExecutionVar,
+                        context, op, (DistributeResultOperator) op1, channelDataverse, channelName)
+                : createNotifyBrokerPullPlan(brokerEndpointVar, subscriptionIdVar, channelExecutionVar, context, op,
+                        (DistributeResultOperator) op1, channelDataverse, channelName);
 
         opRef.setValue(dOp);
 
         return true;
     }
 
-    private DelegateOperator createNotifyBrokerPlan(LogicalVariable brokerEndpointVar,
-            LogicalVariable subscriptionIdVar, LogicalVariable channelExecutionVar, IOptimizationContext context,
-            ILogicalOperator eOp, DistributeResultOperator distributeOp, String channelDataverse, String channelName)
-                    throws AlgebricksException {
-        //create the Distinct Op
-        ArrayList<Mutable<ILogicalExpression>> expressions = new ArrayList<Mutable<ILogicalExpression>>();
-        VariableReferenceExpression vExpr = new VariableReferenceExpression(subscriptionIdVar);
-        expressions.add(new MutableObject<ILogicalExpression>(vExpr));
-        DistinctOperator distinctOp = new DistinctOperator(expressions);
-
-        //create the GroupBy Op
-        //And set the distinct as input
-        List<Pair<LogicalVariable, Mutable<ILogicalExpression>>> groupByList = new ArrayList<Pair<LogicalVariable, Mutable<ILogicalExpression>>>();
-        List<Pair<LogicalVariable, Mutable<ILogicalExpression>>> groupByDecorList = new ArrayList<Pair<LogicalVariable, Mutable<ILogicalExpression>>>();
-        List<ILogicalPlan> nestedPlans = new ArrayList<ILogicalPlan>();
-
-        //create group by operator
-        GroupByOperator groupbyOp = new GroupByOperator(groupByList, groupByDecorList, nestedPlans);
-        groupbyOp.addGbyExpression(null, new VariableReferenceExpression(brokerEndpointVar));
-        groupbyOp.addGbyExpression(null, new VariableReferenceExpression(channelExecutionVar));
-        groupbyOp.getInputs().add(new MutableObject<ILogicalOperator>(distinctOp));
-
-        //create nested plan for subscription ids in group by
-        NestedTupleSourceOperator nestedTupleSourceOp = new NestedTupleSourceOperator(
-                new MutableObject<ILogicalOperator>(groupbyOp));
-        //TODO: This is from translationcontext. It might be needed to make the variable exist outside of the subplan
-        //LogicalVariable subscriptionListVar = context.newSubplanOutputVar();
-        LogicalVariable subscriptionListVar = context.newVar();
-        List<LogicalVariable> aggVars = new ArrayList<LogicalVariable>();
-        aggVars.add(subscriptionListVar);
-        AggregateFunctionCallExpression funAgg = BuiltinFunctions.makeAggregateFunctionExpression(
-                BuiltinFunctions.LISTIFY, new ArrayList<Mutable<ILogicalExpression>>());
-        funAgg.getArguments()
-                .add(new MutableObject<ILogicalExpression>(new VariableReferenceExpression(subscriptionIdVar)));
-        List<Mutable<ILogicalExpression>> aggExpressions = new ArrayList<Mutable<ILogicalExpression>>();
-        aggExpressions.add(new MutableObject<ILogicalExpression>(funAgg));
-        AggregateOperator listifyOp = new AggregateOperator(aggVars, aggExpressions);
-        listifyOp.getInputs().add(new MutableObject<ILogicalOperator>(nestedTupleSourceOp));
-
-        //add nested plans
-        nestedPlans.add(new ALogicalPlanImpl(new MutableObject<ILogicalOperator>(listifyOp)));
-
-        //Create the NotifyBrokerOperator
-        NotifyBrokerOperator notifyBrokerOp = new NotifyBrokerOperator(brokerEndpointVar, subscriptionListVar,
-                channelExecutionVar);
+    private DelegateOperator createBrokerOp(LogicalVariable brokerEndpointVar, LogicalVariable sendVar,
+            LogicalVariable channelExecutionVar, String channelDataverse, String channelName, boolean push,
+            IAType resultType) {
+        NotifyBrokerOperator notifyBrokerOp =
+                new NotifyBrokerOperator(brokerEndpointVar, sendVar, channelExecutionVar, push, resultType);
         EntityId activeId = new EntityId(BADConstants.CHANNEL_EXTENSION_NAME, channelDataverse, channelName);
         NotifyBrokerPOperator notifyBrokerPOp = new NotifyBrokerPOperator(activeId);
         notifyBrokerOp.setPhysicalOperator(notifyBrokerPOp);
         DelegateOperator extensionOp = new DelegateOperator(notifyBrokerOp);
         extensionOp.setPhysicalOperator(notifyBrokerPOp);
-        extensionOp.getInputs().add(new MutableObject<ILogicalOperator>(groupbyOp));
+        return extensionOp;
+    }
 
-        //Set the input for the brokerNotify as the replicate operator
-        distinctOp.getInputs().add(new MutableObject<ILogicalOperator>(eOp));
+    private DelegateOperator createNotifyBrokerPushPlan(LogicalVariable brokerEndpointVar, LogicalVariable sendVar,
+            LogicalVariable channelExecutionVar, IOptimizationContext context, ILogicalOperator eOp,
+            DistributeResultOperator distributeOp, String channelDataverse, String channelName)
+            throws AlgebricksException {
+        //Find the assign operator to get the result type that we need
+        AbstractLogicalOperator assign = (AbstractLogicalOperator) eOp.getInputs().get(0).getValue();
+        while (assign.getOperatorTag() != LogicalOperatorTag.ASSIGN) {
+            assign = (AbstractLogicalOperator) assign.getInputs().get(0).getValue();
+        }
+        IVariableTypeEnvironment env = assign.computeOutputTypeEnvironment(context);
+        IAType resultType = (IAType) env.getVarType(sendVar);
+
+        //Create the NotifyBrokerOperator
+        DelegateOperator extensionOp = createBrokerOp(brokerEndpointVar, sendVar, channelExecutionVar, channelDataverse,
+                channelName, true, resultType);
+
+        extensionOp.getInputs().add(new MutableObject<>(eOp));
+        context.computeAndSetTypeEnvironmentForOperator(extensionOp);
+
+        return extensionOp;
+
+    }
+
+    private DelegateOperator createNotifyBrokerPullPlan(LogicalVariable brokerEndpointVar,
+            LogicalVariable sendVar, LogicalVariable channelExecutionVar, IOptimizationContext context,
+            ILogicalOperator eOp, DistributeResultOperator distributeOp, String channelDataverse, String channelName)
+                    throws AlgebricksException {
+
+        //Create the Distinct Op
+        ArrayList<Mutable<ILogicalExpression>> expressions = new ArrayList<>();
+        VariableReferenceExpression vExpr = new VariableReferenceExpression(sendVar);
+        expressions.add(new MutableObject<>(vExpr));
+        DistinctOperator distinctOp = new DistinctOperator(expressions);
+
+
+        List<Pair<LogicalVariable, Mutable<ILogicalExpression>>> groupByList = new ArrayList<>();
+        List<Pair<LogicalVariable, Mutable<ILogicalExpression>>> groupByDecorList = new ArrayList<>();
+        List<ILogicalPlan> nestedPlans = new ArrayList<>();
+
+        //Create GroupBy operator
+        GroupByOperator groupbyOp = new GroupByOperator(groupByList, groupByDecorList, nestedPlans);
+        groupbyOp.addGbyExpression(null, new VariableReferenceExpression(brokerEndpointVar));
+        groupbyOp.addGbyExpression(null, new VariableReferenceExpression(channelExecutionVar));
+
+        //Set the distinct as input
+        groupbyOp.getInputs().add(new MutableObject<>(distinctOp));
+
+        //create nested plan for subscription ids in group by
+        NestedTupleSourceOperator nestedTupleSourceOp = new NestedTupleSourceOperator(new MutableObject<>(groupbyOp));
+        LogicalVariable sendListVar = context.newVar();
+        List<LogicalVariable> aggVars = new ArrayList<>();
+        aggVars.add(sendListVar);
+        AggregateFunctionCallExpression funAgg =
+                BuiltinFunctions.makeAggregateFunctionExpression(BuiltinFunctions.LISTIFY, new ArrayList<>());
+        funAgg.getArguments().add(new MutableObject<>(new VariableReferenceExpression(sendVar)));
+        List<Mutable<ILogicalExpression>> aggExpressions = new ArrayList<>();
+        aggExpressions.add(new MutableObject<>(funAgg));
+        AggregateOperator listifyOp = new AggregateOperator(aggVars, aggExpressions);
+        listifyOp.getInputs().add(new MutableObject<>(nestedTupleSourceOp));
+
+        //add nested plans
+        nestedPlans.add(new ALogicalPlanImpl(new MutableObject<>(listifyOp)));
+
+
+        //Create the NotifyBrokerOperator
+        DelegateOperator extensionOp = createBrokerOp(brokerEndpointVar, sendListVar, channelExecutionVar,
+                channelDataverse, channelName, false, null);
+
+        //Set the input for the distinct as the old top
+        extensionOp.getInputs().add(new MutableObject<>(groupbyOp));
+        distinctOp.getInputs().add(new MutableObject<>(eOp));
 
         //compute environment bottom up
-
         context.computeAndSetTypeEnvironmentForOperator(distinctOp);
         context.computeAndSetTypeEnvironmentForOperator(groupbyOp);
         context.computeAndSetTypeEnvironmentForOperator(nestedTupleSourceOp);
@@ -211,7 +277,6 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
 
     }
 
-    @SuppressWarnings("unchecked")
     private AssignOperator createbrokerEndPointAssignOperator(LogicalVariable brokerEndpointVar,
             AbstractLogicalOperator opAboveBrokersScan) {
         Mutable<ILogicalExpression> fieldRef = new MutableObject<ILogicalExpression>(
@@ -244,9 +309,10 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
         return assignOp;
     }
 
-    /*This function searches for the needed op
-     * If lookingForBrokers, find the op above the brokers scan
-     * Else find the suscbriptionsScan
+    /*This function is used to find specific operators within the plan, either
+     * A. The brokers dataset scan
+     * B. The subscriptions scan
+     * C. The highest project of the plan
      */
     private AbstractLogicalOperator findOp(AbstractLogicalOperator op, String lookingForString) {
         if (!op.hasInputs()) {
@@ -311,7 +377,7 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
                 DatasetDataSource dds = (DatasetDataSource) ((DataSourceScanOperator) op).getDataSource();
                 if (dds.getDataset().getItemTypeDataverseName().equals("Metadata")
                         && dds.getDataset().getItemTypeName().equals("ChannelSubscriptionsType")) {
-                    if (dds.getDataset().getDatasetName().equals(subscriptionsName)) {
+                    if (subscriptionsName.equals("") || dds.getDataset().getDatasetName().equals(subscriptionsName)) {
                         return true;
                     }
                 }
