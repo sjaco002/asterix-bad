@@ -18,6 +18,8 @@
  */
 package org.apache.asterix.bad.metadata;
 
+import java.util.concurrent.ScheduledExecutorService;
+
 import org.apache.asterix.active.ActiveEvent;
 import org.apache.asterix.active.ActiveEvent.Kind;
 import org.apache.asterix.active.ActivityState;
@@ -31,14 +33,7 @@ import org.apache.hyracks.api.dataset.IHyracksDataset;
 import org.apache.hyracks.api.dataset.ResultSetId;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.job.DeployedJobSpecId;
-import org.apache.hyracks.api.job.JobId;
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.concurrent.ScheduledExecutorService;
 
 public class DeployedJobSpecEventListener implements IActiveEntityEventsListener {
 
@@ -47,15 +42,17 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
 
     public enum PrecompiledType {
         CHANNEL,
+        PUSH_CHANNEL,
         QUERY,
         INSERT,
         DELETE
     }
 
-    enum RequestState {
-        INIT,
-        STARTED,
-        FINISHED
+    public enum InstanceChange {
+        LOCK,
+        INCREASE,
+        DECREASE,
+        UNLOCK
     }
 
     private DeployedJobSpecId deployedJobSpecId;
@@ -64,17 +61,15 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
 
     private IHyracksDataset hdc;
     private ResultSetId resultSetId;
+    private int instanceCount;
 
     // members
     protected volatile ActivityState state;
-    protected JobId jobId;
-    protected final List<IActiveEntityEventSubscriber> subscribers = new ArrayList<>();
     protected final ICcApplicationContext appCtx;
     protected final EntityId entityId;
     protected final ActiveEvent statsUpdatedEvent;
     protected long statsTimestamp;
     protected String stats;
-    protected RequestState statsRequestState;
     protected final String runtimeName;
     protected final AlgebricksAbsolutePartitionConstraint locations;
     private int runningInstance;
@@ -85,7 +80,7 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
         this.entityId = entityId;
         this.state = ActivityState.STOPPED;
         this.statsTimestamp = -1;
-        this.statsRequestState = RequestState.INIT;
+        this.instanceCount = 0;
         this.statsUpdatedEvent = new ActiveEvent(null, Kind.STATS_UPDATED, entityId, null);
         this.stats = "{\"Stats\":\"N/A\"}";
         this.runtimeName = runtimeName;
@@ -122,10 +117,6 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
         return false;
     }
 
-    public JobId getJobId() {
-        return jobId;
-    }
-
     @Override
     public String getStats() {
         return stats;
@@ -136,38 +127,28 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
         return statsTimestamp;
     }
 
-    public String formatStats(List<String> responses) {
-        StringBuilder strBuilder = new StringBuilder();
-        strBuilder.append("{\"Stats\": [").append(responses.get(0));
-        for (int i = 1; i < responses.size(); i++) {
-            strBuilder.append(", ").append(responses.get(i));
-        }
-        strBuilder.append("]}");
-        return strBuilder.toString();
-    }
-
-    protected synchronized void notifySubscribers(ActiveEvent event) {
-        notifyAll();
-        Iterator<IActiveEntityEventSubscriber> it = subscribers.iterator();
-        while (it.hasNext()) {
-            IActiveEntityEventSubscriber subscriber = it.next();
-            if (subscriber.isDone()) {
-                it.remove();
-            } else {
-                try {
-                    subscriber.notify(event);
-                } catch (HyracksDataException e) {
-                    LOGGER.log(Level.WARN, "Failed to notify subscriber", e);
+    public synchronized boolean setInstanceCount(InstanceChange change) {
+        switch (change) {
+            case INCREASE:
+                if (instanceCount < 0) {
+                    return false;
                 }
-                if (subscriber.isDone()) {
-                    it.remove();
+                instanceCount++;
+                break;
+            case DECREASE:
+                instanceCount--;
+                break;
+            case LOCK:
+                if (instanceCount != 0) {
+                    return false;
                 }
-            }
+                instanceCount = -1;
+                break;
+            case UNLOCK:
+                instanceCount = 0;
+                break;
         }
-    }
-
-    public AlgebricksAbsolutePartitionConstraint getLocations() {
-        return locations;
+        return true;
     }
 
     public PrecompiledType getType() {

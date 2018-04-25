@@ -135,6 +135,17 @@
       </compilation-unit>
     </test-case>
     <test-case FilePath="channel">
+      <compilation-unit name="drop_index">
+        <output-dir compare="Text">drop_index</output-dir>
+        <expected-error>Cannot drop index. channels.EmergencyChannel(Channel) depends on it!</expected-error>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="channel">
+      <compilation-unit name="add_index">
+        <output-dir compare="Text">add_index</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="channel">
       <compilation-unit name="drop_results">
         <output-dir compare="Text">drop_results</output-dir>
         <expected-error>Cannot alter dataset two.nearbyTweetChannelResults. two.nearbyTweetChannel(Channel) depends on it!</expected-error>
