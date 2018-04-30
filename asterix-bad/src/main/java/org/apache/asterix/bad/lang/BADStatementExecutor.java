@@ -223,10 +223,15 @@ public class BADStatementExecutor extends QueryTranslator {
 
         for (Channel channel : usages.first) {
             metadataProvider = new MetadataProvider(appCtx, activeDataverse);
-            BADJobService.redeployChannel(channel, metadataProvider, this, hcc);
+            BADJobService.redeployJobSpec(channel.getChannelId(), channel.getBody(), metadataProvider, this, hcc,
+                    requestParameters);
+            metadataProvider.getLocks().unlock();
         }
         for (Procedure procedure : usages.second) {
-            //TODO: redeployProcedure
+            metadataProvider = new MetadataProvider(appCtx, activeDataverse);
+            BADJobService.redeployJobSpec(procedure.getEntityId(), procedure.getBody(), metadataProvider, this, hcc,
+                    requestParameters);
+            metadataProvider.getLocks().unlock();
         }
 
 

@@ -36,18 +36,20 @@ import org.apache.asterix.app.result.ResultReader;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.lang.BADParserFactory;
 import org.apache.asterix.bad.lang.BADStatementExecutor;
-import org.apache.asterix.bad.metadata.Channel;
 import org.apache.asterix.bad.metadata.DeployedJobSpecEventListener;
 import org.apache.asterix.common.dataflow.ICcApplicationContext;
 import org.apache.asterix.common.transactions.ITxnIdFactory;
 import org.apache.asterix.lang.common.base.Statement;
 import org.apache.asterix.lang.common.statement.Query;
 import org.apache.asterix.lang.common.statement.SetStatement;
+import org.apache.asterix.lang.sqlpp.visitor.SqlppDeleteRewriteVisitor;
 import org.apache.asterix.metadata.MetadataManager;
 import org.apache.asterix.metadata.MetadataTransactionContext;
 import org.apache.asterix.metadata.declared.MetadataProvider;
+import org.apache.asterix.translator.IRequestParameters;
 import org.apache.asterix.translator.IStatementExecutor;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
+import org.apache.hyracks.api.dataset.IHyracksDataset;
 import org.apache.hyracks.api.job.DeployedJobSpecId;
 import org.apache.hyracks.api.job.JobId;
 import org.apache.hyracks.api.job.JobSpecification;
@@ -218,36 +220,88 @@ public class BADJobService {
 
     }
 
-    public static void redeployChannel(Channel channel, MetadataProvider metadataProvider,
-            BADStatementExecutor badStatementExecutor, IHyracksClientConnection hcc) throws Exception {
+    public static void redeployJobSpec(EntityId entityId, String queryBodyString, MetadataProvider metadataProvider,
+            BADStatementExecutor badStatementExecutor, IHyracksClientConnection hcc,
+            IRequestParameters requestParameters) throws Exception {
 
         ICcApplicationContext appCtx = metadataProvider.getApplicationContext();
         ActiveNotificationHandler activeEventHandler =
                 (ActiveNotificationHandler) appCtx.getActiveNotificationHandler();
         DeployedJobSpecEventListener listener =
-                (DeployedJobSpecEventListener) activeEventHandler.getListener(channel.getChannelId());
+                (DeployedJobSpecEventListener) activeEventHandler.getListener(entityId);
         if (listener == null) {
-            LOGGER.severe("Tried to redeploy the job for " + channel.getChannelId() + " but no listener exists.");
+            LOGGER.severe("Tried to redeploy the job for " + entityId + " but no listener exists.");
             return;
         }
 
-        getLock(channel.getChannelId(), listener);
+        getLock(entityId, listener);
 
         BADParserFactory factory = new BADParserFactory();
-        List<Statement> fStatements = factory.createParser(new StringReader(channel.getBody())).parse();
-        SetStatement ss = (SetStatement) fStatements.get(0);
-        metadataProvider.getConfig().put(ss.getPropName(), ss.getPropValue());
-        JobSpecification jobSpec;
-        if (listener.getType().equals(DeployedJobSpecEventListener.PrecompiledType.PUSH_CHANNEL)) {
-            jobSpec = compilePushChannel(badStatementExecutor, metadataProvider, hcc, (Query) fStatements.get(1));
+        List<Statement> fStatements = factory.createParser(new StringReader(queryBodyString)).parse();
+        JobSpecification jobSpec = null;
+        if (listener.getType().equals(DeployedJobSpecEventListener.PrecompiledType.PUSH_CHANNEL)
+                || listener.getType().equals(DeployedJobSpecEventListener.PrecompiledType.CHANNEL)) {
+            //Channels
+            SetStatement ss = (SetStatement) fStatements.get(0);
+            metadataProvider.getConfig().put(ss.getPropName(), ss.getPropValue());
+            if (listener.getType().equals(DeployedJobSpecEventListener.PrecompiledType.PUSH_CHANNEL)) {
+                jobSpec = compilePushChannel(badStatementExecutor, metadataProvider, hcc, (Query) fStatements.get(1));
+            } else {
+                jobSpec = badStatementExecutor.handleInsertUpsertStatement(metadataProvider, fStatements.get(1), hcc,
+                        null, null, null, null, true, null);
+            }
         } else {
-            jobSpec = badStatementExecutor.handleInsertUpsertStatement(metadataProvider, fStatements.get(1), hcc, null,
-                    null, null, null, true, null);
+            //Procedures
+            metadataProvider.setResultSetId(listener.getResultId());
+            final IStatementExecutor.ResultDelivery resultDelivery =
+                    requestParameters.getResultProperties().getDelivery();
+            final IHyracksDataset hdc = requestParameters.getHyracksDataset();
+            final IStatementExecutor.Stats stats = requestParameters.getStats();
+            boolean resultsAsync = resultDelivery == IStatementExecutor.ResultDelivery.ASYNC
+                    || resultDelivery == IStatementExecutor.ResultDelivery.DEFERRED;
+            metadataProvider.setResultAsyncMode(resultsAsync);
+            metadataProvider.setMaxResultReads(1);
+
+            jobSpec = compileProcedureJob(badStatementExecutor, metadataProvider, hcc, hdc, stats, fStatements.get(1));
+
         }
         hcc.upsertDeployedJobSpec(listener.getDeployedJobSpecId(), jobSpec);
 
         listener.setInstanceCount(DeployedJobSpecEventListener.InstanceChange.UNLOCK);
 
+    }
+
+    public static JobSpecification compileQueryJob(IStatementExecutor statementExecutor,
+            MetadataProvider metadataProvider, IHyracksClientConnection hcc, Query q) throws Exception {
+        MetadataTransactionContext mdTxnCtx = MetadataManager.INSTANCE.beginTransaction();
+        boolean bActiveTxn = true;
+        metadataProvider.setMetadataTxnContext(mdTxnCtx);
+        JobSpecification jobSpec = null;
+        try {
+            jobSpec = statementExecutor.rewriteCompileQuery(hcc, metadataProvider, q, null);
+            MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
+            bActiveTxn = false;
+        } catch (Exception e) {
+            ((QueryTranslator) statementExecutor).abort(e, e, mdTxnCtx);
+            throw e;
+        }
+        return jobSpec;
+    }
+
+    private static JobSpecification compileProcedureJob(IStatementExecutor statementExecutor,
+            MetadataProvider metadataProvider, IHyracksClientConnection hcc, IHyracksDataset hdc,
+            IStatementExecutor.Stats stats, Statement procedureStatement) throws Exception {
+        if (procedureStatement.getKind() == Statement.Kind.INSERT) {
+            return ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider,
+                    procedureStatement, hcc, hdc, IStatementExecutor.ResultDelivery.ASYNC, null, stats, true, null);
+        } else if (procedureStatement.getKind() == Statement.Kind.QUERY) {
+            return compileQueryJob(statementExecutor, metadataProvider, hcc, (Query) procedureStatement);
+        } else {
+            SqlppDeleteRewriteVisitor visitor = new SqlppDeleteRewriteVisitor();
+            procedureStatement.accept(visitor, null);
+            return ((QueryTranslator) statementExecutor).handleDeleteStatement(metadataProvider, procedureStatement,
+                    hcc, true);
+        }
     }
 
     @Override
