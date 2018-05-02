@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
+import org.apache.asterix.app.active.ActiveNotificationHandler;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.app.translator.RequestParameters;
 import org.apache.asterix.bad.BADJobService;
@@ -30,6 +31,7 @@ import org.apache.asterix.bad.lang.statement.ChannelDropStatement;
 import org.apache.asterix.bad.lang.statement.ProcedureDropStatement;
 import org.apache.asterix.bad.metadata.Broker;
 import org.apache.asterix.bad.metadata.Channel;
+import org.apache.asterix.bad.metadata.DeployedJobSpecEventListener;
 import org.apache.asterix.bad.metadata.Procedure;
 import org.apache.asterix.common.dataflow.ICcApplicationContext;
 import org.apache.asterix.common.exceptions.CompilationException;
@@ -185,7 +187,6 @@ public class BADStatementExecutor extends QueryTranslator {
 
         //TODO: Check whether a delete or insert procedure using the index. If so, we will need to
         // disallow the procedure until after the newly distributed version is ready
-        super.handleCreateIndexStatement(metadataProvider, stmt, hcc, requestParameters);
 
         MetadataTransactionContext mdTxnCtx = MetadataManager.INSTANCE.beginTransaction();
         metadataProvider.setMetadataTxnContext(mdTxnCtx);
@@ -218,8 +219,26 @@ public class BADStatementExecutor extends QueryTranslator {
                 }
             }
         }
+
+        ActiveNotificationHandler activeEventHandler =
+                (ActiveNotificationHandler) appCtx.getActiveNotificationHandler();
+
+        for (Channel channel : usages.first) {
+            DeployedJobSpecEventListener listener =
+                    (DeployedJobSpecEventListener) activeEventHandler.getListener(channel.getChannelId());
+            BADJobService.getLock(channel.getChannelId(), listener);
+        }
+        for (Procedure procedure : usages.second) {
+            DeployedJobSpecEventListener listener =
+                    (DeployedJobSpecEventListener) activeEventHandler.getListener(procedure.getEntityId());
+            BADJobService.getLock(procedure.getEntityId(), listener);
+        }
+
         MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
         metadataProvider.getLocks().unlock();
+
+        metadataProvider = new MetadataProvider(appCtx, activeDataverse);
+        super.handleCreateIndexStatement(metadataProvider, stmt, hcc, requestParameters);
 
         for (Channel channel : usages.first) {
             metadataProvider = new MetadataProvider(appCtx, activeDataverse);

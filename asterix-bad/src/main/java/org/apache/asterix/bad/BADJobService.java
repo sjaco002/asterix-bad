@@ -234,8 +234,6 @@ public class BADJobService {
             return;
         }
 
-        getLock(entityId, listener);
-
         BADParserFactory factory = new BADParserFactory();
         List<Statement> fStatements = factory.createParser(new StringReader(queryBodyString)).parse();
         JobSpecification jobSpec = null;

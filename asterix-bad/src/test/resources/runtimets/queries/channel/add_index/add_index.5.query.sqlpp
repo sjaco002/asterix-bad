@@ -25,4 +25,5 @@
 
 use channels;
 
-create index s_location on Shelters(location) type RTREE;
+select value array_count(
+(select * from EmergencyChannelResults where deliveryTime > datetime("2017-05-02T17:52:59.570Z")));

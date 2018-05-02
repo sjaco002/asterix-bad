@@ -23,4 +23,6 @@
 * Author       : Steven Jacobs
 */
 
-10000
+use channels;
+
+create index delivery on EmergencyChannelResults(deliveryTime);
