@@ -28,9 +28,6 @@ import org.apache.asterix.active.IActiveEntityEventSubscriber;
 import org.apache.asterix.active.IActiveEntityEventsListener;
 import org.apache.asterix.common.dataflow.ICcApplicationContext;
 import org.apache.asterix.common.metadata.IDataset;
-import org.apache.hyracks.algebricks.common.constraints.AlgebricksAbsolutePartitionConstraint;
-import org.apache.hyracks.api.dataset.IHyracksDataset;
-import org.apache.hyracks.api.dataset.ResultSetId;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.job.DeployedJobSpecId;
 import org.apache.log4j.Logger;
@@ -58,9 +55,6 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
     private DeployedJobSpecId deployedJobSpecId;
     private ScheduledExecutorService executorService = null;
     private final PrecompiledType type;
-
-    private IHyracksDataset hdc;
-    private ResultSetId resultSetId;
     private int instanceCount;
 
     // members
@@ -70,12 +64,9 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
     protected final ActiveEvent statsUpdatedEvent;
     protected long statsTimestamp;
     protected String stats;
-    protected final String runtimeName;
-    protected final AlgebricksAbsolutePartitionConstraint locations;
     private int runningInstance;
 
-    public DeployedJobSpecEventListener(ICcApplicationContext appCtx, EntityId entityId, PrecompiledType type,
-            AlgebricksAbsolutePartitionConstraint locations, String runtimeName) {
+    public DeployedJobSpecEventListener(ICcApplicationContext appCtx, EntityId entityId, PrecompiledType type) {
         this.appCtx = appCtx;
         this.entityId = entityId;
         this.state = ActivityState.STOPPED;
@@ -83,19 +74,8 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
         this.instanceCount = 0;
         this.statsUpdatedEvent = new ActiveEvent(null, Kind.STATS_UPDATED, entityId, null);
         this.stats = "{\"Stats\":\"N/A\"}";
-        this.runtimeName = runtimeName;
-        this.locations = locations;
         state = ActivityState.STOPPED;
         this.type = type;
-    }
-
-
-    public IHyracksDataset getResultDataset() {
-        return hdc;
-    }
-
-    public ResultSetId getResultId() {
-        return resultSetId;
     }
 
     public DeployedJobSpecId getDeployedJobSpecId() {
@@ -155,12 +135,9 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
         return type;
     }
 
-    public void storeDistributedInfo(DeployedJobSpecId deployedJobSpecId, ScheduledExecutorService ses,
-            IHyracksDataset hdc, ResultSetId resultSetId) {
+    public void storeDistributedInfo(DeployedJobSpecId deployedJobSpecId, ScheduledExecutorService ses) {
         this.deployedJobSpecId = deployedJobSpecId;
         this.executorService = ses;
-        this.hdc = hdc;
-        this.resultSetId = resultSetId;
     }
 
     public ScheduledExecutorService getExecutorService() {

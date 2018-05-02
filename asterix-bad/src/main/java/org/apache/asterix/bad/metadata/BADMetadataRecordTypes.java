@@ -28,19 +28,19 @@ import org.apache.asterix.om.types.IAType;
 public class BADMetadataRecordTypes {
 
     // -------------------------------------- Subscriptions --------------------------------------//
-    private static final String[] subTypeFieldNames = { BADConstants.DataverseName, BADConstants.BrokerName,
-            BADConstants.SubscriptionId };
+    private static final String[] subTypeFieldNames =
+            { BADConstants.DataverseName, BADConstants.BrokerName, BADConstants.SubscriptionId };
     private static final IAType[] subTypeFieldTypes = { BuiltinType.ASTRING, BuiltinType.ASTRING, BuiltinType.AUUID };
-    public static final ARecordType channelSubscriptionsType = new ARecordType(BADConstants.ChannelSubscriptionsType,
-            subTypeFieldNames, subTypeFieldTypes, true);
+    public static final ARecordType channelSubscriptionsType =
+            new ARecordType(BADConstants.ChannelSubscriptionsType, subTypeFieldNames, subTypeFieldTypes, true);
 
     // ---------------------------------------- Results --------------------------------------------//
     private static final String[] resultTypeFieldNames = { BADConstants.ResultId, BADConstants.ChannelExecutionTime,
             BADConstants.SubscriptionId, BADConstants.DeliveryTime };
-    private static final IAType[] resultTypeFieldTypes = { BuiltinType.AUUID, BuiltinType.ADATETIME, BuiltinType.AUUID,
-            BuiltinType.ADATETIME };
-    public static final ARecordType channelResultsType = new ARecordType(BADConstants.ChannelResultsType,
-            resultTypeFieldNames, resultTypeFieldTypes, true);
+    private static final IAType[] resultTypeFieldTypes =
+            { BuiltinType.AUUID, BuiltinType.ADATETIME, BuiltinType.AUUID, BuiltinType.ADATETIME };
+    public static final ARecordType channelResultsType =
+            new ARecordType(BADConstants.ChannelResultsType, resultTypeFieldNames, resultTypeFieldTypes, true);
 
     //------------------------------------------ Channel ----------------------------------------//     
     public static final int CHANNEL_ARECORD_DATAVERSE_NAME_FIELD_INDEX = 0;
@@ -86,7 +86,7 @@ public class BADMetadataRecordTypes {
     public static final int PROCEDURE_ARECORD_PROCEDURE_NAME_FIELD_INDEX = 1;
     public static final int PROCEDURE_ARECORD_PROCEDURE_ARITY_FIELD_INDEX = 2;
     public static final int PROCEDURE_ARECORD_PROCEDURE_PARAM_LIST_FIELD_INDEX = 3;
-    public static final int PROCEDURE_ARECORD_PROCEDURE_RETURN_TYPE_FIELD_INDEX = 4;
+    public static final int PROCEDURE_ARECORD_PROCEDURE_TYPE_FIELD_INDEX = 4;
     public static final int PROCEDURE_ARECORD_PROCEDURE_DEFINITION_FIELD_INDEX = 5;
     public static final int PROCEDURE_ARECORD_PROCEDURE_LANGUAGE_FIELD_INDEX = 6;
     public static final int PROCEDURE_ARECORD_PROCEDURE_DURATION_FIELD_INDEX = 7;
@@ -96,9 +96,8 @@ public class BADMetadataRecordTypes {
             BADConstants.RECORD_TYPENAME_PROCEDURE,
             // FieldNames
             new String[] { BADConstants.DataverseName, BADConstants.ProcedureName, BADConstants.FIELD_NAME_ARITY,
-                    BADConstants.FIELD_NAME_PARAMS, BADConstants.FIELD_NAME_RETURN_TYPE,
-                    BADConstants.FIELD_NAME_DEFINITION, BADConstants.FIELD_NAME_LANGUAGE, BADConstants.Duration,
-                    BADConstants.FIELD_NAME_DEPENDENCIES },
+                    BADConstants.FIELD_NAME_PARAMS, BADConstants.FIELD_NAME_TYPE, BADConstants.FIELD_NAME_DEFINITION,
+                    BADConstants.FIELD_NAME_LANGUAGE, BADConstants.Duration, BADConstants.FIELD_NAME_DEPENDENCIES },
             // FieldTypes
             new IAType[] { BuiltinType.ASTRING, BuiltinType.ASTRING, BuiltinType.ASTRING,
                     new AOrderedListType(BuiltinType.ASTRING, null), BuiltinType.ASTRING, BuiltinType.ASTRING,

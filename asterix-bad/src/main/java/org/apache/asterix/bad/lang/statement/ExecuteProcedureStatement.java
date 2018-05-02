@@ -118,7 +118,8 @@ public class ExecuteProcedureStatement extends ExtensionStatement {
             Map<byte[], byte[]> contextRuntimeVarMap = createParameterMap(procedure);
             DeployedJobSpecId deployedJobSpecId = listener.getDeployedJobSpecId();
             if (procedure.getDuration().equals("")) {
-                BADJobService.runDeployedJobSpec(deployedJobSpecId, hcc, contextRuntimeVarMap, entityId,
+                BADJobService.runDeployedJobSpec(deployedJobSpecId, hcc, requestParameters.getHyracksDataset(),
+                        contextRuntimeVarMap, entityId,
                         metadataProvider.getTxnIdFactory(), appCtx, listener, (QueryTranslator) statementExecutor);
 
 
@@ -126,8 +127,7 @@ public class ExecuteProcedureStatement extends ExtensionStatement {
                 ScheduledExecutorService ses = BADJobService.startRepetitiveDeployedJobSpec(deployedJobSpecId, hcc,
                         BADJobService.findPeriod(procedure.getDuration()), contextRuntimeVarMap, entityId,
                         metadataProvider.getTxnIdFactory(), listener);
-                listener.storeDistributedInfo(deployedJobSpecId, ses, listener.getResultDataset(),
-                        listener.getResultId());
+                listener.storeDistributedInfo(deployedJobSpecId, ses);
             }
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
             txnActive = false;
