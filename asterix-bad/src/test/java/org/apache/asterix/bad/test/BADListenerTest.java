@@ -68,7 +68,7 @@ public class BADListenerTest {
     public static void init() {
         djsel = new DeployedJobSpecEventListener(null,
                 new EntityId(BADConstants.CHANNEL_EXTENSION_NAME, "test", "test"),
-                DeployedJobSpecEventListener.PrecompiledType.CHANNEL, null, "BadListener");
+                DeployedJobSpecEventListener.PrecompiledType.CHANNEL);
     }
 
     @Test
