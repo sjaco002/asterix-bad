@@ -37,6 +37,7 @@ public class Channel implements IExtensionMetadataEntity {
     private final String subscriptionsDatasetName;
     private final String resultsDatasetName;
     private final String duration;
+    private final String channelBody;
     private final FunctionSignature function;
     private final List<String> functionAsPath;
     /*
@@ -49,12 +50,13 @@ public class Channel implements IExtensionMetadataEntity {
     private final List<List<List<String>>> dependencies;
 
     public Channel(String dataverseName, String channelName, String subscriptionsDataset, String resultsDataset,
-            FunctionSignature function, String duration, List<List<List<String>>> dependencies) {
+            FunctionSignature function, String duration, List<List<List<String>>> dependencies, String channelBody) {
         this.channelId = new EntityId(BADConstants.CHANNEL_EXTENSION_NAME, dataverseName, channelName);
         this.function = function;
         this.duration = duration;
         this.resultsDatasetName = resultsDataset;
         this.subscriptionsDatasetName = subscriptionsDataset;
+        this.channelBody = channelBody;
         if (this.function.getNamespace() == null) {
             this.function.setNamespace(dataverseName);
         }
@@ -92,6 +94,10 @@ public class Channel implements IExtensionMetadataEntity {
 
     public String getDuration() {
         return duration;
+    }
+
+    public String getChannelBody() {
+        return channelBody;
     }
 
     public List<String> getFunctionAsPath() {

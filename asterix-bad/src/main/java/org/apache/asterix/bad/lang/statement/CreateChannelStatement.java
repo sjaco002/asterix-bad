@@ -28,13 +28,12 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.asterix.active.DeployedJobService;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.algebra.extension.ExtensionStatement;
 import org.apache.asterix.app.active.ActiveNotificationHandler;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
-import org.apache.asterix.bad.ChannelJobService;
+import org.apache.asterix.bad.BADJobService;
 import org.apache.asterix.bad.lang.BADLangExtension;
 import org.apache.asterix.bad.lang.BADParserFactory;
 import org.apache.asterix.bad.metadata.Channel;
@@ -57,7 +56,6 @@ import org.apache.asterix.lang.common.literal.StringLiteral;
 import org.apache.asterix.lang.common.statement.CreateIndexStatement;
 import org.apache.asterix.lang.common.statement.DatasetDecl;
 import org.apache.asterix.lang.common.statement.IDatasetDetailsDecl;
-import org.apache.asterix.lang.common.statement.InsertStatement;
 import org.apache.asterix.lang.common.statement.InternalDetailsDecl;
 import org.apache.asterix.lang.common.statement.Query;
 import org.apache.asterix.lang.common.statement.SetStatement;
@@ -89,7 +87,7 @@ public class CreateChannelStatement extends ExtensionStatement {
     private final CallExpr period;
     private Identifier dataverseName;
     private String duration;
-    private InsertStatement channelResultsInsertQuery;
+    private String body;
     private String subscriptionsTableName;
     private String resultsTableName;
     private String dataverse;
@@ -131,10 +129,6 @@ public class CreateChannelStatement extends ExtensionStatement {
 
     public Expression getPeriod() {
         return period;
-    }
-
-    public InsertStatement getChannelResultsInsertQuery() {
-        return channelResultsInsertQuery;
     }
 
     @Override
@@ -221,28 +215,6 @@ public class CreateChannelStatement extends ExtensionStatement {
 
     }
 
-    private JobSpecification compilePushChannel(IStatementExecutor statementExecutor, MetadataProvider metadataProvider,
-            IHyracksClientConnection hcc, Query q) throws Exception {
-        MetadataTransactionContext mdTxnCtx = MetadataManager.INSTANCE.beginTransaction();
-        boolean bActiveTxn = true;
-        metadataProvider.setMetadataTxnContext(mdTxnCtx);
-        JobSpecification jobSpec = null;
-        try {
-            jobSpec = ((QueryTranslator) statementExecutor).rewriteCompileQuery(hcc, metadataProvider, q, null);
-            MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
-            bActiveTxn = false;
-        } catch (Exception e) {
-            LOGGER.log(Level.INFO, e.getMessage(), e);
-            if (bActiveTxn) {
-                ((QueryTranslator) statementExecutor).abort(e, e, mdTxnCtx);
-            }
-            throw e;
-        } finally {
-            metadataProvider.getLocks().unlock();
-        }
-        return jobSpec;
-    }
-
     private JobSpecification createChannelJob(IStatementExecutor statementExecutor, MetadataProvider metadataProvider,
             IHyracksClientConnection hcc, IHyracksDataset hdc, Stats stats) throws Exception {
         StringBuilder builder = new StringBuilder();
@@ -271,13 +243,15 @@ public class CreateChannelStatement extends ExtensionStatement {
             builder.append(" returning a");
         }
         builder.append(";");
+        body = builder.toString();
         BADParserFactory factory = new BADParserFactory();
         List<Statement> fStatements = factory.createParser(new StringReader(builder.toString())).parse();
 
         SetStatement ss = (SetStatement) fStatements.get(0);
         metadataProvider.getConfig().put(ss.getPropName(), ss.getPropValue());
         if (push) {
-            return compilePushChannel(statementExecutor, metadataProvider, hcc, (Query) fStatements.get(1));
+            return BADJobService.compilePushChannel(statementExecutor, metadataProvider, hcc,
+                    (Query) fStatements.get(1));
         }
         return ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider, fStatements.get(1),
                 hcc, hdc, ResultDelivery.ASYNC, null, stats, true, null);
@@ -286,9 +260,10 @@ public class CreateChannelStatement extends ExtensionStatement {
     private void setupExecutorJob(EntityId entityId, JobSpecification channeljobSpec, IHyracksClientConnection hcc,
             DeployedJobSpecEventListener listener, ITxnIdFactory txnIdFactory) throws Exception {
         if (channeljobSpec != null) {
+            channeljobSpec.setProperty(ActiveNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, entityId);
             DeployedJobSpecId destributedId = hcc.deployJobSpec(channeljobSpec);
-            ScheduledExecutorService ses = DeployedJobService.startRepetitiveDeployedJobSpec(destributedId, hcc,
-                    ChannelJobService.findPeriod(duration), new HashMap<>(), entityId, txnIdFactory);
+            ScheduledExecutorService ses = BADJobService.startRepetitiveDeployedJobSpec(destributedId, hcc,
+                    BADJobService.findPeriod(duration), new HashMap<>(), entityId, txnIdFactory, listener);
             listener.storeDistributedInfo(destributedId, ses, null, null);
         }
 
@@ -354,14 +329,15 @@ public class CreateChannelStatement extends ExtensionStatement {
 
             // Now we subscribe
             if (listener == null) {
-                listener = new DeployedJobSpecEventListener(appCtx, entityId, PrecompiledType.CHANNEL, null,
+                listener = new DeployedJobSpecEventListener(appCtx, entityId,
+                        push ? PrecompiledType.PUSH_CHANNEL : PrecompiledType.CHANNEL, null,
                         "BadListener");
                 activeEventHandler.registerListener(listener);
             }
 
             setupExecutorJob(entityId, channeljobSpec, hcc, listener, metadataProvider.getTxnIdFactory());
             channel = new Channel(dataverse, channelName.getValue(), subscriptionsTableName, resultsTableName, function,
-                    duration, null);
+                    duration, null, body);
 
             MetadataManager.INSTANCE.addEntity(mdTxnCtx, channel);
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);

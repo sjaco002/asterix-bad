@@ -161,7 +161,7 @@ CreateProcedureStatement ProcedureSpecification() throws ParseException:
     }
   ("period" period = FunctionCallExpr())?
   {
-  return new CreateProcedureStatement(signature, paramList, paramIds, functionBody, functionBodyExpr, period);
+  return new CreateProcedureStatement(signature, paramList, paramIds, functionBody, period);
   }
 }
 

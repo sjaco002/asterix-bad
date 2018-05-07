@@ -123,11 +123,15 @@ public class ChannelTupleTranslator extends AbstractTupleTranslator<Channel> {
 
         }
 
+        String channelBody =
+                ((AString) channelRecord.getValueByPos(BADMetadataRecordTypes.CHANNEL_ARECORD_BODY_FIELD_INDEX))
+                        .getStringValue();
+
         FunctionSignature signature = new FunctionSignature(functionSignature.get(0), functionSignature.get(1),
                 Integer.parseInt(functionSignature.get(2)));
 
         channel = new Channel(dataverseName, channelName, subscriptionsName, resultsName, signature, duration,
-                dependencies);
+                dependencies, channelBody);
         return channel;
     }
 
@@ -216,6 +220,12 @@ public class ChannelTupleTranslator extends AbstractTupleTranslator<Channel> {
         fieldValue.reset();
         dependenciesListBuilder.write(fieldValue.getDataOutput(), true);
         recordBuilder.addField(BADMetadataRecordTypes.CHANNEL_ARECORD_DEPENDENCIES_FIELD_INDEX, fieldValue);
+
+        // write field 7
+        fieldValue.reset();
+        aString.setValue(channel.getChannelBody());
+        stringSerde.serialize(aString, fieldValue.getDataOutput());
+        recordBuilder.addField(BADMetadataRecordTypes.CHANNEL_ARECORD_BODY_FIELD_INDEX, fieldValue);
 
         // write record
         recordBuilder.write(tupleBuilder.getDataOutput(), true);

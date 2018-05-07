@@ -24,18 +24,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 
-import org.apache.asterix.active.DeployedJobService;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.algebra.extension.ExtensionStatement;
-import org.apache.asterix.api.http.server.ResultUtil;
 import org.apache.asterix.app.active.ActiveNotificationHandler;
-import org.apache.asterix.app.result.ResultReader;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
-import org.apache.asterix.bad.ChannelJobService;
+import org.apache.asterix.bad.BADJobService;
 import org.apache.asterix.bad.lang.BADLangExtension;
 import org.apache.asterix.bad.metadata.DeployedJobSpecEventListener;
-import org.apache.asterix.bad.metadata.DeployedJobSpecEventListener.PrecompiledType;
 import org.apache.asterix.bad.metadata.Procedure;
 import org.apache.asterix.common.dataflow.ICcApplicationContext;
 import org.apache.asterix.common.exceptions.AsterixException;
@@ -54,12 +50,10 @@ import org.apache.asterix.om.base.IAObject;
 import org.apache.asterix.translator.ConstantHelper;
 import org.apache.asterix.translator.IRequestParameters;
 import org.apache.asterix.translator.IStatementExecutor;
-import org.apache.asterix.translator.IStatementExecutor.Stats;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.job.DeployedJobSpecId;
-import org.apache.hyracks.api.job.JobId;
 import org.apache.hyracks.data.std.util.ArrayBackedValueStorage;
 
 public class ExecuteProcedureStatement extends ExtensionStatement {
@@ -111,10 +105,9 @@ public class ExecuteProcedureStatement extends ExtensionStatement {
         boolean txnActive = false;
         EntityId entityId = new EntityId(BADConstants.PROCEDURE_KEYWORD, dataverse, procedureName);
         DeployedJobSpecEventListener listener = (DeployedJobSpecEventListener) activeEventHandler.getListener(entityId);
-        Procedure procedure = null;
+        Procedure procedure;
 
         MetadataTransactionContext mdTxnCtx = null;
-        JobId jobId;
         try {
             mdTxnCtx = MetadataManager.INSTANCE.beginTransaction();
             txnActive = true;
@@ -125,31 +118,14 @@ public class ExecuteProcedureStatement extends ExtensionStatement {
             Map<byte[], byte[]> contextRuntimeVarMap = createParameterMap(procedure);
             DeployedJobSpecId deployedJobSpecId = listener.getDeployedJobSpecId();
             if (procedure.getDuration().equals("")) {
+                BADJobService.runDeployedJobSpec(deployedJobSpecId, hcc, contextRuntimeVarMap, entityId,
+                        metadataProvider.getTxnIdFactory(), appCtx, listener, (QueryTranslator) statementExecutor);
 
-                //Add the Asterix Transaction Id to the map
-                long newTxId = metadataProvider.getTxnIdFactory().create().getId();
-                contextRuntimeVarMap.put(BADConstants.TRANSACTION_ID_PARAMETER_NAME,
-                        String.valueOf(newTxId).getBytes());
-                jobId = hcc.startJob(deployedJobSpecId, contextRuntimeVarMap);
-
-                boolean wait = Boolean.parseBoolean(metadataProvider.getConfig().get(
-                        ExecuteProcedureStatement.WAIT_FOR_COMPLETION));
-                if (wait || listener.getType() == PrecompiledType.QUERY) {
-                    hcc.waitForCompletion(jobId);
-                }
-
-                if (listener.getType() == PrecompiledType.QUERY) {
-                    ResultReader resultReader =
-                            new ResultReader(listener.getResultDataset(), jobId, listener.getResultId());
-
-                    ResultUtil.printResults(appCtx, resultReader,
-                            ((QueryTranslator) statementExecutor).getSessionOutput(), new Stats(), null);
-                }
 
             } else {
-                ScheduledExecutorService ses = DeployedJobService.startRepetitiveDeployedJobSpec(deployedJobSpecId, hcc,
-                        ChannelJobService.findPeriod(procedure.getDuration()), contextRuntimeVarMap, entityId,
-                        metadataProvider.getTxnIdFactory());
+                ScheduledExecutorService ses = BADJobService.startRepetitiveDeployedJobSpec(deployedJobSpecId, hcc,
+                        BADJobService.findPeriod(procedure.getDuration()), contextRuntimeVarMap, entityId,
+                        metadataProvider.getTxnIdFactory(), listener);
                 listener.storeDistributedInfo(deployedJobSpecId, ses, listener.getResultDataset(),
                         listener.getResultId());
             }

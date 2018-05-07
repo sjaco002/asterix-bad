@@ -28,10 +28,7 @@ import org.apache.asterix.metadata.api.IExtensionMetadataEntity;
 
 public class Procedure implements IExtensionMetadataEntity {
     private static final long serialVersionUID = 1L;
-    public static final String LANGUAGE_JAVA = "JAVA";
-
     public static final String RETURNTYPE_VOID = "VOID";
-    public static final String NOT_APPLICABLE = "N/A";
 
     private final EntityId procedureId;
     private final int arity;

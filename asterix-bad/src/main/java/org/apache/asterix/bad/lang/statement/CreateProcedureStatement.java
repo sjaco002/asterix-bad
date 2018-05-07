@@ -20,18 +20,23 @@ package org.apache.asterix.bad.lang.statement;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.algebra.extension.ExtensionStatement;
 import org.apache.asterix.app.active.ActiveNotificationHandler;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
+import org.apache.asterix.bad.BADJobService;
 import org.apache.asterix.bad.lang.BADLangExtension;
+import org.apache.asterix.bad.lang.BADParserFactory;
 import org.apache.asterix.bad.metadata.DeployedJobSpecEventListener;
 import org.apache.asterix.bad.metadata.DeployedJobSpecEventListener.PrecompiledType;
 import org.apache.asterix.bad.metadata.Procedure;
@@ -42,7 +47,6 @@ import org.apache.asterix.common.exceptions.MetadataException;
 import org.apache.asterix.common.functions.FunctionSignature;
 import org.apache.asterix.lang.common.base.Expression;
 import org.apache.asterix.lang.common.base.Statement;
-import org.apache.asterix.lang.common.clause.LetClause;
 import org.apache.asterix.lang.common.expression.CallExpr;
 import org.apache.asterix.lang.common.expression.LiteralExpr;
 import org.apache.asterix.lang.common.expression.VariableExpr;
@@ -54,7 +58,6 @@ import org.apache.asterix.lang.common.struct.Identifier;
 import org.apache.asterix.lang.common.struct.VarIdentifier;
 import org.apache.asterix.lang.common.util.FunctionUtil;
 import org.apache.asterix.lang.common.visitor.base.ILangVisitor;
-import org.apache.asterix.lang.sqlpp.expression.SelectExpression;
 import org.apache.asterix.lang.sqlpp.rewrites.SqlppRewriterFactory;
 import org.apache.asterix.lang.sqlpp.visitor.SqlppDeleteRewriteVisitor;
 import org.apache.asterix.metadata.MetadataManager;
@@ -62,14 +65,12 @@ import org.apache.asterix.metadata.MetadataTransactionContext;
 import org.apache.asterix.metadata.declared.MetadataProvider;
 import org.apache.asterix.metadata.entities.Function;
 import org.apache.asterix.om.base.temporal.ADurationParserFactory;
-import org.apache.asterix.om.functions.BuiltinFunctions;
 import org.apache.asterix.translator.IRequestParameters;
 import org.apache.asterix.translator.IStatementExecutor;
 import org.apache.asterix.translator.IStatementExecutor.ResultDelivery;
 import org.apache.asterix.translator.IStatementExecutor.Stats;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.algebricks.common.utils.Pair;
-import org.apache.hyracks.algebricks.core.algebra.functions.FunctionIdentifier;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.dataset.IHyracksDataset;
 import org.apache.hyracks.api.dataset.ResultSetId;
@@ -84,7 +85,7 @@ public class CreateProcedureStatement extends ExtensionStatement {
 
     private final FunctionSignature signature;
     private final String procedureBody;
-    private final Statement procedureBodyStatement;
+    private Statement procedureBodyStatement;
     private final List<String> paramList;
     private final List<VariableExpr> varList;
     private final CallExpr period;
@@ -92,20 +93,30 @@ public class CreateProcedureStatement extends ExtensionStatement {
     private List<List<List<String>>> dependencies;
 
     public CreateProcedureStatement(FunctionSignature signature, List<VarIdentifier> parameterList,
-            List<Integer> paramIds, String functionBody, Statement procedureBodyStatement, Expression period) {
+            List<Integer> paramIds, String functionBody, Expression period) {
         this.signature = signature;
-        this.procedureBody = functionBody;
-        this.procedureBodyStatement = procedureBodyStatement;
         this.paramList = new ArrayList<>();
         this.varList = new ArrayList<>();
         for (int i = 0; i < parameterList.size(); i++) {
-            this.paramList.add(parameterList.get(i).getValue());
-            this.varList.add(new VariableExpr(new VarIdentifier(parameterList.get(i).toString(), paramIds.get(i))));
+            this.paramList.add(parameterList.get(i).getValue().substring(1));
+            this.varList.add(
+                    new VariableExpr(new VarIdentifier(parameterList.get(i).getValue().substring(1), paramIds.get(i))));
         }
+        procedureBody = rewriteJobParams(functionBody);
         this.period = (CallExpr) period;
         this.dependencies = new ArrayList<>();
         this.dependencies.add(new ArrayList<>());
         this.dependencies.add(new ArrayList<>());
+    }
+
+    private String rewriteJobParams(String body) {
+        String newBody = body;
+        for (VariableExpr var : varList) {
+            Pattern variableReference = Pattern.compile("([^\\w\\d])" + var.getVar() + "([^\\w\\d]|$)");
+            Matcher matcher = variableReference.matcher(newBody);
+            newBody = matcher.replaceAll("$1get_job_param(\"" + var.getVar() + "\")$2");
+        }
+        return "use " + signature.getNamespace() + ";\n" + newBody + ";";
     }
 
     public String getProcedureBody() {
@@ -142,7 +153,14 @@ public class CreateProcedureStatement extends ExtensionStatement {
         return null;
     }
 
-    private void initialize() throws MetadataException, HyracksDataException {
+    private void initialize() throws CompilationException, HyracksDataException {
+        BADParserFactory factory = new BADParserFactory();
+        List<Statement> fStatements = factory.createParser(new StringReader(procedureBody)).parse();
+        if (fStatements.size() != 2) {
+            //TODO: Add a test for this error
+            throw new CompilationException("Procedure can only execute a single statement");
+        }
+        procedureBodyStatement = fStatements.get(1);
         if (period == null) {
             return;
         }
@@ -155,40 +173,6 @@ public class CreateProcedureStatement extends ExtensionStatement {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         DataOutputStream outputStream = new DataOutputStream(bos);
         durationParser.parse(duration.toCharArray(), 0, duration.toCharArray().length, outputStream);
-    }
-
-    private JobSpecification compileQueryJob(IStatementExecutor statementExecutor, MetadataProvider metadataProvider,
-            IHyracksClientConnection hcc, Query q) throws Exception {
-        MetadataTransactionContext mdTxnCtx = MetadataManager.INSTANCE.beginTransaction();
-        boolean bActiveTxn = true;
-        metadataProvider.setMetadataTxnContext(mdTxnCtx);
-        JobSpecification jobSpec = null;
-        try {
-            jobSpec = ((QueryTranslator) statementExecutor).rewriteCompileQuery(hcc, metadataProvider, q, null);
-            MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
-            bActiveTxn = false;
-        } catch (Exception e) {
-            LOGGER.log(Level.INFO, e.getMessage(), e);
-            if (bActiveTxn) {
-                ((QueryTranslator) statementExecutor).abort(e, e, mdTxnCtx);
-            }
-            throw e;
-        }
-        return jobSpec;
-    }
-
-    private void addLets(SelectExpression s) {
-        FunctionIdentifier function = BuiltinFunctions.GET_JOB_PARAMETER;
-        FunctionSignature sig =
-                new FunctionSignature(function.getNamespace(), function.getName(), function.getArity());
-        for (VariableExpr var : varList) {
-            List<Expression> strListForCall = new ArrayList<>();
-            LiteralExpr l = new LiteralExpr(new StringLiteral(var.getVar().getValue()));
-            strListForCall.add(l);
-            Expression con = new CallExpr(sig, strListForCall);
-            LetClause let = new LetClause(var, con);
-            s.getLetList().add(let);
-        }
     }
 
     private Pair<JobSpecification, PrecompiledType> createProcedureJob(IStatementExecutor statementExecutor,
@@ -207,28 +191,23 @@ public class CreateProcedureStatement extends ExtensionStatement {
                             getProcedureBodyStatement(), hcc, hdc, ResultDelivery.ASYNC, null, stats, true, null),
                     PrecompiledType.INSERT);
         } else if (getProcedureBodyStatement().getKind() == Statement.Kind.QUERY) {
-            Query s = (Query) getProcedureBodyStatement();
-            addLets((SelectExpression) s.getBody());
             SqlppRewriterFactory fact = new SqlppRewriterFactory();
             dependencies.get(1).addAll(FunctionUtil.getFunctionDependencies(fact.createQueryRewriter(),
                     ((Query) getProcedureBodyStatement()).getBody(), metadataProvider).get(1));
-            Pair<JobSpecification, PrecompiledType> pair = new Pair<>(
-                    compileQueryJob(statementExecutor, metadataProvider, hcc, (Query) getProcedureBodyStatement()),
+            Pair<JobSpecification, PrecompiledType> pair = new Pair<>(BADJobService.compileQueryJob(statementExecutor,
+                    metadataProvider, hcc, (Query) getProcedureBodyStatement()),
                     PrecompiledType.QUERY);
             dependencies.get(0).addAll(FunctionUtil.getFunctionDependencies(fact.createQueryRewriter(),
                     ((Query) getProcedureBodyStatement()).getBody(), metadataProvider).get(0));
-            metadataProvider.getLocks().unlock();
             return pair;
         } else if (getProcedureBodyStatement().getKind() == Statement.Kind.DELETE) {
             SqlppDeleteRewriteVisitor visitor = new SqlppDeleteRewriteVisitor();
             getProcedureBodyStatement().accept(visitor, null);
             DeleteStatement delete = (DeleteStatement) getProcedureBodyStatement();
-            addLets((SelectExpression) delete.getQuery().getBody());
 
             SqlppRewriterFactory fact = new SqlppRewriterFactory();
             dependencies = FunctionUtil.getFunctionDependencies(fact.createQueryRewriter(), delete.getQuery().getBody(),
                     metadataProvider);
-
             Pair<JobSpecification, PrecompiledType> pair =
                     new Pair<>(((QueryTranslator) statementExecutor).handleDeleteStatement(metadataProvider,
                     getProcedureBodyStatement(), hcc, true), PrecompiledType.DELETE);
@@ -276,24 +255,16 @@ public class CreateProcedureStatement extends ExtensionStatement {
             if (alreadyActive) {
                 throw new AsterixException("Procedure " + signature.getName() + " is already running");
             }
-            MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getApplicationContext(),
-                    metadataProvider.getDefaultDataverse());
-            tempMdProvider.getConfig().putAll(metadataProvider.getConfig());
             metadataProvider.setResultSetId(new ResultSetId(resultSetId++));
             final ResultDelivery resultDelivery = requestParameters.getResultProperties().getDelivery();
             final IHyracksDataset hdc = requestParameters.getHyracksDataset();
             final Stats stats = requestParameters.getStats();
             boolean resultsAsync = resultDelivery == ResultDelivery.ASYNC || resultDelivery == ResultDelivery.DEFERRED;
             metadataProvider.setResultAsyncMode(resultsAsync);
-            tempMdProvider.setResultSetId(metadataProvider.getResultSetId());
-            tempMdProvider.setResultAsyncMode(resultsAsync);
-            tempMdProvider.setWriterFactory(metadataProvider.getWriterFactory());
-            tempMdProvider.setResultSerializerFactoryProvider(metadataProvider.getResultSerializerFactoryProvider());
-            tempMdProvider.setOutputFile(metadataProvider.getOutputFile());
-            tempMdProvider.setMaxResultReads(requestParameters.getResultProperties().getMaxReads());
+            metadataProvider.setMaxResultReads(1);
             //Create Procedure Internal Job
             Pair<JobSpecification, PrecompiledType> procedureJobSpec =
-                    createProcedureJob(statementExecutor, tempMdProvider, hcc, hdc, stats);
+                    createProcedureJob(statementExecutor, metadataProvider, hcc, hdc, stats);
 
             // Now we subscribe
             if (listener == null) {
@@ -301,7 +272,8 @@ public class CreateProcedureStatement extends ExtensionStatement {
                         "BadListener");
                 activeEventHandler.registerListener(listener);
             }
-            setupDeployedJobSpec(entityId, procedureJobSpec.first, hcc, listener, tempMdProvider.getResultSetId(), hdc,
+            setupDeployedJobSpec(entityId, procedureJobSpec.first, hcc, listener, metadataProvider.getResultSetId(),
+                    hdc,
                     stats);
 
             procedure = new Procedure(dataverse, signature.getName(), signature.getArity(), getParamList(),

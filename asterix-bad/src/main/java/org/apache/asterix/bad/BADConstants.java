@@ -50,6 +50,7 @@ public interface BADConstants {
     String FIELD_NAME_RETURN_TYPE = "ReturnType";
     String FIELD_NAME_DEFINITION = "Definition";
     String FIELD_NAME_LANGUAGE = "Language";
+    String FIELD_NAME_BODY = "Body";
     //To enable new Asterix TxnId for separate deployed job spec invocations
     byte[] TRANSACTION_ID_PARAMETER_NAME = "TxnIdParameter".getBytes();
     int EXECUTOR_TIMEOUT = 20;

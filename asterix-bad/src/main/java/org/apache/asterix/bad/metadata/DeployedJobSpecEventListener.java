@@ -18,6 +18,8 @@
  */
 package org.apache.asterix.bad.metadata;
 
+import java.util.concurrent.ScheduledExecutorService;
+
 import org.apache.asterix.active.ActiveEvent;
 import org.apache.asterix.active.ActiveEvent.Kind;
 import org.apache.asterix.active.ActivityState;
@@ -25,37 +27,26 @@ import org.apache.asterix.active.EntityId;
 import org.apache.asterix.active.IActiveEntityEventSubscriber;
 import org.apache.asterix.active.IActiveEntityEventsListener;
 import org.apache.asterix.common.dataflow.ICcApplicationContext;
+import org.apache.asterix.common.exceptions.ErrorCode;
+import org.apache.asterix.common.exceptions.RuntimeDataException;
 import org.apache.asterix.common.metadata.IDataset;
 import org.apache.hyracks.algebricks.common.constraints.AlgebricksAbsolutePartitionConstraint;
 import org.apache.hyracks.api.dataset.IHyracksDataset;
 import org.apache.hyracks.api.dataset.ResultSetId;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.job.DeployedJobSpecId;
-import org.apache.hyracks.api.job.JobId;
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.concurrent.ScheduledExecutorService;
 
 public class DeployedJobSpecEventListener implements IActiveEntityEventsListener {
 
     private static final Logger LOGGER = Logger.getLogger(DeployedJobSpecEventListener.class);
 
-
     public enum PrecompiledType {
         CHANNEL,
+        PUSH_CHANNEL,
         QUERY,
         INSERT,
         DELETE
-    }
-
-    enum RequestState {
-        INIT,
-        STARTED,
-        FINISHED
     }
 
     private DeployedJobSpecId deployedJobSpecId;
@@ -67,14 +58,11 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
 
     // members
     protected volatile ActivityState state;
-    protected JobId jobId;
-    protected final List<IActiveEntityEventSubscriber> subscribers = new ArrayList<>();
     protected final ICcApplicationContext appCtx;
     protected final EntityId entityId;
     protected final ActiveEvent statsUpdatedEvent;
     protected long statsTimestamp;
     protected String stats;
-    protected RequestState statsRequestState;
     protected final String runtimeName;
     protected final AlgebricksAbsolutePartitionConstraint locations;
     private int runningInstance;
@@ -83,17 +71,14 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
             AlgebricksAbsolutePartitionConstraint locations, String runtimeName) {
         this.appCtx = appCtx;
         this.entityId = entityId;
-        this.state = ActivityState.STOPPED;
+        setState(ActivityState.STOPPED);
         this.statsTimestamp = -1;
-        this.statsRequestState = RequestState.INIT;
         this.statsUpdatedEvent = new ActiveEvent(null, Kind.STATS_UPDATED, entityId, null);
         this.stats = "{\"Stats\":\"N/A\"}";
         this.runtimeName = runtimeName;
         this.locations = locations;
-        state = ActivityState.STOPPED;
         this.type = type;
     }
-
 
     public IHyracksDataset getResultDataset() {
         return hdc;
@@ -122,10 +107,6 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
         return false;
     }
 
-    public JobId getJobId() {
-        return jobId;
-    }
-
     @Override
     public String getStats() {
         return stats;
@@ -134,40 +115,6 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
     @Override
     public long getStatsTimeStamp() {
         return statsTimestamp;
-    }
-
-    public String formatStats(List<String> responses) {
-        StringBuilder strBuilder = new StringBuilder();
-        strBuilder.append("{\"Stats\": [").append(responses.get(0));
-        for (int i = 1; i < responses.size(); i++) {
-            strBuilder.append(", ").append(responses.get(i));
-        }
-        strBuilder.append("]}");
-        return strBuilder.toString();
-    }
-
-    protected synchronized void notifySubscribers(ActiveEvent event) {
-        notifyAll();
-        Iterator<IActiveEntityEventSubscriber> it = subscribers.iterator();
-        while (it.hasNext()) {
-            IActiveEntityEventSubscriber subscriber = it.next();
-            if (subscriber.isDone()) {
-                it.remove();
-            } else {
-                try {
-                    subscriber.notify(event);
-                } catch (HyracksDataException e) {
-                    LOGGER.log(Level.WARN, "Failed to notify subscriber", e);
-                }
-                if (subscriber.isDone()) {
-                    it.remove();
-                }
-            }
-        }
-    }
-
-    public AlgebricksAbsolutePartitionConstraint getLocations() {
-        return locations;
     }
 
     public PrecompiledType getType() {
@@ -214,12 +161,18 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
         // no op
     }
 
+    protected synchronized void setState(ActivityState newState) {
+        LOGGER.info("State of " + getEntityId() + "is being set to " + newState + " from " + state);
+        this.state = newState;
+        notifyAll();
+    }
+
     private synchronized void handleJobStartEvent(ActiveEvent message) throws Exception {
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("Channel Job started for  " + entityId);
         }
         runningInstance++;
-        state = ActivityState.RUNNING;
+        setState(ActivityState.RUNNING);
     }
 
     private synchronized void handleJobFinishEvent(ActiveEvent message) throws Exception {
@@ -228,8 +181,32 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
         }
         runningInstance--;
         if (runningInstance == 0) {
-            state = ActivityState.STOPPED;
+            setState(ActivityState.STOPPED);
         }
+    }
+
+    public synchronized void waitWhileAtState(ActivityState undesiredState) throws InterruptedException {
+        while (state == undesiredState) {
+            this.wait();
+        }
+    }
+
+    public synchronized void suspend() throws HyracksDataException, InterruptedException {
+        LOGGER.info("Suspending entity " + entityId);
+        LOGGER.info("Waiting for ongoing activities of " + entityId);
+        waitWhileAtState(ActivityState.RUNNING);
+        LOGGER.info("Proceeding with suspension of " + entityId + ". Current state is " + state);
+        setState(ActivityState.SUSPENDED);
+        LOGGER.info("Successfully Suspended " + entityId);
+    }
+
+    public synchronized void resume() throws HyracksDataException {
+        LOGGER.info("Resuming entity " + entityId);
+        if (state != ActivityState.SUSPENDED) {
+            throw new RuntimeDataException(ErrorCode.ACTIVE_ENTITY_CANNOT_RESUME_FROM_STATE, entityId, state);
+        }
+        setState(ActivityState.STOPPED);
+        LOGGER.info("Successfully resumed " + entityId);
     }
 
     @Override
