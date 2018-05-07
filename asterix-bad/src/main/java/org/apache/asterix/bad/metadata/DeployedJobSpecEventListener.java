@@ -41,7 +41,6 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
 
     private static final Logger LOGGER = Logger.getLogger(DeployedJobSpecEventListener.class);
 
-
     public enum PrecompiledType {
         CHANNEL,
         PUSH_CHANNEL,
@@ -80,7 +79,6 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
         this.locations = locations;
         this.type = type;
     }
-
 
     public IHyracksDataset getResultDataset() {
         return hdc;
@@ -135,7 +133,6 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
         return executorService;
     }
 
-
     public void deActivate() {
         state = ActivityState.STOPPED;
     }
@@ -167,6 +164,7 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
     protected synchronized void setState(ActivityState newState) {
         LOGGER.info("State of " + getEntityId() + "is being set to " + newState + " from " + state);
         this.state = newState;
+        notifyAll();
     }
 
     private synchronized void handleJobStartEvent(ActiveEvent message) throws Exception {
