@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.asterix.active.ActivityState;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.api.http.server.ResultUtil;
 import org.apache.asterix.app.active.ActiveNotificationHandler;
@@ -108,7 +109,7 @@ public class BADJobService {
             Map<byte[], byte[]> jobParameters, EntityId entityId, ITxnIdFactory txnIdFactory,
             ICcApplicationContext appCtx, DeployedJobSpecEventListener listener, QueryTranslator statementExecutor)
             throws Exception {
-        listener.waitForNonSuspendedState();
+        listener.waitWhileAtState(ActivityState.SUSPENDED);
 
         //Add the Asterix Transaction Id to the map
         jobParameters.put(BADConstants.TRANSACTION_ID_PARAMETER_NAME,

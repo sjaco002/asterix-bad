@@ -185,38 +185,28 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
         }
     }
 
-    public void waitForNonSuspendedState() throws InterruptedException {
-        while (state == ActivityState.SUSPENDED) {
+    public void waitWhileAtState(ActivityState undesiredState) throws InterruptedException {
+        while (state == undesiredState) {
             this.wait();
         }
     }
 
-    private void waitForInactiveState() throws InterruptedException {
-        while (isActive()) {
-            this.wait();
-        }
-    }
-
-    public void suspend() throws HyracksDataException, InterruptedException {
-        synchronized (this) {
-            LOGGER.info("Suspending entity " + entityId);
-            LOGGER.info("Waiting for ongoing activities of " + entityId);
-            waitForInactiveState();
-            LOGGER.info("Proceeding with suspension of " + entityId + ". Current state is " + state);
-            setState(ActivityState.SUSPENDED);
-            LOGGER.info("Successfully Suspended " + entityId);
-        }
+    public synchronized void suspend() throws HyracksDataException, InterruptedException {
+        LOGGER.info("Suspending entity " + entityId);
+        LOGGER.info("Waiting for ongoing activities of " + entityId);
+        waitWhileAtState(ActivityState.RUNNING);
+        LOGGER.info("Proceeding with suspension of " + entityId + ". Current state is " + state);
+        setState(ActivityState.SUSPENDED);
+        LOGGER.info("Successfully Suspended " + entityId);
     }
 
     public synchronized void resume() throws HyracksDataException {
-        synchronized (this) {
-            LOGGER.info("Resuming entity " + entityId);
-            if (state != ActivityState.SUSPENDED) {
-                throw new RuntimeDataException(ErrorCode.ACTIVE_ENTITY_CANNOT_RESUME_FROM_STATE, entityId, state);
-            }
-            setState(ActivityState.STOPPED);
-            LOGGER.info("Successfully resumed " + entityId);
+        LOGGER.info("Resuming entity " + entityId);
+        if (state != ActivityState.SUSPENDED) {
+            throw new RuntimeDataException(ErrorCode.ACTIVE_ENTITY_CANNOT_RESUME_FROM_STATE, entityId, state);
         }
+        setState(ActivityState.STOPPED);
+        LOGGER.info("Successfully resumed " + entityId);
     }
 
     @Override
