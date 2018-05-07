@@ -96,7 +96,7 @@ public class Channel implements IExtensionMetadataEntity {
         return duration;
     }
 
-    public String getBody() {
+    public String getChannelBody() {
         return body;
     }
 

@@ -27,6 +27,8 @@ import org.apache.asterix.active.EntityId;
 import org.apache.asterix.active.IActiveEntityEventSubscriber;
 import org.apache.asterix.active.IActiveEntityEventsListener;
 import org.apache.asterix.common.dataflow.ICcApplicationContext;
+import org.apache.asterix.common.exceptions.ErrorCode;
+import org.apache.asterix.common.exceptions.RuntimeDataException;
 import org.apache.asterix.common.metadata.IDataset;
 import org.apache.hyracks.algebricks.common.constraints.AlgebricksAbsolutePartitionConstraint;
 import org.apache.hyracks.api.dataset.IHyracksDataset;
@@ -48,20 +50,12 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
         DELETE
     }
 
-    public enum InstanceChange {
-        LOCK,
-        INCREASE,
-        DECREASE,
-        UNLOCK
-    }
-
     private DeployedJobSpecId deployedJobSpecId;
     private ScheduledExecutorService executorService = null;
     private final PrecompiledType type;
 
     private IHyracksDataset hdc;
     private ResultSetId resultSetId;
-    private int instanceCount;
 
     // members
     protected volatile ActivityState state;
@@ -78,14 +72,12 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
             AlgebricksAbsolutePartitionConstraint locations, String runtimeName) {
         this.appCtx = appCtx;
         this.entityId = entityId;
-        this.state = ActivityState.STOPPED;
+        setState(ActivityState.STOPPED);
         this.statsTimestamp = -1;
-        this.instanceCount = 0;
         this.statsUpdatedEvent = new ActiveEvent(null, Kind.STATS_UPDATED, entityId, null);
         this.stats = "{\"Stats\":\"N/A\"}";
         this.runtimeName = runtimeName;
         this.locations = locations;
-        state = ActivityState.STOPPED;
         this.type = type;
     }
 
@@ -127,30 +119,6 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
         return statsTimestamp;
     }
 
-    public synchronized boolean setInstanceCount(InstanceChange change) {
-        switch (change) {
-            case INCREASE:
-                if (instanceCount < 0) {
-                    return false;
-                }
-                instanceCount++;
-                break;
-            case DECREASE:
-                instanceCount--;
-                break;
-            case LOCK:
-                if (instanceCount != 0) {
-                    return false;
-                }
-                instanceCount = -1;
-                break;
-            case UNLOCK:
-                instanceCount = 0;
-                break;
-        }
-        return true;
-    }
-
     public PrecompiledType getType() {
         return type;
     }
@@ -166,6 +134,7 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
     public ScheduledExecutorService getExecutorService() {
         return executorService;
     }
+
 
     public void deActivate() {
         state = ActivityState.STOPPED;
@@ -195,12 +164,17 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
         // no op
     }
 
+    protected synchronized void setState(ActivityState newState) {
+        LOGGER.info("State of " + getEntityId() + "is being set to " + newState + " from " + state);
+        this.state = newState;
+    }
+
     private synchronized void handleJobStartEvent(ActiveEvent message) throws Exception {
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("Channel Job started for  " + entityId);
         }
         runningInstance++;
-        state = ActivityState.RUNNING;
+        setState(ActivityState.RUNNING);
     }
 
     private synchronized void handleJobFinishEvent(ActiveEvent message) throws Exception {
@@ -209,7 +183,41 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
         }
         runningInstance--;
         if (runningInstance == 0) {
-            state = ActivityState.STOPPED;
+            setState(ActivityState.STOPPED);
+        }
+    }
+
+    public void waitForNonSuspendedState() throws InterruptedException {
+        while (state == ActivityState.SUSPENDED) {
+            this.wait();
+        }
+    }
+
+    private void waitForInactiveState() throws InterruptedException {
+        while (isActive()) {
+            this.wait();
+        }
+    }
+
+    public void suspend() throws HyracksDataException, InterruptedException {
+        synchronized (this) {
+            LOGGER.info("Suspending entity " + entityId);
+            LOGGER.info("Waiting for ongoing activities of " + entityId);
+            waitForInactiveState();
+            LOGGER.info("Proceeding with suspension of " + entityId + ". Current state is " + state);
+            setState(ActivityState.SUSPENDED);
+            LOGGER.info("Successfully Suspended " + entityId);
+        }
+    }
+
+    public synchronized void resume() throws HyracksDataException {
+        synchronized (this) {
+            LOGGER.info("Resuming entity " + entityId);
+            if (state != ActivityState.SUSPENDED) {
+                throw new RuntimeDataException(ErrorCode.ACTIVE_ENTITY_CANNOT_RESUME_FROM_STATE, entityId, state);
+            }
+            setState(ActivityState.STOPPED);
+            LOGGER.info("Successfully resumed " + entityId);
         }
     }
 

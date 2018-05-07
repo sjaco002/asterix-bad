@@ -226,12 +226,12 @@ public class BADStatementExecutor extends QueryTranslator {
         for (Channel channel : usages.first) {
             DeployedJobSpecEventListener listener =
                     (DeployedJobSpecEventListener) activeEventHandler.getListener(channel.getChannelId());
-            BADJobService.getLock(channel.getChannelId(), listener);
+            listener.suspend();
         }
         for (Procedure procedure : usages.second) {
             DeployedJobSpecEventListener listener =
                     (DeployedJobSpecEventListener) activeEventHandler.getListener(procedure.getEntityId());
-            BADJobService.getLock(procedure.getEntityId(), listener);
+            listener.suspend();
         }
 
         MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
@@ -242,7 +242,7 @@ public class BADStatementExecutor extends QueryTranslator {
 
         for (Channel channel : usages.first) {
             metadataProvider = new MetadataProvider(appCtx, activeDataverse);
-            BADJobService.redeployJobSpec(channel.getChannelId(), channel.getBody(), metadataProvider, this, hcc,
+            BADJobService.redeployJobSpec(channel.getChannelId(), channel.getChannelBody(), metadataProvider, this, hcc,
                     requestParameters);
             metadataProvider.getLocks().unlock();
         }

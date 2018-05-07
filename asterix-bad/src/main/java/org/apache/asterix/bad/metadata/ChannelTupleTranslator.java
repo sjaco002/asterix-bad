@@ -223,7 +223,7 @@ public class ChannelTupleTranslator extends AbstractTupleTranslator<Channel> {
 
         // write field 7
         fieldValue.reset();
-        aString.setValue(channel.getBody());
+        aString.setValue(channel.getChannelBody());
         stringSerde.serialize(aString, fieldValue.getDataOutput());
         recordBuilder.addField(BADMetadataRecordTypes.CHANNEL_ARECORD_BODY_FIELD_INDEX, fieldValue);
 

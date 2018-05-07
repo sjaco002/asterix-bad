@@ -260,6 +260,7 @@ public class CreateChannelStatement extends ExtensionStatement {
     private void setupExecutorJob(EntityId entityId, JobSpecification channeljobSpec, IHyracksClientConnection hcc,
             DeployedJobSpecEventListener listener, ITxnIdFactory txnIdFactory) throws Exception {
         if (channeljobSpec != null) {
+            channeljobSpec.setProperty(ActiveNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, entityId);
             DeployedJobSpecId destributedId = hcc.deployJobSpec(channeljobSpec);
             ScheduledExecutorService ses = BADJobService.startRepetitiveDeployedJobSpec(destributedId, hcc,
                     BADJobService.findPeriod(duration), new HashMap<>(), entityId, txnIdFactory, listener);

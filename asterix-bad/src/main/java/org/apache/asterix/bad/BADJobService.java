@@ -66,16 +66,16 @@ public class BADJobService {
 
     private static final long millisecondTimeout = BADConstants.EXECUTOR_TIMEOUT * 1000;
 
-    //Starts running a deployed job specification periodically with an interval of "duration" seconds
+    //Starts running a deployed job specification periodically with an interval of "period" seconds
     public static ScheduledExecutorService startRepetitiveDeployedJobSpec(DeployedJobSpecId distributedId,
-            IHyracksClientConnection hcc, long duration, Map<byte[], byte[]> jobParameters, EntityId entityId,
+            IHyracksClientConnection hcc, long period, Map<byte[], byte[]> jobParameters, EntityId entityId,
             ITxnIdFactory txnIdFactory, DeployedJobSpecEventListener listener) {
         ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(POOL_SIZE);
         scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
                 try {
-                    if (!runRepetitiveDeployedJobSpec(distributedId, hcc, jobParameters, duration, entityId,
+                    if (!runDeployedJobSpecCheckPeriod(distributedId, hcc, jobParameters, period, entityId,
                             txnIdFactory, listener)) {
                         scheduledExecutorService.shutdown();
                     }
@@ -84,19 +84,19 @@ public class BADJobService {
                             + entityId.getDataverse() + "." + entityId.getEntityName() + ".", e);
                 }
             }
-        }, duration, duration, TimeUnit.MILLISECONDS);
+        }, period, period, TimeUnit.MILLISECONDS);
         return scheduledExecutorService;
     }
 
-    public static boolean runRepetitiveDeployedJobSpec(DeployedJobSpecId distributedId, IHyracksClientConnection hcc,
-            Map<byte[], byte[]> jobParameters, long duration, EntityId entityId, ITxnIdFactory txnIdFactory,
+    public static boolean runDeployedJobSpecCheckPeriod(DeployedJobSpecId distributedId, IHyracksClientConnection hcc,
+            Map<byte[], byte[]> jobParameters, long period, EntityId entityId, ITxnIdFactory txnIdFactory,
             DeployedJobSpecEventListener listener) throws Exception {
         long executionMilliseconds =
                 runDeployedJobSpec(distributedId, hcc, jobParameters, entityId, txnIdFactory, null, listener, null);
-        if (executionMilliseconds > duration) {
+        if (executionMilliseconds > period) {
             LOGGER.log(Level.SEVERE,
                     "Periodic job for " + entityId.getExtensionName() + " " + entityId.getDataverse() + "."
-                            + entityId.getEntityName() + " was unable to meet the required period of " + duration
+                            + entityId.getEntityName() + " was unable to meet the required period of " + period
                             + " milliseconds. Actually took " + executionMilliseconds + " execution will shutdown"
                             + new Date());
             return false;
@@ -108,20 +108,7 @@ public class BADJobService {
             Map<byte[], byte[]> jobParameters, EntityId entityId, ITxnIdFactory txnIdFactory,
             ICcApplicationContext appCtx, DeployedJobSpecEventListener listener, QueryTranslator statementExecutor)
             throws Exception {
-
-        long end = System.currentTimeMillis() + millisecondTimeout;
-        boolean success = false;
-        while (System.currentTimeMillis() < end) {
-            success = listener.setInstanceCount(DeployedJobSpecEventListener.InstanceChange.INCREASE);
-            if (success) {
-                break;
-            }
-            Thread.sleep(100);
-        }
-        if (!success) {
-            throw new RuntimeException("Deployed Job for " + entityId.getExtensionName() + " " + entityId.getDataverse()
-                    + "." + entityId.getEntityName() + " failed to run because the deployed job was not available");
-        }
+        listener.waitForNonSuspendedState();
 
         //Add the Asterix Transaction Id to the map
         jobParameters.put(BADConstants.TRANSACTION_ID_PARAMETER_NAME,
@@ -139,8 +126,6 @@ public class BADJobService {
             ResultUtil.printResults(appCtx, resultReader, statementExecutor.getSessionOutput(),
                     new IStatementExecutor.Stats(), null);
         }
-
-        listener.setInstanceCount(DeployedJobSpecEventListener.InstanceChange.DECREASE);
 
         LOGGER.log(Level.SEVERE,
                 "Deployed Job execution completed for " + entityId.getExtensionName() + " " + entityId.getDataverse()
@@ -201,25 +186,6 @@ public class BADJobService {
         return jobSpec;
     }
 
-    public static void getLock(EntityId entityId, DeployedJobSpecEventListener listener) throws Exception {
-
-        long end = System.currentTimeMillis() + millisecondTimeout;
-        boolean success = false;
-        while (System.currentTimeMillis() < end) {
-            success = listener.setInstanceCount(DeployedJobSpecEventListener.InstanceChange.LOCK);
-            if (success) {
-                break;
-            }
-            Thread.sleep(100);
-        }
-        if (!success) {
-            throw new RuntimeException("Cannot upsert new Job Spec for Deployed Job for " + entityId.getExtensionName()
-                    + " " + entityId.getDataverse() + "." + entityId.getEntityName()
-                    + " because the job spec is in use");
-        }
-
-    }
-
     public static void redeployJobSpec(EntityId entityId, String queryBodyString, MetadataProvider metadataProvider,
             BADStatementExecutor badStatementExecutor, IHyracksClientConnection hcc,
             IRequestParameters requestParameters) throws Exception {
@@ -265,7 +231,7 @@ public class BADJobService {
         }
         hcc.upsertDeployedJobSpec(listener.getDeployedJobSpecId(), jobSpec);
 
-        listener.setInstanceCount(DeployedJobSpecEventListener.InstanceChange.UNLOCK);
+        listener.resume();
 
     }
 
