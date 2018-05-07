@@ -185,7 +185,7 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
         }
     }
 
-    public void waitWhileAtState(ActivityState undesiredState) throws InterruptedException {
+    public synchronized void waitWhileAtState(ActivityState undesiredState) throws InterruptedException {
         while (state == undesiredState) {
             this.wait();
         }

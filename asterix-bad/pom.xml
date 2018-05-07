@@ -270,6 +270,12 @@
       <artifactId>hyracks-data-std</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-all</artifactId>
+      <version>2.0.2-beta</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.apache.hyracks</groupId>
       <artifactId>algebricks-runtime</artifactId>
     </dependency>
