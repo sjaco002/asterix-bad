@@ -168,7 +168,7 @@ public class CreateChannelStatement extends ExtensionStatement {
         List<String> fieldNames = new ArrayList<>();
         fieldNames.add(BADConstants.SubscriptionId);
         partitionFields.add(fieldNames);
-        IDatasetDetailsDecl idd = new InternalDetailsDecl(partitionFields, keyIndicators, true, null);
+        IDatasetDetailsDecl idd = new InternalDetailsDecl(partitionFields, keyIndicators, false, null);
         DatasetDecl createSubscriptionsDataset = new DatasetDecl(dataverseName, new Identifier(subscriptionsTableName),
                 new Identifier(BADConstants.BAD_DATAVERSE_NAME), subscriptionsTypeName, null, null, null,
                 new HashMap<String, String>(), DatasetType.INTERNAL, idd, null, true);

@@ -29,8 +29,8 @@ public class BADMetadataRecordTypes {
 
     // -------------------------------------- Subscriptions --------------------------------------//
     private static final String[] subTypeFieldNames =
-            { BADConstants.DataverseName, BADConstants.BrokerName, BADConstants.SubscriptionId };
-    private static final IAType[] subTypeFieldTypes = { BuiltinType.ASTRING, BuiltinType.ASTRING, BuiltinType.AUUID };
+            { BADConstants.SubscriptionId };
+    private static final IAType[] subTypeFieldTypes = { BuiltinType.AUUID };
     public static final ARecordType channelSubscriptionsType =
             new ARecordType(BADConstants.ChannelSubscriptionsType, subTypeFieldNames, subTypeFieldTypes, true);
 
