@@ -221,7 +221,7 @@ public class CreateProcedureStatement extends ExtensionStatement {
             throws Exception {
         jobSpec.setProperty(ActiveNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, entityId);
         DeployedJobSpecId deployedJobSpecId = hcc.deployJobSpec(jobSpec);
-        listener.storeDeployedJobSpecId(deployedJobSpecId);
+        listener.setDeployedJobSpecId(deployedJobSpecId);
     }
 
     @Override
@@ -271,7 +271,7 @@ public class CreateProcedureStatement extends ExtensionStatement {
                     stats);
 
             procedure = new Procedure(dataverse, signature.getName(), signature.getArity(), getParamList(),
-                    procedureJobSpec.second.toString(), getProcedureBody(), Function.LANGUAGE_AQL, duration,
+                    procedureJobSpec.second.toString(), getProcedureBody(), Function.LANGUAGE_SQLPP, duration,
                     dependencies);
 
             MetadataManager.INSTANCE.addEntity(mdTxnCtx, procedure);

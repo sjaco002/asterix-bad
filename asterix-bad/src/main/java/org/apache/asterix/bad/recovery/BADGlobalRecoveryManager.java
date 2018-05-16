@@ -76,7 +76,16 @@ public class BADGlobalRecoveryManager extends GlobalRecoveryManager {
             MetadataTransactionContext mdTxnCtx = MetadataManager.INSTANCE.beginTransaction();
             mdTxnCtx = doRecovery(appCtx, mdTxnCtx);
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
-            deployJobs(appCtx);
+
+            MetadataProvider metadataProvider = new MetadataProvider(appCtx, MetadataBuiltinEntities.DEFAULT_DATAVERSE);
+            mdTxnCtx = MetadataManager.INSTANCE.beginTransaction();
+            metadataProvider.setMetadataTxnContext(mdTxnCtx);
+            List<Channel> channels = BADLangExtension.getAllChannels(mdTxnCtx);
+            List<Procedure> procedures = BADLangExtension.getAllProcedures(mdTxnCtx);
+            MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
+            metadataProvider.getLocks().unlock();
+
+            deployJobs(appCtx, channels, procedures);
             recoveryCompleted = true;
             recovering = false;
             LOGGER.info("Global Recovery Completed. Refreshing cluster state...");
@@ -86,18 +95,8 @@ public class BADGlobalRecoveryManager extends GlobalRecoveryManager {
         }
     }
 
-    private void deployJobs(ICcApplicationContext appCtx) throws Exception {
-
-        MetadataProvider metadataProvider = new MetadataProvider(appCtx, MetadataBuiltinEntities.DEFAULT_DATAVERSE);
-        MetadataTransactionContext mdTxnCtx = MetadataManager.INSTANCE.beginTransaction();
-        metadataProvider.setMetadataTxnContext(mdTxnCtx);
-
-        List<Channel> channels = BADLangExtension.getAllChannels(mdTxnCtx);
-        List<Procedure> procedures = BADLangExtension.getAllProcedures(mdTxnCtx);
-
-        MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
-        metadataProvider.getLocks().unlock();
-
+    private void deployJobs(ICcApplicationContext appCtx, List<Channel> channels, List<Procedure> procedures)
+            throws Exception {
         SessionConfig sessionConfig =
                 new SessionConfig(SessionConfig.OutputFormat.ADM, true, true, true, SessionConfig.PlanFormat.STRING);
 
@@ -111,9 +110,14 @@ public class BADGlobalRecoveryManager extends GlobalRecoveryManager {
         //Remove any lingering listeners
         for (IActiveEntityEventsListener listener : activeEventHandler.getEventListeners()) {
             if (listener instanceof DeployedJobSpecEventListener) {
+                if (((DeployedJobSpecEventListener) listener).getExecutorService() != null) {
+                    ((DeployedJobSpecEventListener) listener).getExecutorService().shutdown();
+                }
                 activeEventHandler.unregisterListener(listener);
             }
         }
+
+        MetadataProvider metadataProvider;
 
         //Redeploy Jobs
         for (Channel channel : channels) {
@@ -131,7 +135,7 @@ public class BADGlobalRecoveryManager extends GlobalRecoveryManager {
                     hcc,
                     BADJobService.findPeriod(channel.getDuration()), new HashMap<>(), entityId,
                     metadataProvider.getTxnIdFactory(), listener);
-            listener.storeExecutorService(ses);
+            listener.setExecutorService(ses);
 
             LOGGER.log(Level.SEVERE, entityId.getExtensionName() + " " + entityId.getDataverse() + "."
                     + entityId.getEntityName() + " was stopped by cluster failure. It has restarted.");

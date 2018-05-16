@@ -270,7 +270,7 @@ public class CreateChannelStatement extends ExtensionStatement {
         dataverseName = new Identifier(((QueryTranslator) statementExecutor).getActiveDataverse(dataverseName));
         dataverse = dataverseName.getValue();
         subscriptionsTableName = channelName + BADConstants.subscriptionEnding;
-        resultsTableName = !push ? channelName + BADConstants.resultsEnding : "";
+        resultsTableName = push ? "" : channelName + BADConstants.resultsEnding;
 
         EntityId entityId = new EntityId(BADConstants.CHANNEL_EXTENSION_NAME, dataverse, channelName.getValue());
         ICcApplicationContext appCtx = metadataProvider.getApplicationContext();

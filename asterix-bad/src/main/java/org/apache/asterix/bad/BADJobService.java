@@ -77,8 +77,8 @@ public class BADJobService {
             DeployedJobSpecId deployedId = hcc.deployJobSpec(channeljobSpec);
             ScheduledExecutorService ses = startRepetitiveDeployedJobSpec(deployedId, hcc, findPeriod(duration),
                     new HashMap<>(), entityId, txnIdFactory, listener);
-            listener.storeDeployedJobSpecId(deployedId);
-            listener.storeExecutorService(ses);
+            listener.setDeployedJobSpecId(deployedId);
+            listener.setExecutorService(ses);
         }
 
     }
@@ -248,7 +248,7 @@ public class BADJobService {
         }
         if (useNewId) {
             DeployedJobSpecId id = hcc.deployJobSpec(jobSpec);
-            listener.storeDeployedJobSpecId(id);
+            listener.setDeployedJobSpecId(id);
         } else {
             hcc.redeployJobSpec(listener.getDeployedJobSpecId(), jobSpec);
         }

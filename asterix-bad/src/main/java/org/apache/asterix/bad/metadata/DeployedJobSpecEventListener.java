@@ -102,11 +102,11 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
         return type;
     }
 
-    public void storeDeployedJobSpecId(DeployedJobSpecId deployedJobSpecId) {
+    public void setDeployedJobSpecId(DeployedJobSpecId deployedJobSpecId) {
         this.deployedJobSpecId = deployedJobSpecId;
     }
 
-    public void storeExecutorService(ScheduledExecutorService ses) {
+    public void setExecutorService(ScheduledExecutorService ses) {
         this.executorService = ses;
     }
 

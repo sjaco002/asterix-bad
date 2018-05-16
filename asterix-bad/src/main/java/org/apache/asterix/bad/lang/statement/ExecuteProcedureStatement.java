@@ -127,7 +127,7 @@ public class ExecuteProcedureStatement extends ExtensionStatement {
                 ScheduledExecutorService ses = BADJobService.startRepetitiveDeployedJobSpec(deployedJobSpecId, hcc,
                         BADJobService.findPeriod(procedure.getDuration()), contextRuntimeVarMap, entityId,
                         metadataProvider.getTxnIdFactory(), listener);
-                listener.storeExecutorService(ses);
+                listener.setExecutorService(ses);
             }
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
             txnActive = false;
