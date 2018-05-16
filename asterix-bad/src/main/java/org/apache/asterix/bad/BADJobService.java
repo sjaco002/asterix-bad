@@ -230,7 +230,7 @@ public class BADJobService {
             jobSpec = compileProcedureJob(badStatementExecutor, metadataProvider, hcc, hdc, stats, fStatements.get(1));
 
         }
-        hcc.upsertDeployedJobSpec(listener.getDeployedJobSpecId(), jobSpec);
+        hcc.redeployJobSpec(listener.getDeployedJobSpecId(), jobSpec);
 
         listener.resume();
 
