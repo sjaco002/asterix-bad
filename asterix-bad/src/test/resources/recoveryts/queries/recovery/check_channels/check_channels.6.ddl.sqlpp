@@ -16,7 +16,13 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+/*
+* Description  : Confirm that channel is still running after cluster restart
+* Expected Res : Success
+* Date         : May 2018
+* Author       : Steven Jacobs
+*/
 use channels;
 
-array_count((select *
-from roomRecordsResults result));
+drop channel roomRecordsResults;
+drop channel roomRecords2Results;

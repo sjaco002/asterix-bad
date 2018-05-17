@@ -44,4 +44,28 @@ create function RoomOccupants(room) {
 
 create broker brokerA at "http://www.notifyA.com";
 
-create repetitive channel roomRecords using RoomOccupants@1 period duration("PT5S");
+create repetitive channel roomRecords using RoomOccupants@1 period duration("PT1S");
+
+create procedure selectSome(r) {
+select roomNumber from channels.UserLocations
+where roomNumber = r
+order by userId
+};
+
+create procedure deleteSome(r) {
+delete from channels.UserLocations
+where roomNumber = r
+};
+
+create procedure addMe() {
+  insert into channels.UserLocations([
+    {"userId":2, "roomNumber":123}]
+  )
+};
+
+upsert into UserLocations([
+{"userId":1, "roomNumber":123},
+{"userId":3, "roomNumber":350}]
+);
+
+create repetitive channel roomRecords2 using RoomOccupants@1 period duration("PT5S");

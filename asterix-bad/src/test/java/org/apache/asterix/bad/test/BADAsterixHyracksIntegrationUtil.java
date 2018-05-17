@@ -19,7 +19,6 @@
 package org.apache.asterix.bad.test;
 
 import org.apache.asterix.api.common.AsterixHyracksIntegrationUtil;
-import org.apache.asterix.common.config.GlobalConfig;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -30,13 +29,15 @@ public class BADAsterixHyracksIntegrationUtil extends AsterixHyracksIntegrationU
         BADAsterixHyracksIntegrationUtil integrationUtil = new BADAsterixHyracksIntegrationUtil();
         try {
             integrationUtil.run(Boolean.getBoolean("cleanup.start"), Boolean.getBoolean("cleanup.shutdown"),
-                    System.getProperty("external.lib", ""));
+                    System.getProperty("external.lib", ""),
+                    "asterixdb/asterix-opt/asterix-bad/src/main/resources/cc.conf");
         } catch (Exception e) {
             System.exit(1);
         }
     }
 
-    protected void run(boolean cleanupOnStart, boolean cleanupOnShutdown, String loadExternalLibs) throws Exception {
+    protected void run(boolean cleanupOnStart, boolean cleanupOnShutdown, String ccConfPath, boolean wait)
+            throws Exception {
         Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
             public void run() {
@@ -47,10 +48,16 @@ public class BADAsterixHyracksIntegrationUtil extends AsterixHyracksIntegrationU
                 }
             }
         });
-        init(cleanupOnStart, "asterixdb/asterix-opt/asterix-bad/src/main/resources/cc.conf");
-        while (true) {
+        init(cleanupOnStart, ccConfPath);
+        while (wait) {
             Thread.sleep(10000);
         }
+    }
+
+    @Override
+    protected void run(boolean cleanupOnStart, boolean cleanupOnShutdown, String loadExternalLibs, String ccConfPath)
+            throws Exception {
+        run(cleanupOnStart, cleanupOnShutdown, ccConfPath, true);
     }
 
 }

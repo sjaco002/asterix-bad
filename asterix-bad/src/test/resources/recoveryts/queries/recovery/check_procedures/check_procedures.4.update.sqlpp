@@ -17,31 +17,12 @@
  * under the License.
  */
 /*
-* Description  : Restart cluster and confirm that procedures and channel still work
+* Description  : Confirm that procedure still works after cluster restart
 * Expected Res : Success
-* Date         : 2018
+* Date         : May 2018
 * Author       : Steven Jacobs
 */
 
-drop dataverse two if exists;
-drop dataverse channels if exists;
-create dataverse channels;
 use channels;
 
-create type userLocation as {
-  userId: int,
-  roomNumber: int
-};
-
-create dataset UserLocations(userLocation)
-primary key userId;
-
-create function RoomOccupants(room) {
-  (select location.userId
-  from UserLocations location
-  where location.roomNumber = room)
-};
-
-create broker brokerA at "http://www.notifyA.com";
-
-create repetitive channel roomRecords using RoomOccupants@1 period duration("PT5S");
+execute deleteSome(123);
