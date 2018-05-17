@@ -26,7 +26,6 @@ import java.util.Map;
 
 import org.apache.asterix.test.base.RetainLogsRule;
 import org.apache.asterix.test.common.TestExecutor;
-import org.apache.asterix.test.runtime.HDFSCluster;
 import org.apache.asterix.testframework.context.TestCaseContext;
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
@@ -79,10 +78,28 @@ public class BADRecoveryTest {
         })[0];
         ncServiceHomePath = new File(installerTargetPath, ncServiceHomeDirName).getAbsolutePath();
 
-        LOGGER.info("NCSERVICE_HOME=" + ncServiceHomePath);
+
 
         pb = new ProcessBuilder();
         env = pb.environment();
+
+        //Create the folder to run asterix with extensions
+        String asterixInstallerTarget = asterixInstallerPath + File.separator + "target";
+        Process p = Runtime.getRuntime().exec("cp -R " + ncServiceHomePath + " " + asterixInstallerTarget);
+        p.waitFor();
+
+        ncServiceHomePath = asterixInstallerTarget + File.separator + ncServiceHomeDirName;
+
+        String confDir = File.separator + "opt" + File.separator + "local" + File.separator + "conf" + File.separator;
+        p = Runtime.getRuntime().exec("rm " + ncServiceHomePath + confDir + "cc.conf");
+        p.waitFor();
+
+        String BADconf = asterixInstallerPath + File.separator + "src" + File.separator + "main" + File.separator
+                + "resources" + File.separator + "cc.conf";
+        p = Runtime.getRuntime().exec("cp " + BADconf + " " + ncServiceHomePath + confDir);
+        p.waitFor();
+
+        LOGGER.info("NCSERVICE_HOME=" + ncServiceHomePath);
         env.put("NCSERVICE_HOME", ncServiceHomePath);
         env.put("JAVA_HOME", System.getProperty("java.home"));
         scriptHomePath = asterixInstallerPath + File.separator + "src" + File.separator + "test" + File.separator
@@ -91,7 +108,6 @@ public class BADRecoveryTest {
 
         TestExecutor.executeScript(pb,
                 scriptHomePath + File.separator + "setup_teardown" + File.separator + "configure_and_validate.sh");
-        HDFSCluster.getInstance().setup(HDFS_BASE);
     }
 
     @AfterClass
@@ -99,11 +115,10 @@ public class BADRecoveryTest {
         File outdir = new File(PATH_ACTUAL);
         FileUtils.deleteDirectory(outdir);
         File dataCopyDir =
-                new File(ncServiceHomePath + File.separator + ".." + File.separator + ".." + File.separator + "data");
+                new File(ncServiceHomePath);
         FileUtils.deleteDirectory(dataCopyDir);
         TestExecutor.executeScript(pb,
                 scriptHomePath + File.separator + "setup_teardown" + File.separator + "stop_and_delete.sh");
-        HDFSCluster.getInstance().cleanup();
     }
 
     @Parameters(name = "RecoveryIT {index}: {0}")
