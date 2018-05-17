@@ -19,6 +19,7 @@
 package org.apache.asterix.bad.test;
 
 import org.apache.asterix.api.common.AsterixHyracksIntegrationUtil;
+import org.apache.asterix.common.config.GlobalConfig;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -29,35 +30,27 @@ public class BADAsterixHyracksIntegrationUtil extends AsterixHyracksIntegrationU
         BADAsterixHyracksIntegrationUtil integrationUtil = new BADAsterixHyracksIntegrationUtil();
         try {
             integrationUtil.run(Boolean.getBoolean("cleanup.start"), Boolean.getBoolean("cleanup.shutdown"),
-                    System.getProperty("external.lib", ""),
-                    "asterixdb/asterix-opt/asterix-bad/src/main/resources/cc.conf");
+                    System.getProperty("external.lib", ""));
         } catch (Exception e) {
             System.exit(1);
         }
     }
 
-    protected void run(boolean cleanupOnStart, boolean cleanupOnShutdown, String ccConfPath, boolean wait)
-            throws Exception {
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            @Override
-            public void run() {
-                try {
-                    deinit(cleanupOnShutdown);
-                } catch (Exception e) {
+    protected void run(boolean cleanupOnStart, boolean cleanupOnShutdown, String loadExternalLibs) throws Exception {
+            Runtime.getRuntime().addShutdownHook(new Thread() {
+                @Override
+                public void run() {
+                    try {
+                        deinit(cleanupOnShutdown);
+                    } catch (Exception e) {
 
+                    }
                 }
-            }
-        });
-        init(cleanupOnStart, ccConfPath);
-        while (wait) {
+            });
+        init(cleanupOnStart, "asterixdb/asterix-opt/asterix-bad/src/main/resources/cc.conf");
+        while (true) {
             Thread.sleep(10000);
         }
-    }
-
-    @Override
-    protected void run(boolean cleanupOnStart, boolean cleanupOnShutdown, String loadExternalLibs, String ccConfPath)
-            throws Exception {
-        run(cleanupOnStart, cleanupOnShutdown, ccConfPath, true);
     }
 
 }

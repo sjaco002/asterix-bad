@@ -41,6 +41,8 @@ public class BADRecoveryTest {
     private static ProcessBuilder pb;
     private static Map<String, String> env;
     private final TestExecutor testExecutor = new TestExecutor();
+    private static int testNumber;
+    private static BADAsterixHyracksIntegrationUtil integrationUtil;
 
     @BeforeClass
     public static void setUp() throws Exception {
@@ -49,11 +51,19 @@ public class BADRecoveryTest {
         pb = new ProcessBuilder();
         env = pb.environment();
         env.put("JAVA_HOME", System.getProperty("java.home"));
+        testNumber = 0;
+        integrationUtil = new BADAsterixHyracksIntegrationUtil();
+        try {
+            integrationUtil.init(true, "src/main/resources/cc.conf");
+        } catch (Exception e) {
+            System.exit(1);
+        }
 
     }
 
     @AfterClass
     public static void tearDown() throws Exception {
+        integrationUtil.deinit(true);
     }
 
     @Parameters(name = "RecoveryIT {index}: {0}")
@@ -73,14 +83,18 @@ public class BADRecoveryTest {
 
     @Test
     public void test() throws Exception {
-        BADAsterixHyracksIntegrationUtil integrationUtil = new BADAsterixHyracksIntegrationUtil();
-        try {
-            integrationUtil.run(false, false, "src/main/resources/cc.conf", false);
-        } catch (Exception e) {
-            System.exit(1);
+        if (testNumber == 1) {
+            try {
+                integrationUtil.init(false, "src/main/resources/cc.conf");
+            } catch (Exception e) {
+                System.exit(1);
+            }
         }
         testExecutor.executeTest(PATH_ACTUAL, tcCtx, pb, false);
-        integrationUtil.deinit(false);
+        if (testNumber == 0) {
+            integrationUtil.deinit(false);
+        }
+        testNumber++;
     }
 
 }
