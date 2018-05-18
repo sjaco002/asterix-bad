@@ -75,16 +75,9 @@ public class BADGlobalRecoveryManager extends GlobalRecoveryManager {
             MetadataManager.INSTANCE.init();
             MetadataTransactionContext mdTxnCtx = MetadataManager.INSTANCE.beginTransaction();
             mdTxnCtx = doRecovery(appCtx, mdTxnCtx);
-            MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
-
-            MetadataProvider metadataProvider = new MetadataProvider(appCtx, MetadataBuiltinEntities.DEFAULT_DATAVERSE);
-            mdTxnCtx = MetadataManager.INSTANCE.beginTransaction();
-            metadataProvider.setMetadataTxnContext(mdTxnCtx);
             List<Channel> channels = BADLangExtension.getAllChannels(mdTxnCtx);
             List<Procedure> procedures = BADLangExtension.getAllProcedures(mdTxnCtx);
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
-            metadataProvider.getLocks().unlock();
-
             deployJobs(appCtx, channels, procedures);
             recoveryCompleted = true;
             recovering = false;
