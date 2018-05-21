@@ -25,4 +25,4 @@
 use channels;
 
 array_count((select *
-from roomRecords2Results result)) < 3;
+from roomRecordsResults result));

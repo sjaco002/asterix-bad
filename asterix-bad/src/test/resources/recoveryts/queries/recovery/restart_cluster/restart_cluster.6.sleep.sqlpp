@@ -22,7 +22,4 @@
 * Date         : May 2018
 * Author       : Steven Jacobs
 */
-use channels;
-
-array_count((select *
-from roomRecords2Results result)) > 3;
+8000

@@ -17,7 +17,7 @@
  * under the License.
  */
 /*
-* Description  : Restart cluster and confirm that procedures and channel still work
+* Description  : Restart cluster and confirm that channel still work
 * Expected Res : Success
 * Date         : 2018
 * Author       : Steven Jacobs

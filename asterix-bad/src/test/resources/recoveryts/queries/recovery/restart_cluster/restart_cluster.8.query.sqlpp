@@ -22,4 +22,7 @@
 * Date         : May 2018
 * Author       : Steven Jacobs
 */
-25000
+use channels;
+
+array_count((select *
+from roomRecords2Results result)) > 0;

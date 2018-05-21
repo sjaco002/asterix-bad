@@ -22,18 +22,8 @@
              QueryFileExtension=".sqlpp">
   <test-group name="recovery">
     <test-case FilePath="recovery">
-      <compilation-unit name="ddl">
-        <output-dir compare="Text">ddl</output-dir>
-      </compilation-unit>
-    </test-case>
-    <test-case FilePath="recovery">
-      <compilation-unit name="check_channels">
-        <output-dir compare="Text">check_channels</output-dir>
-      </compilation-unit>
-    </test-case>
-    <test-case FilePath="recovery">
-      <compilation-unit name="check_procedures">
-        <output-dir compare="Text">check_procedures</output-dir>
+      <compilation-unit name="restart_cluster">
+        <output-dir compare="Text">restart_cluster</output-dir>
       </compilation-unit>
     </test-case>
   </test-group>

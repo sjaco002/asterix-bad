@@ -129,6 +129,7 @@ public class BADGlobalRecoveryManager extends GlobalRecoveryManager {
                     BADJobService.findPeriod(channel.getDuration()), new HashMap<>(), entityId,
                     metadataProvider.getTxnIdFactory(), listener);
             listener.setExecutorService(ses);
+            metadataProvider.getLocks().unlock();
 
             LOGGER.log(Level.SEVERE, entityId.getExtensionName() + " " + entityId.getDataverse() + "."
                     + entityId.getEntityName() + " was stopped by cluster failure. It has restarted.");
@@ -150,6 +151,7 @@ public class BADGlobalRecoveryManager extends GlobalRecoveryManager {
                             new ResultProperties(IStatementExecutor.ResultDelivery.IMMEDIATE),
                             new IStatementExecutor.Stats(), null, null, null),
                     true);
+            metadataProvider.getLocks().unlock();
             //Log that the procedure stopped by cluster restart. Procedure is available again now.
             LOGGER.log(Level.SEVERE, entityId.getExtensionName() + " " + entityId.getDataverse() + "."
                     + entityId.getEntityName()
