@@ -19,7 +19,6 @@
 package org.apache.asterix.bad.test;
 
 import org.apache.asterix.api.common.AsterixHyracksIntegrationUtil;
-import org.apache.asterix.common.config.GlobalConfig;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -36,6 +35,7 @@ public class BADAsterixHyracksIntegrationUtil extends AsterixHyracksIntegrationU
         }
     }
 
+    @Override
     protected void run(boolean cleanupOnStart, boolean cleanupOnShutdown, String loadExternalLibs) throws Exception {
         Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override

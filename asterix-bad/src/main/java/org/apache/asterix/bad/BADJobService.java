@@ -21,6 +21,7 @@ package org.apache.asterix.bad;
 import java.io.StringReader;
 import java.time.Instant;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -51,6 +52,7 @@ import org.apache.asterix.translator.IRequestParameters;
 import org.apache.asterix.translator.IStatementExecutor;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.dataset.IHyracksDataset;
+import org.apache.hyracks.api.dataset.ResultSetId;
 import org.apache.hyracks.api.job.DeployedJobSpecId;
 import org.apache.hyracks.api.job.JobId;
 import org.apache.hyracks.api.job.JobSpecification;
@@ -66,6 +68,20 @@ public class BADJobService {
     private static final int POOL_SIZE = 1;
 
     private static final long millisecondTimeout = BADConstants.EXECUTOR_TIMEOUT * 1000;
+
+    public static void setupExecutorJob(EntityId entityId, JobSpecification channeljobSpec,
+            IHyracksClientConnection hcc, DeployedJobSpecEventListener listener, ITxnIdFactory txnIdFactory,
+            String duration) throws Exception {
+        if (channeljobSpec != null) {
+            channeljobSpec.setProperty(ActiveNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, entityId);
+            DeployedJobSpecId deployedId = hcc.deployJobSpec(channeljobSpec);
+            ScheduledExecutorService ses = startRepetitiveDeployedJobSpec(deployedId, hcc, findPeriod(duration),
+                    new HashMap<>(), entityId, txnIdFactory, listener);
+            listener.setDeployedJobSpecId(deployedId);
+            listener.setExecutorService(ses);
+        }
+
+    }
 
     //Starts running a deployed job specification periodically with an interval of "period" seconds
     public static ScheduledExecutorService startRepetitiveDeployedJobSpec(DeployedJobSpecId distributedId,
@@ -93,7 +109,8 @@ public class BADJobService {
             Map<byte[], byte[]> jobParameters, long period, EntityId entityId, ITxnIdFactory txnIdFactory,
             DeployedJobSpecEventListener listener) throws Exception {
         long executionMilliseconds =
-                runDeployedJobSpec(distributedId, hcc, jobParameters, entityId, txnIdFactory, null, listener, null);
+                runDeployedJobSpec(distributedId, hcc, null, jobParameters, entityId, txnIdFactory, null, listener,
+                        null);
         if (executionMilliseconds > period) {
             LOGGER.log(Level.SEVERE,
                     "Periodic job for " + entityId.getExtensionName() + " " + entityId.getDataverse() + "."
@@ -106,7 +123,7 @@ public class BADJobService {
     }
 
     public static long runDeployedJobSpec(DeployedJobSpecId distributedId, IHyracksClientConnection hcc,
-            Map<byte[], byte[]> jobParameters, EntityId entityId, ITxnIdFactory txnIdFactory,
+            IHyracksDataset hdc, Map<byte[], byte[]> jobParameters, EntityId entityId, ITxnIdFactory txnIdFactory,
             ICcApplicationContext appCtx, DeployedJobSpecEventListener listener, QueryTranslator statementExecutor)
             throws Exception {
         listener.waitWhileAtState(ActivityState.SUSPENDED);
@@ -122,7 +139,7 @@ public class BADJobService {
         long executionMilliseconds = Instant.now().toEpochMilli() - startTime;
 
         if (listener.getType() == DeployedJobSpecEventListener.PrecompiledType.QUERY) {
-            ResultReader resultReader = new ResultReader(listener.getResultDataset(), jobId, listener.getResultId());
+            ResultReader resultReader = new ResultReader(hdc, jobId, new ResultSetId(0));
 
             ResultUtil.printResults(appCtx, resultReader, statementExecutor.getSessionOutput(),
                     new IStatementExecutor.Stats(), null);
@@ -189,7 +206,7 @@ public class BADJobService {
 
     public static void redeployJobSpec(EntityId entityId, String queryBodyString, MetadataProvider metadataProvider,
             BADStatementExecutor badStatementExecutor, IHyracksClientConnection hcc,
-            IRequestParameters requestParameters) throws Exception {
+            IRequestParameters requestParameters, boolean useNewId) throws Exception {
 
         ICcApplicationContext appCtx = metadataProvider.getApplicationContext();
         ActiveNotificationHandler activeEventHandler =
@@ -217,11 +234,10 @@ public class BADJobService {
             }
         } else {
             //Procedures
-            metadataProvider.setResultSetId(listener.getResultId());
-            final IStatementExecutor.ResultDelivery resultDelivery =
-                    requestParameters.getResultProperties().getDelivery();
-            final IHyracksDataset hdc = requestParameters.getHyracksDataset();
-            final IStatementExecutor.Stats stats = requestParameters.getStats();
+            metadataProvider.setResultSetId(new ResultSetId(0));
+            IStatementExecutor.ResultDelivery resultDelivery = requestParameters.getResultProperties().getDelivery();
+            IHyracksDataset hdc = requestParameters.getHyracksDataset();
+            IStatementExecutor.Stats stats = requestParameters.getStats();
             boolean resultsAsync = resultDelivery == IStatementExecutor.ResultDelivery.ASYNC
                     || resultDelivery == IStatementExecutor.ResultDelivery.DEFERRED;
             metadataProvider.setResultAsyncMode(resultsAsync);
@@ -230,7 +246,12 @@ public class BADJobService {
             jobSpec = compileProcedureJob(badStatementExecutor, metadataProvider, hcc, hdc, stats, fStatements.get(1));
 
         }
-        hcc.redeployJobSpec(listener.getDeployedJobSpecId(), jobSpec);
+        if (useNewId) {
+            DeployedJobSpecId id = hcc.deployJobSpec(jobSpec);
+            listener.setDeployedJobSpecId(id);
+        } else {
+            hcc.redeployJobSpec(listener.getDeployedJobSpecId(), jobSpec);
+        }
 
         listener.resume();
 
@@ -239,13 +260,11 @@ public class BADJobService {
     public static JobSpecification compileQueryJob(IStatementExecutor statementExecutor,
             MetadataProvider metadataProvider, IHyracksClientConnection hcc, Query q) throws Exception {
         MetadataTransactionContext mdTxnCtx = MetadataManager.INSTANCE.beginTransaction();
-        boolean bActiveTxn = true;
         metadataProvider.setMetadataTxnContext(mdTxnCtx);
-        JobSpecification jobSpec = null;
+        JobSpecification jobSpec;
         try {
             jobSpec = statementExecutor.rewriteCompileQuery(hcc, metadataProvider, q, null);
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
-            bActiveTxn = false;
         } catch (Exception e) {
             ((QueryTranslator) statementExecutor).abort(e, e, mdTxnCtx);
             throw e;

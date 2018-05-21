@@ -96,7 +96,7 @@ public class ProcedureTupleTranslator extends AbstractTupleTranslator<Procedure>
         }
 
         String returnType = ((AString) procedureRecord
-                .getValueByPos(BADMetadataRecordTypes.PROCEDURE_ARECORD_PROCEDURE_RETURN_TYPE_FIELD_INDEX))
+                .getValueByPos(BADMetadataRecordTypes.PROCEDURE_ARECORD_PROCEDURE_TYPE_FIELD_INDEX))
                         .getStringValue();
 
         String definition = ((AString) procedureRecord
@@ -194,9 +194,9 @@ public class ProcedureTupleTranslator extends AbstractTupleTranslator<Procedure>
 
         // write field 4
         fieldValue.reset();
-        aString.setValue(procedure.getReturnType());
+        aString.setValue(procedure.getType());
         stringSerde.serialize(aString, fieldValue.getDataOutput());
-        recordBuilder.addField(BADMetadataRecordTypes.PROCEDURE_ARECORD_PROCEDURE_RETURN_TYPE_FIELD_INDEX, fieldValue);
+        recordBuilder.addField(BADMetadataRecordTypes.PROCEDURE_ARECORD_PROCEDURE_TYPE_FIELD_INDEX, fieldValue);
 
         // write field 5
         fieldValue.reset();

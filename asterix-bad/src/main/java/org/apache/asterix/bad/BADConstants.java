@@ -47,7 +47,7 @@ public interface BADConstants {
     String FIELD_NAME_ARITY = "Arity";
     String FIELD_NAME_DEPENDENCIES = "Dependencies";
     String FIELD_NAME_PARAMS = "Params";
-    String FIELD_NAME_RETURN_TYPE = "ReturnType";
+    String FIELD_NAME_TYPE = "Type";
     String FIELD_NAME_DEFINITION = "Definition";
     String FIELD_NAME_LANGUAGE = "Language";
     String FIELD_NAME_BODY = "Body";

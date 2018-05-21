@@ -24,7 +24,6 @@ import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -46,7 +45,6 @@ import org.apache.asterix.common.exceptions.AsterixException;
 import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.common.exceptions.MetadataException;
 import org.apache.asterix.common.functions.FunctionSignature;
-import org.apache.asterix.common.transactions.ITxnIdFactory;
 import org.apache.asterix.lang.common.base.Expression;
 import org.apache.asterix.lang.common.base.Statement;
 import org.apache.asterix.lang.common.expression.CallExpr;
@@ -75,7 +73,6 @@ import org.apache.hyracks.algebricks.common.utils.Pair;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.dataset.IHyracksDataset;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
-import org.apache.hyracks.api.job.DeployedJobSpecId;
 import org.apache.hyracks.api.job.JobSpecification;
 import org.apache.hyracks.dataflow.common.data.parsers.IValueParser;
 
@@ -176,42 +173,44 @@ public class CreateChannelStatement extends ExtensionStatement {
                 new Identifier(BADConstants.BAD_DATAVERSE_NAME), subscriptionsTypeName, null, null, null,
                 new HashMap<String, String>(), DatasetType.INTERNAL, idd, null, true);
 
-        //Setup the results dataset
-        partitionFields = new ArrayList<>();
-        fieldNames = new ArrayList<>();
-        fieldNames.add(BADConstants.ResultId);
-        partitionFields.add(fieldNames);
-        idd = new InternalDetailsDecl(partitionFields, keyIndicators, true, null);
-        DatasetDecl createResultsDataset = new DatasetDecl(dataverseName, new Identifier(resultsTableName),
-                new Identifier(BADConstants.BAD_DATAVERSE_NAME), resultsTypeName, null, null, null,
-                new HashMap<String, String>(), DatasetType.INTERNAL, idd, null, true);
-
-        //Create an index on timestamp for results
-        CreateIndexStatement createTimeIndex = new CreateIndexStatement();
-        createTimeIndex.setDatasetName(new Identifier(resultsTableName));
-        createTimeIndex.setDataverseName(dataverseName);
-        createTimeIndex.setIndexName(new Identifier(resultsTableName + "TimeIndex"));
-        createTimeIndex.setIfNotExists(false);
-        createTimeIndex.setIndexType(IndexType.BTREE);
-        createTimeIndex.setEnforced(false);
-        createTimeIndex.setGramLength(0);
-        List<String> fNames = new ArrayList<>();
-        fNames.add(BADConstants.ChannelExecutionTime);
-        Pair<List<String>, IndexedTypeExpression> fields = new Pair<>(fNames, null);
-        createTimeIndex.addFieldExprPair(fields);
-        createTimeIndex.addFieldIndexIndicator(0);
-
-
-        //Run both statements to create datasets
         ((QueryTranslator) statementExecutor).handleCreateDatasetStatement(metadataProvider, createSubscriptionsDataset,
                 hcc, null);
-        metadataProvider.getLocks().reset();
-        ((QueryTranslator) statementExecutor).handleCreateDatasetStatement(metadataProvider, createResultsDataset, hcc,
-                null);
-        metadataProvider.getLocks().reset();
 
-        //Create a time index for the results
-        ((QueryTranslator) statementExecutor).handleCreateIndexStatement(metadataProvider, createTimeIndex, hcc, null);
+        if (!push) {
+            //Setup the results dataset
+            partitionFields = new ArrayList<>();
+            fieldNames = new ArrayList<>();
+            fieldNames.add(BADConstants.ResultId);
+            partitionFields.add(fieldNames);
+            idd = new InternalDetailsDecl(partitionFields, keyIndicators, true, null);
+            DatasetDecl createResultsDataset = new DatasetDecl(dataverseName, new Identifier(resultsTableName),
+                    new Identifier(BADConstants.BAD_DATAVERSE_NAME), resultsTypeName, null, null, null, new HashMap<>(),
+                    DatasetType.INTERNAL, idd, null, true);
+
+            //Create an index on timestamp for results
+            CreateIndexStatement createTimeIndex = new CreateIndexStatement();
+            createTimeIndex.setDatasetName(new Identifier(resultsTableName));
+            createTimeIndex.setDataverseName(dataverseName);
+            createTimeIndex.setIndexName(new Identifier(resultsTableName + "TimeIndex"));
+            createTimeIndex.setIfNotExists(false);
+            createTimeIndex.setIndexType(IndexType.BTREE);
+            createTimeIndex.setEnforced(false);
+            createTimeIndex.setGramLength(0);
+            List<String> fNames = new ArrayList<>();
+            fNames.add(BADConstants.ChannelExecutionTime);
+            Pair<List<String>, IndexedTypeExpression> fields = new Pair<>(fNames, null);
+            createTimeIndex.addFieldExprPair(fields);
+            createTimeIndex.addFieldIndexIndicator(0);
+            metadataProvider.getLocks().reset();
+            ((QueryTranslator) statementExecutor).handleCreateDatasetStatement(metadataProvider, createResultsDataset,
+                    hcc, null);
+            metadataProvider.getLocks().reset();
+
+            //Create a time index for the results
+            ((QueryTranslator) statementExecutor).handleCreateIndexStatement(metadataProvider, createTimeIndex, hcc,
+                    null);
+
+        }
 
     }
 
@@ -257,18 +256,6 @@ public class CreateChannelStatement extends ExtensionStatement {
                 hcc, hdc, ResultDelivery.ASYNC, null, stats, true, null);
     }
 
-    private void setupExecutorJob(EntityId entityId, JobSpecification channeljobSpec, IHyracksClientConnection hcc,
-            DeployedJobSpecEventListener listener, ITxnIdFactory txnIdFactory) throws Exception {
-        if (channeljobSpec != null) {
-            channeljobSpec.setProperty(ActiveNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, entityId);
-            DeployedJobSpecId destributedId = hcc.deployJobSpec(channeljobSpec);
-            ScheduledExecutorService ses = BADJobService.startRepetitiveDeployedJobSpec(destributedId, hcc,
-                    BADJobService.findPeriod(duration), new HashMap<>(), entityId, txnIdFactory, listener);
-            listener.storeDistributedInfo(destributedId, ses, null, null);
-        }
-
-    }
-
     @Override
     public void handle(IHyracksClientConnection hcc, IStatementExecutor statementExecutor,
             IRequestParameters requestContext, MetadataProvider metadataProvider, int resultSetId)
@@ -283,7 +270,7 @@ public class CreateChannelStatement extends ExtensionStatement {
         dataverseName = new Identifier(((QueryTranslator) statementExecutor).getActiveDataverse(dataverseName));
         dataverse = dataverseName.getValue();
         subscriptionsTableName = channelName + BADConstants.subscriptionEnding;
-        resultsTableName = channelName + BADConstants.resultsEnding;
+        resultsTableName = push ? "" : channelName + BADConstants.resultsEnding;
 
         EntityId entityId = new EntityId(BADConstants.CHANNEL_EXTENSION_NAME, dataverse, channelName.getValue());
         ICcApplicationContext appCtx = metadataProvider.getApplicationContext();
@@ -291,7 +278,7 @@ public class CreateChannelStatement extends ExtensionStatement {
                 (ActiveNotificationHandler) appCtx.getActiveNotificationHandler();
         DeployedJobSpecEventListener listener = (DeployedJobSpecEventListener) activeEventHandler.getListener(entityId);
         boolean alreadyActive = false;
-        Channel channel = null;
+        Channel channel;
 
         MetadataTransactionContext mdTxnCtx = null;
         try {
@@ -313,7 +300,7 @@ public class CreateChannelStatement extends ExtensionStatement {
             if (MetadataManager.INSTANCE.getDataset(mdTxnCtx, dataverse, subscriptionsTableName) != null) {
                 throw new AsterixException("The channel name:" + channelName + " is not available.");
             }
-            if (MetadataManager.INSTANCE.getDataset(mdTxnCtx, dataverse, resultsTableName) != null) {
+            if (!push && MetadataManager.INSTANCE.getDataset(mdTxnCtx, dataverse, resultsTableName) != null) {
                 throw new AsterixException("The channel name:" + channelName + " is not available.");
             }
             MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getApplicationContext(),
@@ -330,12 +317,12 @@ public class CreateChannelStatement extends ExtensionStatement {
             // Now we subscribe
             if (listener == null) {
                 listener = new DeployedJobSpecEventListener(appCtx, entityId,
-                        push ? PrecompiledType.PUSH_CHANNEL : PrecompiledType.CHANNEL, null,
-                        "BadListener");
+                        push ? PrecompiledType.PUSH_CHANNEL : PrecompiledType.CHANNEL);
                 activeEventHandler.registerListener(listener);
             }
 
-            setupExecutorJob(entityId, channeljobSpec, hcc, listener, metadataProvider.getTxnIdFactory());
+            BADJobService.setupExecutorJob(entityId, channeljobSpec, hcc, listener, metadataProvider.getTxnIdFactory(),
+                    duration);
             channel = new Channel(dataverse, channelName.getValue(), subscriptionsTableName, resultsTableName, function,
                     duration, null, body);
 

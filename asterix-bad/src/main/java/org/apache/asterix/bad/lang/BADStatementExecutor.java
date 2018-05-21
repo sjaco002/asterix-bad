@@ -185,9 +185,6 @@ public class BADStatementExecutor extends QueryTranslator {
     public void handleCreateIndexStatement(MetadataProvider metadataProvider, Statement stmt,
             IHyracksClientConnection hcc, IRequestParameters requestParameters) throws Exception {
 
-        //TODO: Check whether a delete or insert procedure using the index. If so, we will need to
-        // disallow the procedure until after the newly distributed version is ready
-
         MetadataTransactionContext mdTxnCtx = MetadataManager.INSTANCE.beginTransaction();
         metadataProvider.setMetadataTxnContext(mdTxnCtx);
         //Allow channels to use the new index
@@ -243,13 +240,13 @@ public class BADStatementExecutor extends QueryTranslator {
         for (Channel channel : usages.first) {
             metadataProvider = new MetadataProvider(appCtx, activeDataverse);
             BADJobService.redeployJobSpec(channel.getChannelId(), channel.getChannelBody(), metadataProvider, this, hcc,
-                    requestParameters);
+                    requestParameters, false);
             metadataProvider.getLocks().unlock();
         }
         for (Procedure procedure : usages.second) {
             metadataProvider = new MetadataProvider(appCtx, activeDataverse);
             BADJobService.redeployJobSpec(procedure.getEntityId(), procedure.getBody(), metadataProvider, this, hcc,
-                    requestParameters);
+                    requestParameters, false);
             metadataProvider.getLocks().unlock();
         }
 

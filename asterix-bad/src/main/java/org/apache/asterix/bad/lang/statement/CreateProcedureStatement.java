@@ -72,7 +72,6 @@ import org.apache.asterix.translator.IStatementExecutor.Stats;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.algebricks.common.utils.Pair;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
-import org.apache.hyracks.api.dataset.IHyracksDataset;
 import org.apache.hyracks.api.dataset.ResultSetId;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.job.DeployedJobSpecId;
@@ -176,7 +175,7 @@ public class CreateProcedureStatement extends ExtensionStatement {
     }
 
     private Pair<JobSpecification, PrecompiledType> createProcedureJob(IStatementExecutor statementExecutor,
-            MetadataProvider metadataProvider, IHyracksClientConnection hcc, IHyracksDataset hdc, Stats stats)
+            MetadataProvider metadataProvider, IHyracksClientConnection hcc, Stats stats)
                     throws Exception {
         if (getProcedureBodyStatement().getKind() == Statement.Kind.INSERT) {
             if (!varList.isEmpty()) {
@@ -188,7 +187,7 @@ public class CreateProcedureStatement extends ExtensionStatement {
                     insertStatement.getDatasetName().getValue()));
             return new Pair<>(
                     ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider,
-                            getProcedureBodyStatement(), hcc, hdc, ResultDelivery.ASYNC, null, stats, true, null),
+                            getProcedureBodyStatement(), hcc, null, ResultDelivery.ASYNC, null, stats, true, null),
                     PrecompiledType.INSERT);
         } else if (getProcedureBodyStatement().getKind() == Statement.Kind.QUERY) {
             SqlppRewriterFactory fact = new SqlppRewriterFactory();
@@ -218,11 +217,11 @@ public class CreateProcedureStatement extends ExtensionStatement {
     }
 
     private void setupDeployedJobSpec(EntityId entityId, JobSpecification jobSpec, IHyracksClientConnection hcc,
-            DeployedJobSpecEventListener listener, ResultSetId resultSetId, IHyracksDataset hdc, Stats stats)
+            DeployedJobSpecEventListener listener, ResultSetId resultSetId, Stats stats)
             throws Exception {
         jobSpec.setProperty(ActiveNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, entityId);
         DeployedJobSpecId deployedJobSpecId = hcc.deployJobSpec(jobSpec);
-        listener.storeDistributedInfo(deployedJobSpecId, null, hdc, resultSetId);
+        listener.setDeployedJobSpecId(deployedJobSpecId);
     }
 
     @Override
@@ -255,29 +254,25 @@ public class CreateProcedureStatement extends ExtensionStatement {
             if (alreadyActive) {
                 throw new AsterixException("Procedure " + signature.getName() + " is already running");
             }
-            metadataProvider.setResultSetId(new ResultSetId(resultSetId++));
-            final ResultDelivery resultDelivery = requestParameters.getResultProperties().getDelivery();
-            final IHyracksDataset hdc = requestParameters.getHyracksDataset();
+            metadataProvider.setResultSetId(new ResultSetId(0));
             final Stats stats = requestParameters.getStats();
-            boolean resultsAsync = resultDelivery == ResultDelivery.ASYNC || resultDelivery == ResultDelivery.DEFERRED;
-            metadataProvider.setResultAsyncMode(resultsAsync);
+            metadataProvider.setResultAsyncMode(false);
             metadataProvider.setMaxResultReads(1);
             //Create Procedure Internal Job
             Pair<JobSpecification, PrecompiledType> procedureJobSpec =
-                    createProcedureJob(statementExecutor, metadataProvider, hcc, hdc, stats);
+                    createProcedureJob(statementExecutor, metadataProvider, hcc, stats);
 
             // Now we subscribe
             if (listener == null) {
-                listener = new DeployedJobSpecEventListener(appCtx, entityId, procedureJobSpec.second, null,
-                        "BadListener");
+                listener = new DeployedJobSpecEventListener(appCtx, entityId, procedureJobSpec.second);
                 activeEventHandler.registerListener(listener);
             }
             setupDeployedJobSpec(entityId, procedureJobSpec.first, hcc, listener, metadataProvider.getResultSetId(),
-                    hdc,
                     stats);
 
             procedure = new Procedure(dataverse, signature.getName(), signature.getArity(), getParamList(),
-                    Function.RETURNTYPE_VOID, getProcedureBody(), Function.LANGUAGE_AQL, duration, dependencies);
+                    procedureJobSpec.second.toString(), getProcedureBody(), Function.LANGUAGE_SQLPP, duration,
+                    dependencies);
 
             MetadataManager.INSTANCE.addEntity(mdTxnCtx, procedure);
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
