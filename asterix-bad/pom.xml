@@ -294,6 +294,11 @@
       <version>${asterix.version}</version>
     </dependency>
     <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+      <version>2.6</version>
+    </dependency>
+    <dependency>
       <groupId>org.apache.asterix</groupId>
       <artifactId>asterix-fuzzyjoin</artifactId>
       <version>${asterix.version}</version>

@@ -27,8 +27,6 @@ import java.util.Map;
 import org.apache.asterix.test.common.TestExecutor;
 import org.apache.asterix.testframework.context.TestCaseContext;
 import org.apache.commons.io.FileUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -39,7 +37,8 @@ import org.junit.runners.Parameterized.Parameters;
 @RunWith(Parameterized.class)
 public class BADRecoveryTest {
 
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final java.util.logging.Logger LOGGER =
+            java.util.logging.Logger.getLogger(BADRecoveryTest.class.getName());
 
     private static final String PATH_ACTUAL = "target" + File.separator + "rttest" + File.separator;
     private static final String PATH_BASE = "src/test/resources/recoveryts/";
