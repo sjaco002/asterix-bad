@@ -27,6 +27,7 @@ import org.apache.asterix.bad.lang.statement.CreateProcedureStatement;
 import org.apache.asterix.bad.lang.statement.ExecuteProcedureStatement;
 import org.apache.asterix.bad.lang.statement.ProcedureDropStatement;
 import org.apache.asterix.lang.sqlpp.parser.ParseException;
+import org.apache.asterix.lang.sqlpp.parser.SqlppParseException;
 import org.apache.asterix.lang.sqlpp.parser.Token;
 
 
