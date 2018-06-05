@@ -22,7 +22,9 @@
 * Date         : May 17
 * Author       : Steven Jacobs
 */
+// polltimeoutsecs=15
 
 use channels;
 select value array_count (result.result.shelters)
-from EmergenciesNearMeChannelResults result;
+from EmergenciesNearMeChannelResults result
+limit 1;
