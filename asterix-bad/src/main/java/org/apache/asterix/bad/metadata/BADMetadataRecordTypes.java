@@ -27,16 +27,24 @@ import org.apache.asterix.om.types.IAType;
 
 public class BADMetadataRecordTypes {
 
-    // -------------------------------------- Subscriptions --------------------------------------//
-    private static final String[] subTypeFieldNames =
-            { BADConstants.SubscriptionId };
-    private static final IAType[] subTypeFieldTypes = { BuiltinType.AUUID };
+    // -------------------------------------- Channel Subscriptions --------------------------------------//
+    private static final String[] channelSubTypeFieldNames = { BADConstants.ChannelSubscriptionId };
+    private static final IAType[] channelSubTypeFieldTypes = { BuiltinType.AUUID };
     public static final ARecordType channelSubscriptionsType =
-            new ARecordType(BADConstants.ChannelSubscriptionsType, subTypeFieldNames, subTypeFieldTypes, true);
+            new ARecordType(BADConstants.ChannelSubscriptionsType, channelSubTypeFieldNames, channelSubTypeFieldTypes,
+                    true);
+
+    // -------------------------------------- Broker Subscriptions --------------------------------------//
+    private static final String[] brokerSubTypeFieldNames = { BADConstants.ChannelSubscriptionId,
+            BADConstants.BrokerSubscriptionId, BADConstants.DataverseName, BADConstants.BrokerName };
+    private static final IAType[] brokerSubTypeFieldTypes =
+            { BuiltinType.AUUID, BuiltinType.AUUID, BuiltinType.ASTRING, BuiltinType.ASTRING };
+    public static final ARecordType brokerSubscriptionsType = new ARecordType(BADConstants.BrokerSubscriptionsType,
+            brokerSubTypeFieldNames, brokerSubTypeFieldTypes, true);
 
     // ---------------------------------------- Results --------------------------------------------//
     private static final String[] resultTypeFieldNames = { BADConstants.ResultId, BADConstants.ChannelExecutionTime,
-            BADConstants.SubscriptionId, BADConstants.DeliveryTime };
+            BADConstants.ChannelSubscriptionId, BADConstants.DeliveryTime };
     private static final IAType[] resultTypeFieldTypes =
             { BuiltinType.AUUID, BuiltinType.ADATETIME, BuiltinType.AUUID, BuiltinType.ADATETIME };
     public static final ARecordType channelResultsType =
@@ -45,25 +53,28 @@ public class BADMetadataRecordTypes {
     //------------------------------------------ Channel ----------------------------------------//     
     public static final int CHANNEL_ARECORD_DATAVERSE_NAME_FIELD_INDEX = 0;
     public static final int CHANNEL_ARECORD_CHANNEL_NAME_FIELD_INDEX = 1;
-    public static final int CHANNEL_ARECORD_SUBSCRIPTIONS_NAME_FIELD_INDEX = 2;
+    public static final int CHANNEL_ARECORD_CHANNEL_SUBSCRIPTIONS_NAME_FIELD_INDEX = 2;
     public static final int CHANNEL_ARECORD_RESULTS_NAME_FIELD_INDEX = 3;
     public static final int CHANNEL_ARECORD_FUNCTION_FIELD_INDEX = 4;
     public static final int CHANNEL_ARECORD_DURATION_FIELD_INDEX = 5;
     public static final int CHANNEL_ARECORD_DEPENDENCIES_FIELD_INDEX = 6;
     public static final int CHANNEL_ARECORD_BODY_FIELD_INDEX = 7;
+    public static final int CHANNEL_ARECORD_BROKER_SUBSCRIPTIONS_NAME_FIELD_INDEX = 8;
     public static final ARecordType CHANNEL_RECORDTYPE = MetadataRecordTypes.createRecordType(
             // RecordTypeName
             BADConstants.RECORD_TYPENAME_CHANNEL,
             // FieldNames
-            new String[] { BADConstants.DataverseName, BADConstants.ChannelName, BADConstants.SubscriptionsDatasetName,
+            new String[] { BADConstants.DataverseName, BADConstants.ChannelName,
+                    BADConstants.ChannelSubscriptionsDatasetName,
                     BADConstants.ResultsDatasetName, BADConstants.Function, BADConstants.Duration,
-                    BADConstants.FIELD_NAME_DEPENDENCIES, BADConstants.FIELD_NAME_BODY },
+                    BADConstants.FIELD_NAME_DEPENDENCIES, BADConstants.FIELD_NAME_BODY,
+                    BADConstants.BrokerSubscriptionsDatasetName },
             // FieldTypes
             new IAType[] { BuiltinType.ASTRING, BuiltinType.ASTRING, BuiltinType.ASTRING, BuiltinType.ASTRING,
                     new AOrderedListType(BuiltinType.ASTRING, null), BuiltinType.ASTRING,
                     new AOrderedListType(new AOrderedListType(new AOrderedListType(BuiltinType.ASTRING, null), null),
                             null),
-                    BuiltinType.ASTRING },
+                    BuiltinType.ASTRING, BuiltinType.ASTRING },
             //IsOpen?
             true);
     //------------------------------------------ Broker ----------------------------------------//

@@ -138,7 +138,7 @@ public class ChannelSubscribeStatement extends ExtensionStatement {
                 throw new AsterixException("There is no broker with this name " + brokerName + ".");
             }
 
-            String subscriptionsDatasetName = channel.getSubscriptionsDataset();
+            String subscriptionsDatasetName = channel.getChannelSubscriptionsDataset();
 
             if (argList.size() != channel.getFunction().getArity()) {
                 throw new AsterixException("Channel expected " + channel.getFunction().getArity()
@@ -157,7 +157,7 @@ public class ChannelSubscribeStatement extends ExtensionStatement {
             fb.add(new FieldBinding(leftExpr, rightExpr));
 
             if (subscriptionId != null) {
-                leftExpr = new LiteralExpr(new StringLiteral(BADConstants.SubscriptionId));
+                leftExpr = new LiteralExpr(new StringLiteral(BADConstants.ChannelSubscriptionId));
 
                 List<Expression> UUIDList = new ArrayList<>();
                 UUIDList.add(new LiteralExpr(new StringLiteral(subscriptionId)));
@@ -190,7 +190,8 @@ public class ChannelSubscribeStatement extends ExtensionStatement {
                 VariableExpr resultVar = new VariableExpr(new VarIdentifier("$result", 0));
                 VariableExpr useResultVar = new VariableExpr(new VarIdentifier("$result", 0));
                 useResultVar.setIsNewVar(false);
-                FieldAccessor accessor = new FieldAccessor(useResultVar, new Identifier(BADConstants.SubscriptionId));
+                FieldAccessor accessor =
+                        new FieldAccessor(useResultVar, new Identifier(BADConstants.ChannelSubscriptionId));
 
                 metadataProvider.setResultSetId(new ResultSetId(resultSetId));
                 boolean resultsAsync =

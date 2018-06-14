@@ -82,8 +82,9 @@ public class ChannelTupleTranslator extends AbstractTupleTranslator<Channel> {
         String channelName =
                 ((AString) channelRecord.getValueByPos(BADMetadataRecordTypes.CHANNEL_ARECORD_CHANNEL_NAME_FIELD_INDEX))
                         .getStringValue();
-        String subscriptionsName = ((AString) channelRecord
-                .getValueByPos(BADMetadataRecordTypes.CHANNEL_ARECORD_SUBSCRIPTIONS_NAME_FIELD_INDEX)).getStringValue();
+        String channelSubscriptionsName = ((AString) channelRecord
+                .getValueByPos(BADMetadataRecordTypes.CHANNEL_ARECORD_CHANNEL_SUBSCRIPTIONS_NAME_FIELD_INDEX))
+                        .getStringValue();
         String resultsName =
                 ((AString) channelRecord.getValueByPos(BADMetadataRecordTypes.CHANNEL_ARECORD_RESULTS_NAME_FIELD_INDEX))
                         .getStringValue();
@@ -127,10 +128,15 @@ public class ChannelTupleTranslator extends AbstractTupleTranslator<Channel> {
                 ((AString) channelRecord.getValueByPos(BADMetadataRecordTypes.CHANNEL_ARECORD_BODY_FIELD_INDEX))
                         .getStringValue();
 
+        String brokerSubscriptionsName = ((AString) channelRecord
+                .getValueByPos(BADMetadataRecordTypes.CHANNEL_ARECORD_BROKER_SUBSCRIPTIONS_NAME_FIELD_INDEX))
+                        .getStringValue();
+
         FunctionSignature signature = new FunctionSignature(functionSignature.get(0), functionSignature.get(1),
                 Integer.parseInt(functionSignature.get(2)));
 
-        channel = new Channel(dataverseName, channelName, subscriptionsName, resultsName, signature, duration,
+        channel = new Channel(dataverseName, channelName, channelSubscriptionsName, brokerSubscriptionsName,
+                resultsName, signature, duration,
                 dependencies, channelBody);
         return channel;
     }
@@ -164,9 +170,10 @@ public class ChannelTupleTranslator extends AbstractTupleTranslator<Channel> {
 
         // write field 2
         fieldValue.reset();
-        aString.setValue(channel.getSubscriptionsDataset());
+        aString.setValue(channel.getChannelSubscriptionsDataset());
         stringSerde.serialize(aString, fieldValue.getDataOutput());
-        recordBuilder.addField(BADMetadataRecordTypes.CHANNEL_ARECORD_SUBSCRIPTIONS_NAME_FIELD_INDEX, fieldValue);
+        recordBuilder.addField(BADMetadataRecordTypes.CHANNEL_ARECORD_CHANNEL_SUBSCRIPTIONS_NAME_FIELD_INDEX,
+                fieldValue);
 
         // write field 3
         fieldValue.reset();
@@ -226,6 +233,13 @@ public class ChannelTupleTranslator extends AbstractTupleTranslator<Channel> {
         aString.setValue(channel.getChannelBody());
         stringSerde.serialize(aString, fieldValue.getDataOutput());
         recordBuilder.addField(BADMetadataRecordTypes.CHANNEL_ARECORD_BODY_FIELD_INDEX, fieldValue);
+
+        // write field 8
+        fieldValue.reset();
+        aString.setValue(channel.getBrokerSubscriptionsDataset());
+        stringSerde.serialize(aString, fieldValue.getDataOutput());
+        recordBuilder.addField(BADMetadataRecordTypes.CHANNEL_ARECORD_BROKER_SUBSCRIPTIONS_NAME_FIELD_INDEX,
+                fieldValue);
 
         // write record
         recordBuilder.write(tupleBuilder.getDataOutput(), true);

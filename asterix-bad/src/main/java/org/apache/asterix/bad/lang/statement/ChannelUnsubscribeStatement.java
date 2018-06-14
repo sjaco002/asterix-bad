@@ -113,11 +113,11 @@ public class ChannelUnsubscribeStatement extends ExtensionStatement {
                 throw new AsterixException("There is no channel with this name " + channelName + ".");
             }
 
-            String subscriptionsDatasetName = channel.getSubscriptionsDataset();
+            String subscriptionsDatasetName = channel.getChannelSubscriptionsDataset();
 
             //Need a condition to say subscription-id = sid
             OperatorExpr condition = new OperatorExpr();
-            FieldAccessor fa = new FieldAccessor(vars, new Identifier(BADConstants.SubscriptionId));
+            FieldAccessor fa = new FieldAccessor(vars, new Identifier(BADConstants.ChannelSubscriptionId));
             condition.addOperand(fa);
             condition.setCurrentop(true);
             condition.addOperator("=");

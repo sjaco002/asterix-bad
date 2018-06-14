@@ -85,7 +85,8 @@ public class CreateChannelStatement extends ExtensionStatement {
     private Identifier dataverseName;
     private String duration;
     private String body;
-    private String subscriptionsTableName;
+    private String channelSubscriptionsTableName;
+    private String brokerSubscriptionsTableName;
     private String resultsTableName;
     private String dataverse;
     private final boolean push;
@@ -113,7 +114,7 @@ public class CreateChannelStatement extends ExtensionStatement {
     }
 
     public String getSubscriptionsName() {
-        return subscriptionsTableName;
+        return channelSubscriptionsTableName;
     }
 
     public String getDuration() {
@@ -159,29 +160,53 @@ public class CreateChannelStatement extends ExtensionStatement {
     private void createDatasets(IStatementExecutor statementExecutor, MetadataProvider metadataProvider,
             IHyracksClientConnection hcc) throws AsterixException, Exception {
 
+        //Create channel subscriptions dataset
         Identifier subscriptionsTypeName = new Identifier(BADConstants.ChannelSubscriptionsType);
         Identifier resultsTypeName = new Identifier(BADConstants.ChannelResultsType);
         //Setup the subscriptions dataset
         List<List<String>> partitionFields = new ArrayList<>();
         List<Integer> keyIndicators = new ArrayList<>();
         keyIndicators.add(0);
-        List<String> fieldNames = new ArrayList<>();
-        fieldNames.add(BADConstants.SubscriptionId);
-        partitionFields.add(fieldNames);
+        List<String> fieldName = new ArrayList<>();
+        fieldName.add(BADConstants.ChannelSubscriptionId);
+        partitionFields.add(fieldName);
         IDatasetDetailsDecl idd = new InternalDetailsDecl(partitionFields, keyIndicators, false, null);
-        DatasetDecl createSubscriptionsDataset = new DatasetDecl(dataverseName, new Identifier(subscriptionsTableName),
-                new Identifier(BADConstants.BAD_DATAVERSE_NAME), subscriptionsTypeName, null, null, null,
-                new HashMap<String, String>(), DatasetType.INTERNAL, idd, null, true);
+        DatasetDecl createChannelSubscriptionsDataset =
+                new DatasetDecl(dataverseName, new Identifier(channelSubscriptionsTableName),
+                        new Identifier(BADConstants.BAD_DATAVERSE_NAME), subscriptionsTypeName, null, null, null,
+                        new HashMap<String, String>(), DatasetType.INTERNAL, idd, null, true);
 
-        ((QueryTranslator) statementExecutor).handleCreateDatasetStatement(metadataProvider, createSubscriptionsDataset,
+        ((QueryTranslator) statementExecutor).handleCreateDatasetStatement(metadataProvider,
+                createChannelSubscriptionsDataset, hcc, null);
+
+        //Create broker subscriptions dataset
+        Identifier brokerSubscriptionsTypeName = new Identifier(BADConstants.BrokerSubscriptionsType);
+        partitionFields = new ArrayList<>();
+        keyIndicators = new ArrayList<>();
+        keyIndicators.add(0);
+        keyIndicators.add(0);
+        fieldName = new ArrayList<>();
+        List<String> fieldName2 = new ArrayList<>();
+        fieldName.add(BADConstants.ChannelSubscriptionId);
+        fieldName2.add(BADConstants.BrokerSubscriptionId);
+        partitionFields.add(fieldName);
+        partitionFields.add(fieldName2);
+        idd = new InternalDetailsDecl(partitionFields, keyIndicators, false, null);
+        DatasetDecl createBrokerSubscriptionsDataset =
+                new DatasetDecl(dataverseName, new Identifier(brokerSubscriptionsTableName),
+                        new Identifier(BADConstants.BAD_DATAVERSE_NAME), brokerSubscriptionsTypeName, null, null, null,
+                        new HashMap<String, String>(), DatasetType.INTERNAL, idd, null, true);
+        metadataProvider.getLocks().reset();
+        ((QueryTranslator) statementExecutor).handleCreateDatasetStatement(metadataProvider,
+                createBrokerSubscriptionsDataset,
                 hcc, null);
 
         if (!push) {
             //Setup the results dataset
             partitionFields = new ArrayList<>();
-            fieldNames = new ArrayList<>();
-            fieldNames.add(BADConstants.ResultId);
-            partitionFields.add(fieldNames);
+            fieldName = new ArrayList<>();
+            fieldName.add(BADConstants.ResultId);
+            partitionFields.add(fieldName);
             idd = new InternalDetailsDecl(partitionFields, keyIndicators, true, null);
             DatasetDecl createResultsDataset = new DatasetDecl(dataverseName, new Identifier(resultsTableName),
                     new Identifier(BADConstants.BAD_DATAVERSE_NAME), resultsTypeName, null, null, null, new HashMap<>(),
@@ -225,9 +250,10 @@ public class CreateChannelStatement extends ExtensionStatement {
         builder.append("with " + BADConstants.ChannelExecutionTime + " as current_datetime() \n");
         builder.append("select result, ");
         builder.append(BADConstants.ChannelExecutionTime + ", ");
-        builder.append("sub." + BADConstants.SubscriptionId + " as " + BADConstants.SubscriptionId + ",");
+        builder.append("sub." + BADConstants.ChannelSubscriptionId + " as " + BADConstants.ChannelSubscriptionId + ",");
         builder.append("current_datetime() as " + BADConstants.DeliveryTime + "\n");
-        builder.append("from " + dataverse + "." + subscriptionsTableName + " sub,\n");
+        builder.append("from " + dataverse + "." + brokerSubscriptionsTableName + " bs,\n");
+        builder.append(dataverse + "." + channelSubscriptionsTableName + " sub,\n");
         builder.append(BADConstants.BAD_DATAVERSE_NAME + "." + BADConstants.BROKER_KEYWORD + " b, \n");
         builder.append(function.getNamespace() + "." + function.getName() + "(");
         int i = 0;
@@ -235,8 +261,10 @@ public class CreateChannelStatement extends ExtensionStatement {
             builder.append("sub.param" + i + ",");
         }
         builder.append("sub.param" + i + ") result \n");
-        builder.append("where b." + BADConstants.BrokerName + " = sub." + BADConstants.BrokerName + "\n");
-        builder.append("and b." + BADConstants.DataverseName + " = sub." + BADConstants.DataverseName + "\n");
+        builder.append("where b." + BADConstants.BrokerName + " = bs." + BADConstants.BrokerName + "\n");
+        builder.append("and b." + BADConstants.DataverseName + " = bs." + BADConstants.DataverseName + "\n");
+        builder.append(
+                "and bs." + BADConstants.ChannelSubscriptionId + " = sub." + BADConstants.ChannelSubscriptionId + "\n");
         if (!push) {
             builder.append(")");
             builder.append(" returning a");
@@ -269,7 +297,9 @@ public class CreateChannelStatement extends ExtensionStatement {
 
         dataverseName = new Identifier(((QueryTranslator) statementExecutor).getActiveDataverse(dataverseName));
         dataverse = dataverseName.getValue();
-        subscriptionsTableName = channelName + BADConstants.subscriptionEnding;
+        channelSubscriptionsTableName =
+                channelName + BADConstants.CHANNEL_EXTENSION_NAME + BADConstants.subscriptionEnding;
+        brokerSubscriptionsTableName = channelName + BADConstants.BROKER_KEYWORD + BADConstants.subscriptionEnding;
         resultsTableName = push ? "" : channelName + BADConstants.resultsEnding;
 
         EntityId entityId = new EntityId(BADConstants.CHANNEL_EXTENSION_NAME, dataverse, channelName.getValue());
@@ -297,7 +327,10 @@ public class CreateChannelStatement extends ExtensionStatement {
             initialize(mdTxnCtx);
 
             //check if names are available before creating anything
-            if (MetadataManager.INSTANCE.getDataset(mdTxnCtx, dataverse, subscriptionsTableName) != null) {
+            if (MetadataManager.INSTANCE.getDataset(mdTxnCtx, dataverse, channelSubscriptionsTableName) != null) {
+                throw new AsterixException("The channel name:" + channelName + " is not available.");
+            }
+            if (MetadataManager.INSTANCE.getDataset(mdTxnCtx, dataverse, brokerSubscriptionsTableName) != null) {
                 throw new AsterixException("The channel name:" + channelName + " is not available.");
             }
             if (!push && MetadataManager.INSTANCE.getDataset(mdTxnCtx, dataverse, resultsTableName) != null) {
@@ -323,7 +356,8 @@ public class CreateChannelStatement extends ExtensionStatement {
 
             BADJobService.setupExecutorJob(entityId, channeljobSpec, hcc, listener, metadataProvider.getTxnIdFactory(),
                     duration);
-            channel = new Channel(dataverse, channelName.getValue(), subscriptionsTableName, resultsTableName, function,
+            channel = new Channel(dataverse, channelName.getValue(), channelSubscriptionsTableName,
+                    brokerSubscriptionsTableName, resultsTableName, function,
                     duration, null, body);
 
             MetadataManager.INSTANCE.addEntity(mdTxnCtx, channel);

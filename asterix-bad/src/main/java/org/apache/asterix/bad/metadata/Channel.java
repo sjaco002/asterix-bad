@@ -34,7 +34,8 @@ public class Channel implements IExtensionMetadataEntity {
 
     /** A unique identifier for the channel */
     protected final EntityId channelId;
-    private final String subscriptionsDatasetName;
+    private final String channelSubscriptionsDatasetName;
+    private final String brokerSubscriptionsDatasetName;
     private final String resultsDatasetName;
     private final String duration;
     private final String channelBody;
@@ -49,13 +50,15 @@ public class Channel implements IExtensionMetadataEntity {
     */
     private final List<List<List<String>>> dependencies;
 
-    public Channel(String dataverseName, String channelName, String subscriptionsDataset, String resultsDataset,
+    public Channel(String dataverseName, String channelName, String channelSubscriptionsDatasetName,
+            String brokerSubscriptionsDatasetName, String resultsDataset,
             FunctionSignature function, String duration, List<List<List<String>>> dependencies, String channelBody) {
         this.channelId = new EntityId(BADConstants.CHANNEL_EXTENSION_NAME, dataverseName, channelName);
         this.function = function;
         this.duration = duration;
         this.resultsDatasetName = resultsDataset;
-        this.subscriptionsDatasetName = subscriptionsDataset;
+        this.channelSubscriptionsDatasetName = channelSubscriptionsDatasetName;
+        this.brokerSubscriptionsDatasetName = brokerSubscriptionsDatasetName;
         this.channelBody = channelBody;
         if (this.function.getNamespace() == null) {
             this.function.setNamespace(dataverseName);
@@ -67,7 +70,7 @@ public class Channel implements IExtensionMetadataEntity {
             this.dependencies.add(new ArrayList<>());
             this.dependencies.add(new ArrayList<>());
             List<String> resultsList = Arrays.asList(dataverseName, resultsDatasetName);
-            List<String> subscriptionList = Arrays.asList(dataverseName, subscriptionsDatasetName);
+            List<String> subscriptionList = Arrays.asList(dataverseName, channelSubscriptionsDatasetName);
             this.dependencies.get(0).add(resultsList);
             this.dependencies.get(0).add(subscriptionList);
             this.dependencies.get(1).add(functionAsPath);
@@ -84,8 +87,12 @@ public class Channel implements IExtensionMetadataEntity {
         return dependencies;
     }
 
-    public String getSubscriptionsDataset() {
-        return subscriptionsDatasetName;
+    public String getChannelSubscriptionsDataset() {
+        return channelSubscriptionsDatasetName;
+    }
+
+    public String getBrokerSubscriptionsDataset() {
+        return brokerSubscriptionsDatasetName;
     }
 
     public String getResultsDatasetName() {

@@ -19,7 +19,8 @@
 package org.apache.asterix.bad;
 
 public interface BADConstants {
-    String SubscriptionId = "subscriptionId";
+    String ChannelSubscriptionId = "channelSubId";
+    String BrokerSubscriptionId = "brokerSubId";
     String BrokerName = "BrokerName";
     String ChannelName = "ChannelName";
     String ProcedureName = "ProcedureName";
@@ -29,9 +30,11 @@ public interface BADConstants {
     String ResultId = "resultId";
     String ChannelExecutionTime = "channelExecutionTime";
     String ChannelSubscriptionsType = "ChannelSubscriptionsType";
+    String BrokerSubscriptionsType = "BrokerSubscriptionsType";
     String ChannelResultsType = "ChannelResultsType";
     String ResultsDatasetName = "ResultsDatasetName";
-    String SubscriptionsDatasetName = "SubscriptionsDatasetName";
+    String ChannelSubscriptionsDatasetName = "ChannelSubscriptionsDatasetName";
+    String BrokerSubscriptionsDatasetName = "BrokerSubscriptionsDatasetName";
     String CHANNEL_EXTENSION_NAME = "Channel";
     String PROCEDURE_KEYWORD = "Procedure";
     String BROKER_KEYWORD = "Broker";
