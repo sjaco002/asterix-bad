@@ -82,6 +82,7 @@ public class NotifyBrokerRuntime extends AbstractOneInputOneOutputOneFramePushRu
     private final IAType recordType;
     private final Map<String, HashSet<String>> sendData = new HashMap<>();
     private String executionTimeString;
+    String endpoint;
 
     public NotifyBrokerRuntime(IHyracksTaskContext ctx, IScalarEvaluatorFactory brokerEvalFactory,
             IScalarEvaluatorFactory pushListEvalFactory, IScalarEvaluatorFactory channelExecutionEvalFactory,
@@ -185,7 +186,7 @@ public class NotifyBrokerRuntime extends AbstractOneInputOneOutputOneFramePushRu
 
             int serBrokerOffset = inputArg0.getStartOffset();
             bbis.setByteBuffer(tRef.getFrameTupleAccessor().getBuffer(), serBrokerOffset + 1);
-            String endpoint = AStringSerializerDeserializer.INSTANCE.deserialize(di).getStringValue();
+            endpoint = AStringSerializerDeserializer.INSTANCE.deserialize(di).getStringValue();
             sendData.putIfAbsent(endpoint, new HashSet<>());
 
             if (push) {
