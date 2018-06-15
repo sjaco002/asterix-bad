@@ -186,6 +186,7 @@ public class NotifyBrokerRuntime extends AbstractOneInputOneOutputOneFramePushRu
 
             int serBrokerOffset = inputArg0.getStartOffset();
             bbis.setByteBuffer(tRef.getFrameTupleAccessor().getBuffer(), serBrokerOffset + 1);
+            //don't use the instance. Create your own
             endpoint = AStringSerializerDeserializer.INSTANCE.deserialize(di).getStringValue();
             sendData.putIfAbsent(endpoint, new HashSet<>());
 
@@ -193,6 +194,9 @@ public class NotifyBrokerRuntime extends AbstractOneInputOneOutputOneFramePushRu
                 int pushOffset = inputArg1.getStartOffset();
                 bbis.setByteBuffer(tRef.getFrameTupleAccessor().getBuffer(), pushOffset + 1);
                 //TODO: Right now this creates an object per channel result. Need to find a better way to deserialize
+                //Set the record pointable to the bytes.
+                //Aprintvisitor vistit
+                //Submit to printstream directly (no string object)
                 pushRecord = recordSerDes.deserialize(di);
                 sendData.get(endpoint).add(pushRecord.toString());
 
