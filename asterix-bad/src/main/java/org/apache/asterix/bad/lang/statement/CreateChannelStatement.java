@@ -252,8 +252,8 @@ public class CreateChannelStatement extends ExtensionStatement {
         builder.append(BADConstants.ChannelExecutionTime + ", ");
         builder.append("sub." + BADConstants.ChannelSubscriptionId + " as " + BADConstants.ChannelSubscriptionId + ",");
         builder.append("current_datetime() as " + BADConstants.DeliveryTime + "\n");
-        builder.append("from " + dataverse + "." + brokerSubscriptionsTableName + " bs,\n");
-        builder.append(dataverse + "." + channelSubscriptionsTableName + " sub,\n");
+        builder.append("from " + dataverse + "." + channelSubscriptionsTableName + " sub,\n");
+        builder.append(dataverse + "." + brokerSubscriptionsTableName + " bs,\n");
         builder.append(BADConstants.BAD_DATAVERSE_NAME + "." + BADConstants.BROKER_KEYWORD + " b, \n");
         builder.append(function.getNamespace() + "." + function.getName() + "(");
         int i = 0;
@@ -261,10 +261,6 @@ public class CreateChannelStatement extends ExtensionStatement {
             builder.append("sub.param" + i + ",");
         }
         builder.append("sub.param" + i + ") result \n");
-        builder.append("where b." + BADConstants.BrokerName + " = bs." + BADConstants.BrokerName + "\n");
-        builder.append("and b." + BADConstants.DataverseName + " = bs." + BADConstants.DataverseName + "\n");
-        builder.append(
-                "and bs." + BADConstants.ChannelSubscriptionId + " = sub." + BADConstants.ChannelSubscriptionId + "\n");
         if (!push) {
             builder.append(")");
             builder.append(" returning a");
