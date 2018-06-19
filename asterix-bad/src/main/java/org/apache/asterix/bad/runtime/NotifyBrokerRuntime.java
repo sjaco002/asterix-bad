@@ -19,12 +19,16 @@
 
 package org.apache.asterix.bad.runtime;
 
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -35,6 +39,7 @@ import org.apache.asterix.active.ActiveManager;
 import org.apache.asterix.active.EntityId;
 import org.apache.asterix.bad.BADConstants;
 import org.apache.asterix.common.api.INcApplicationContext;
+import org.apache.asterix.dataflow.data.nontagged.printers.adm.ARecordPrinterFactory;
 import org.apache.asterix.dataflow.data.nontagged.serde.ADateTimeSerializerDeserializer;
 import org.apache.asterix.dataflow.data.nontagged.serde.AOrderedListSerializerDeserializer;
 import org.apache.asterix.dataflow.data.nontagged.serde.ARecordSerializerDeserializer;
@@ -43,10 +48,12 @@ import org.apache.asterix.om.base.ADateTime;
 import org.apache.asterix.om.base.AOrderedList;
 import org.apache.asterix.om.base.ARecord;
 import org.apache.asterix.om.base.AUUID;
+import org.apache.asterix.om.pointables.nonvisitor.ARecordPointable;
 import org.apache.asterix.om.types.AOrderedListType;
 import org.apache.asterix.om.types.ARecordType;
 import org.apache.asterix.om.types.BuiltinType;
 import org.apache.asterix.om.types.IAType;
+import org.apache.hyracks.algebricks.data.IPrinter;
 import org.apache.hyracks.algebricks.runtime.base.IScalarEvaluator;
 import org.apache.hyracks.algebricks.runtime.base.IScalarEvaluatorFactory;
 import org.apache.hyracks.algebricks.runtime.operators.base.AbstractOneInputOneOutputOneFramePushRuntime;
@@ -67,6 +74,11 @@ public class NotifyBrokerRuntime extends AbstractOneInputOneOutputOneFramePushRu
     private final AOrderedListSerializerDeserializer subSerDes =
             new AOrderedListSerializerDeserializer(new AOrderedListType(BuiltinType.AUUID, null));
     private final ARecordSerializerDeserializer recordSerDes;
+    private final ARecordPointable recordPointable;
+    private final IPrinter recordPrinterFactory;
+
+    private final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    private final PrintStream ps;
 
     private IPointable inputArg0 = new VoidPointable();
     private IPointable inputArg1 = new VoidPointable();
@@ -81,7 +93,10 @@ public class NotifyBrokerRuntime extends AbstractOneInputOneOutputOneFramePushRu
     private ARecord pushRecord;
     private final IAType recordType;
     private final Map<String, HashSet<String>> sendData = new HashMap<>();
+    private final Map<String, ByteArrayOutputStream> sendbaos = new HashMap<>();
+    private final Map<String, PrintStream> sendStreams = new HashMap<>();
     private String executionTimeString;
+    private boolean firstResult = true;
     String endpoint;
 
     public NotifyBrokerRuntime(IHyracksTaskContext ctx, IScalarEvaluatorFactory brokerEvalFactory,
@@ -98,6 +113,13 @@ public class NotifyBrokerRuntime extends AbstractOneInputOneOutputOneFramePushRu
         this.pushList = null;
         this.pushRecord = null;
         this.recordType = recordType;
+        recordPointable = ARecordPointable.FACTORY.createPointable();
+        recordPrinterFactory = new ARecordPrinterFactory((ARecordType) recordType).createPrinter();
+        try {
+            ps = new PrintStream(baos, true, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            throw new HyracksDataException(e.getMessage());
+        }
         recordSerDes = new ARecordSerializerDeserializer((ARecordType) recordType);
         executionTimeString = null;
     }
@@ -189,16 +211,21 @@ public class NotifyBrokerRuntime extends AbstractOneInputOneOutputOneFramePushRu
             //don't use the instance. Create your own
             endpoint = AStringSerializerDeserializer.INSTANCE.deserialize(di).getStringValue();
             sendData.putIfAbsent(endpoint, new HashSet<>());
+            sendbaos.putIfAbsent(endpoint, new ByteArrayOutputStream());
+            try {
+                sendStreams.putIfAbsent(endpoint, new PrintStream(sendbaos.get(endpoint), true, "UTF-8"));
+            } catch (UnsupportedEncodingException e) {
+                throw new HyracksDataException(e.getMessage());
+            }
 
             if (push) {
                 int pushOffset = inputArg1.getStartOffset();
                 bbis.setByteBuffer(tRef.getFrameTupleAccessor().getBuffer(), pushOffset + 1);
-                //TODO: Right now this creates an object per channel result. Need to find a better way to deserialize
-                //Set the record pointable to the bytes.
-                //Aprintvisitor vistit
-                //Submit to printstream directly (no string object)
-                pushRecord = recordSerDes.deserialize(di);
-                sendData.get(endpoint).add(pushRecord.toString());
+                if (!firstResult) {
+                    sendStreams.get(endpoint).append(',');
+                }
+                recordPrinterFactory.print(inputArg1.getByteArray(), inputArg1.getStartOffset(), inputArg1.getLength(),
+                        sendStreams.get(endpoint));
 
             } else {
                 int serSubOffset = inputArg1.getStartOffset();
@@ -206,6 +233,7 @@ public class NotifyBrokerRuntime extends AbstractOneInputOneOutputOneFramePushRu
                 pushList = subSerDes.deserialize(di);
                 addSubscriptions(endpoint, pushList);
             }
+            firstResult = false;
         }
 
     }
@@ -213,11 +241,20 @@ public class NotifyBrokerRuntime extends AbstractOneInputOneOutputOneFramePushRu
     @Override
     public void close() throws HyracksDataException {
         for (String endpoint : sendData.keySet()) {
+            sendData.get(endpoint).add(new String(sendbaos.get(endpoint).toByteArray(), StandardCharsets.UTF_8));
             if (sendData.get(endpoint).size() > 0) {
                 sendGroupOfResults(endpoint);
                 sendData.get(endpoint).clear();
             }
+            sendStreams.get(endpoint).close();
+            try {
+                sendbaos.get(endpoint).close();
+            } catch (IOException e) {
+                throw new HyracksDataException(e.getMessage());
+            }
+
         }
+
         return;
     }
 
