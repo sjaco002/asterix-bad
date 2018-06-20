@@ -251,17 +251,7 @@ Statement ChannelSubscriptionStatement() throws ParseException:
         getCurrentScope().addNewVarSymbolToScope(varExp.getVar());
         stmt = new ChannelUnsubscribeStatement(varExp, nameComponents.first, nameComponents.second, id, getVarCounter());
       }
-     | "change" "subscription" subscriptionId = StringLiteral()  <ON> nameComponents = QualifiedName()
-       <LEFTPAREN> (tmp = Expression()
-       {
-         argList.add(tmp);
-       }
-       (<COMMA> tmp = Expression()
-       {
-         argList.add(tmp);
-       }
-       )*)? <RIGHTPAREN>
-        <TO> brokerName = QualifiedName()
+     | "move" "subscription" subscriptionId = StringLiteral()  <ON> nameComponents = QualifiedName() <TO> brokerName = QualifiedName()
       {
         stmt = new ChannelSubscribeStatement(nameComponents.first, nameComponents.second, argList, getVarCounter(), brokerName.first, brokerName.second, subscriptionId);
       }
