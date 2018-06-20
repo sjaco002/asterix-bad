@@ -108,9 +108,8 @@ public class BADJobService {
     public static boolean runDeployedJobSpecCheckPeriod(DeployedJobSpecId distributedId, IHyracksClientConnection hcc,
             Map<byte[], byte[]> jobParameters, long period, EntityId entityId, ITxnIdFactory txnIdFactory,
             DeployedJobSpecEventListener listener) throws Exception {
-        long executionMilliseconds =
-                runDeployedJobSpec(distributedId, hcc, null, jobParameters, entityId, txnIdFactory, null, listener,
-                        null);
+        long executionMilliseconds = runDeployedJobSpec(distributedId, hcc, null, jobParameters, entityId, txnIdFactory,
+                null, listener, null);
         if (executionMilliseconds > period) {
             LOGGER.log(Level.SEVERE,
                     "Periodic job for " + entityId.getExtensionName() + " " + entityId.getDataverse() + "."
@@ -153,7 +152,6 @@ public class BADJobService {
 
     }
 
-
     public static long findPeriod(String duration) {
         //TODO: Allow Repetitive Channels to use YMD durations
         String hoursMinutesSeconds = "";
@@ -189,7 +187,8 @@ public class BADJobService {
         metadataProvider.setMetadataTxnContext(mdTxnCtx);
         JobSpecification jobSpec = null;
         try {
-            jobSpec = ((QueryTranslator) statementExecutor).rewriteCompileQuery(hcc, metadataProvider, q, null);
+            jobSpec = ((QueryTranslator) statementExecutor).rewriteCompileQuery(hcc, metadataProvider, q, null, null,
+                    null);
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
             bActiveTxn = false;
         } catch (Exception e) {
@@ -230,7 +229,7 @@ public class BADJobService {
                 jobSpec = compilePushChannel(badStatementExecutor, metadataProvider, hcc, (Query) fStatements.get(1));
             } else {
                 jobSpec = badStatementExecutor.handleInsertUpsertStatement(metadataProvider, fStatements.get(1), hcc,
-                        null, null, null, null, true, null);
+                        null, null, null, null, true, null, null, null);
             }
         } else {
             //Procedures
@@ -263,7 +262,7 @@ public class BADJobService {
         metadataProvider.setMetadataTxnContext(mdTxnCtx);
         JobSpecification jobSpec;
         try {
-            jobSpec = statementExecutor.rewriteCompileQuery(hcc, metadataProvider, q, null);
+            jobSpec = statementExecutor.rewriteCompileQuery(hcc, metadataProvider, q, null, null, null);
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
         } catch (Exception e) {
             ((QueryTranslator) statementExecutor).abort(e, e, mdTxnCtx);
@@ -277,14 +276,15 @@ public class BADJobService {
             IStatementExecutor.Stats stats, Statement procedureStatement) throws Exception {
         if (procedureStatement.getKind() == Statement.Kind.INSERT) {
             return ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider,
-                    procedureStatement, hcc, hdc, IStatementExecutor.ResultDelivery.ASYNC, null, stats, true, null);
+                    procedureStatement, hcc, hdc, IStatementExecutor.ResultDelivery.ASYNC, null, stats, true, null,
+                    null, null);
         } else if (procedureStatement.getKind() == Statement.Kind.QUERY) {
             return compileQueryJob(statementExecutor, metadataProvider, hcc, (Query) procedureStatement);
         } else {
             SqlppDeleteRewriteVisitor visitor = new SqlppDeleteRewriteVisitor();
             procedureStatement.accept(visitor, null);
             return ((QueryTranslator) statementExecutor).handleDeleteStatement(metadataProvider, procedureStatement,
-                    hcc, true);
+                    hcc, true, null, null);
         }
     }
 
