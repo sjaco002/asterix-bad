@@ -69,7 +69,7 @@ public class NotifyBrokerRuntime extends AbstractOneInputOneOutputOneFramePushRu
             new AStringSerializerDeserializer(new UTF8StringWriter(), new UTF8StringReader());
 
     private final IPrinter recordPrinterFactory;
-    private final IPrinter listPrinterFactory;
+    private final IPrinter subscriptionIdListPrinterFactory;
 
     private IPointable inputArg0 = new VoidPointable();
     private IPointable inputArg1 = new VoidPointable();
@@ -96,7 +96,7 @@ public class NotifyBrokerRuntime extends AbstractOneInputOneOutputOneFramePushRu
         this.entityId = activeJobId;
         this.push = push;
         recordPrinterFactory = new ARecordPrinterFactory((ARecordType) recordType).createPrinter();
-        listPrinterFactory =
+        subscriptionIdListPrinterFactory =
                 new AOrderedlistPrinterFactory(new AOrderedListType(BuiltinType.AUUID, null)).createPrinter();
         executionTimeString = null;
     }
@@ -111,13 +111,13 @@ public class NotifyBrokerRuntime extends AbstractOneInputOneOutputOneFramePushRu
         if (push) {
             resultTitle = "\"results\"";
         }
-        String JSON = "{ \"dataverseName\":\"" + entityId.getDataverse() + "\", \"channelName\":\""
+        String jsonStr = "{ \"dataverseName\":\"" + entityId.getDataverse() + "\", \"channelName\":\""
                 + entityId.getEntityName() + "\", \"" + BADConstants.ChannelExecutionTime + "\":\""
                 + executionTimeString + "\", " + resultTitle + ":[";
-        JSON += sendData.get(endpoint);
-        JSON = JSON.substring(0, JSON.length());
-        JSON += "]}";
-        return JSON;
+        jsonStr += sendData.get(endpoint);
+        jsonStr = jsonStr.substring(0, jsonStr.length());
+        jsonStr += "]}";
+        return jsonStr;
 
     }
 
@@ -162,6 +162,11 @@ public class NotifyBrokerRuntime extends AbstractOneInputOneOutputOneFramePushRu
             eval1.evaluate(tRef, inputArg1);
             eval2.evaluate(tRef, inputArg2);
 
+            /*The incoming tuples have three fields:
+             1. eval0 will get the serialized broker endpoint string
+             2. eval1 will get the payload (either the subscriptionIds or entire results)
+             3. eval2 will get the channel execution time stamp (the same for all tuples)
+            */
             if (executionTimeString == null) {
                 int resultSetOffset = inputArg2.getStartOffset();
                 bbis.setByteBuffer(tRef.getFrameTupleAccessor().getBuffer(), resultSetOffset + 1);
@@ -196,7 +201,8 @@ public class NotifyBrokerRuntime extends AbstractOneInputOneOutputOneFramePushRu
                 if (!firstResult) {
                     sendStreams.get(endpoint).append(',');
                 }
-                listPrinterFactory.print(inputArg1.getByteArray(), inputArg1.getStartOffset(), inputArg1.getLength(),
+                subscriptionIdListPrinterFactory.print(inputArg1.getByteArray(), inputArg1.getStartOffset(),
+                        inputArg1.getLength(),
                         sendStreams.get(endpoint));
             }
             firstResult = false;
