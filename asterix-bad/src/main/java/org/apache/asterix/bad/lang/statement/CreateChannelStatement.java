@@ -277,7 +277,7 @@ public class CreateChannelStatement extends ExtensionStatement {
                     (Query) fStatements.get(1));
         }
         return ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider, fStatements.get(1),
-                hcc, hdc, ResultDelivery.ASYNC, null, stats, true, null);
+                hcc, hdc, ResultDelivery.ASYNC, null, stats, true, null, null, null);
     }
 
     @Override

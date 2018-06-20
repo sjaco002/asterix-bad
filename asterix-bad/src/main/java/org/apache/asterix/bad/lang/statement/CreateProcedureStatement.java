@@ -176,7 +176,7 @@ public class CreateProcedureStatement extends ExtensionStatement {
 
     private Pair<JobSpecification, PrecompiledType> createProcedureJob(IStatementExecutor statementExecutor,
             MetadataProvider metadataProvider, IHyracksClientConnection hcc, Stats stats)
-                    throws Exception {
+            throws Exception {
         if (getProcedureBodyStatement().getKind() == Statement.Kind.INSERT) {
             if (!varList.isEmpty()) {
                 throw new CompilationException("Insert procedures cannot have parameters");
@@ -185,9 +185,8 @@ public class CreateProcedureStatement extends ExtensionStatement {
             dependencies.get(0).add(Arrays.asList(
                     ((QueryTranslator) statementExecutor).getActiveDataverse(insertStatement.getDataverseName()),
                     insertStatement.getDatasetName().getValue()));
-            return new Pair<>(
-                    ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider,
-                            getProcedureBodyStatement(), hcc, null, ResultDelivery.ASYNC, null, stats, true, null),
+            return new Pair<>(((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider,
+                    getProcedureBodyStatement(), hcc, null, ResultDelivery.ASYNC, null, stats, true, null, null, null),
                     PrecompiledType.INSERT);
         } else if (getProcedureBodyStatement().getKind() == Statement.Kind.QUERY) {
             SqlppRewriterFactory fact = new SqlppRewriterFactory();
@@ -209,7 +208,7 @@ public class CreateProcedureStatement extends ExtensionStatement {
                     metadataProvider);
             Pair<JobSpecification, PrecompiledType> pair =
                     new Pair<>(((QueryTranslator) statementExecutor).handleDeleteStatement(metadataProvider,
-                    getProcedureBodyStatement(), hcc, true), PrecompiledType.DELETE);
+                            getProcedureBodyStatement(), hcc, true, null, null), PrecompiledType.DELETE);
             return pair;
         } else {
             throw new CompilationException("Procedure can only execute a single delete, insert, or query");
