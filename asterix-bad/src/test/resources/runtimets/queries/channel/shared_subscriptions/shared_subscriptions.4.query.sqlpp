@@ -16,16 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-/*
-* Description  : Room Occupants Test
-* Expected Res : Success
-* Date         : Sep 2016
-* Author       : Steven Jacobs
-*/
-
 use channels;
 
-select test.param0
-from roomRecordsChannelSubscriptions test
-order by test.param0
-;
+select DataverseName,BrokerName from roomRecordsBrokerSubscriptions
+order by BrokerName;

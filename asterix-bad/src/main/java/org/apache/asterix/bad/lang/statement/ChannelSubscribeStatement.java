@@ -18,42 +18,30 @@
  */
 package org.apache.asterix.bad.lang.statement;
 
-import java.util.ArrayList;
+import java.io.StringReader;
 import java.util.List;
 
 import org.apache.asterix.algebra.extension.ExtensionStatement;
 import org.apache.asterix.app.translator.QueryTranslator;
 import org.apache.asterix.bad.BADConstants;
 import org.apache.asterix.bad.lang.BADLangExtension;
+import org.apache.asterix.bad.lang.BADParserFactory;
 import org.apache.asterix.bad.metadata.Broker;
 import org.apache.asterix.bad.metadata.Channel;
 import org.apache.asterix.common.exceptions.AsterixException;
 import org.apache.asterix.common.exceptions.CompilationException;
-import org.apache.asterix.common.functions.FunctionSignature;
 import org.apache.asterix.lang.common.base.Expression;
-import org.apache.asterix.lang.common.expression.CallExpr;
-import org.apache.asterix.lang.common.expression.FieldAccessor;
-import org.apache.asterix.lang.common.expression.FieldBinding;
-import org.apache.asterix.lang.common.expression.LiteralExpr;
-import org.apache.asterix.lang.common.expression.RecordConstructor;
-import org.apache.asterix.lang.common.expression.VariableExpr;
-import org.apache.asterix.lang.common.literal.StringLiteral;
-import org.apache.asterix.lang.common.statement.InsertStatement;
-import org.apache.asterix.lang.common.statement.Query;
-import org.apache.asterix.lang.common.statement.UpsertStatement;
+import org.apache.asterix.lang.common.base.Statement;
 import org.apache.asterix.lang.common.struct.Identifier;
-import org.apache.asterix.lang.common.struct.VarIdentifier;
 import org.apache.asterix.lang.common.visitor.base.ILangVisitor;
 import org.apache.asterix.metadata.MetadataManager;
 import org.apache.asterix.metadata.MetadataTransactionContext;
 import org.apache.asterix.metadata.declared.MetadataProvider;
-import org.apache.asterix.om.functions.BuiltinFunctions;
 import org.apache.asterix.translator.IRequestParameters;
 import org.apache.asterix.translator.IStatementExecutor;
 import org.apache.asterix.translator.IStatementExecutor.ResultDelivery;
 import org.apache.asterix.translator.IStatementExecutor.Stats;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
-import org.apache.hyracks.algebricks.core.algebra.functions.FunctionIdentifier;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.dataset.IHyracksDataset;
 import org.apache.hyracks.api.dataset.ResultSetId;
@@ -66,11 +54,13 @@ public class ChannelSubscribeStatement extends ExtensionStatement {
     private final Identifier brokerDataverseName;
     private final Identifier brokerName;
     private final List<Expression> argList;
+    private final List<String> paramList;
     private final String subscriptionId;
     private final int varCounter;
 
     public ChannelSubscribeStatement(Identifier dataverseName, Identifier channelName, List<Expression> argList,
-            int varCounter, Identifier brokerDataverseName, Identifier brokerName, String subscriptionId) {
+            int varCounter, Identifier brokerDataverseName, Identifier brokerName, String subscriptionId,
+            List<String> paramList) {
         this.channelName = channelName;
         this.dataverseName = dataverseName;
         this.brokerDataverseName = brokerDataverseName;
@@ -78,6 +68,7 @@ public class ChannelSubscribeStatement extends ExtensionStatement {
         this.argList = argList;
         this.subscriptionId = subscriptionId;
         this.varCounter = varCounter;
+        this.paramList = paramList;
     }
 
     public Identifier getDataverseName() {
@@ -138,83 +129,39 @@ public class ChannelSubscribeStatement extends ExtensionStatement {
                 throw new AsterixException("There is no broker with this name " + brokerName + ".");
             }
 
-            String subscriptionsDatasetName = channel.getChannelSubscriptionsDataset();
+            String channelSubscriptionsDataset =
+                    channel.getChannelId().getDataverse() + "." + channel.getChannelSubscriptionsDataset();
 
-            if (argList.size() != channel.getFunction().getArity()) {
-                throw new AsterixException("Channel expected " + channel.getFunction().getArity()
-                        + " parameters but got " + argList.size());
-            }
-
-            Query subscriptionTuple = new Query(false);
-
-            List<FieldBinding> fb = new ArrayList<>();
-            LiteralExpr leftExpr = new LiteralExpr(new StringLiteral(BADConstants.DataverseName));
-            Expression rightExpr = new LiteralExpr(new StringLiteral(brokerDataverse));
-            fb.add(new FieldBinding(leftExpr, rightExpr));
-
-            leftExpr = new LiteralExpr(new StringLiteral(BADConstants.BrokerName));
-            rightExpr = new LiteralExpr(new StringLiteral(broker.getBrokerName()));
-            fb.add(new FieldBinding(leftExpr, rightExpr));
-
-            if (subscriptionId != null) {
-                leftExpr = new LiteralExpr(new StringLiteral(BADConstants.ChannelSubscriptionId));
-
-                List<Expression> UUIDList = new ArrayList<>();
-                UUIDList.add(new LiteralExpr(new StringLiteral(subscriptionId)));
-                FunctionIdentifier function = BuiltinFunctions.UUID_CONSTRUCTOR;
-                FunctionSignature UUIDfunc =
-                        new FunctionSignature(function.getNamespace(), function.getName(), function.getArity());
-                CallExpr UUIDCall = new CallExpr(UUIDfunc, UUIDList);
-
-                rightExpr = UUIDCall;
-                fb.add(new FieldBinding(leftExpr, rightExpr));
-            }
-
-            for (int i = 0; i < argList.size(); i++) {
-                leftExpr = new LiteralExpr(new StringLiteral("param" + i));
-                rightExpr = argList.get(i);
-                fb.add(new FieldBinding(leftExpr, rightExpr));
-            }
-            RecordConstructor recordCon = new RecordConstructor(fb);
-            subscriptionTuple.setBody(recordCon);
-            subscriptionTuple.setVarCounter(varCounter);
-            MetadataProvider tempMdProvider = new MetadataProvider(metadataProvider.getApplicationContext(),
-                    metadataProvider.getDefaultDataverse());
-            tempMdProvider.getConfig().putAll(metadataProvider.getConfig());
+            String brokerSubscriptionsDataset =
+                    channel.getChannelId().getDataverse() + "." + channel.getBrokerSubscriptionsDataset();
 
             final ResultDelivery resultDelivery = requestParameters.getResultProperties().getDelivery();
             final IHyracksDataset hdc = requestParameters.getHyracksDataset();
             final Stats stats = requestParameters.getStats();
             if (subscriptionId == null) {
-                //To create a new subscription
-                VariableExpr resultVar = new VariableExpr(new VarIdentifier("$result", 0));
-                VariableExpr useResultVar = new VariableExpr(new VarIdentifier("$result", 0));
-                useResultVar.setIsNewVar(false);
-                FieldAccessor accessor =
-                        new FieldAccessor(useResultVar, new Identifier(BADConstants.ChannelSubscriptionId));
+                //Create a new subscription
+                if (argList.size() != channel.getFunction().getArity()) {
+                    throw new AsterixException("Channel expected " + channel.getFunction().getArity()
+                            + " parameters but got " + argList.size());
+                }
 
+                createChannelSubscription(statementExecutor, metadataProvider, hcc, hdc, stats,
+                        channelSubscriptionsDataset, resultDelivery);
+
+                metadataProvider.getLocks().reset();
                 metadataProvider.setResultSetId(new ResultSetId(resultSetId));
                 boolean resultsAsync =
                         resultDelivery == ResultDelivery.ASYNC || resultDelivery == ResultDelivery.DEFERRED;
                 metadataProvider.setResultAsyncMode(resultsAsync);
-                tempMdProvider.setResultSetId(metadataProvider.getResultSetId());
-                tempMdProvider.setResultAsyncMode(resultsAsync);
-                tempMdProvider.setWriterFactory(metadataProvider.getWriterFactory());
-                tempMdProvider
-                        .setResultSerializerFactoryProvider(metadataProvider.getResultSerializerFactoryProvider());
-                tempMdProvider.setOutputFile(metadataProvider.getOutputFile());
-                tempMdProvider.setMaxResultReads(requestParameters.getResultProperties().getMaxReads());
+                metadataProvider.setMaxResultReads(requestParameters.getResultProperties().getMaxReads());
 
-                InsertStatement insert = new InsertStatement(new Identifier(dataverse),
-                        new Identifier(subscriptionsDatasetName), subscriptionTuple, varCounter, resultVar, accessor);
-                ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(tempMdProvider, insert, hcc, hdc,
-                        resultDelivery, null, stats, false, null, null, null);
+                createBrokerSubscription(statementExecutor, metadataProvider, hcc, hdc, stats,
+                        channelSubscriptionsDataset, brokerSubscriptionsDataset, broker, resultDelivery);
+
             } else {
-                //To update an existing subscription
-                UpsertStatement upsert = new UpsertStatement(new Identifier(dataverse),
-                        new Identifier(subscriptionsDatasetName), subscriptionTuple, varCounter, null, null);
-                ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(tempMdProvider, upsert, hcc, hdc,
-                        resultDelivery, null, stats, false, null, null, null);
+                //move subscription
+                moveBrokerSubscription(statementExecutor, metadataProvider, hcc, hdc, stats, brokerSubscriptionsDataset,
+                        broker, resultDelivery, subscriptionId);
             }
 
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
@@ -225,6 +172,91 @@ public class ChannelSubscribeStatement extends ExtensionStatement {
             metadataProvider.getLocks().unlock();
         }
 
+    }
+
+    private void createChannelSubscription(IStatementExecutor statementExecutor, MetadataProvider metadataProvider,
+            IHyracksClientConnection hcc, IHyracksDataset hdc, Stats stats, String channelSubscriptionsDataset,
+            ResultDelivery resultDelivery) throws Exception {
+        //TODO: Might be better to create the entire expression manually rather than parsing a string
+        StringBuilder builder = new StringBuilder();
+        builder.append("upsert into " + channelSubscriptionsDataset + "(\n");
+        builder.append("(let v = (select value s from " + channelSubscriptionsDataset + " s where ");
+        for (int i = 0; i < paramList.size(); i++) {
+            builder.append("param" + i + " =  " + paramList.get(i));
+            if (i < paramList.size() - 1) {
+                builder.append(" and ");
+            }
+        }
+        builder.append(")\n");
+        builder.append("select value (CASE (array_count(v) > 0)\n");
+        builder.append("WHEN true THEN {\"" + BADConstants.ChannelSubscriptionId + "\":v[0]."
+                + BADConstants.ChannelSubscriptionId + ", ");
+        for (int i = 0; i < paramList.size(); i++) {
+            builder.append("\"param" + i + "\": " + paramList.get(i));
+            if (i < paramList.size() - 1) {
+                builder.append(", ");
+            }
+        }
+        builder.append("}\n");
+        builder.append("ELSE {\"" + BADConstants.ChannelSubscriptionId + "\":create_uuid(), ");
+        for (int i = 0; i < paramList.size(); i++) {
+            builder.append("\"param" + i + "\": " + paramList.get(i));
+            if (i < paramList.size() - 1) {
+                builder.append(", ");
+            }
+        }
+        builder.append("}\n");
+        builder.append("END))\n");
+        builder.append(");");
+        BADParserFactory factory = new BADParserFactory();
+        List<Statement> fStatements = factory.createParser(new StringReader(builder.toString())).parse();
+        ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider, fStatements.get(0), hcc,
+                hdc, resultDelivery, null, stats, false, null, null, null);
+    }
+
+    private void createBrokerSubscription(IStatementExecutor statementExecutor, MetadataProvider metadataProvider,
+            IHyracksClientConnection hcc, IHyracksDataset hdc, Stats stats, String channelSubscriptionsDataset,
+            String brokerSubscriptionDataset, Broker broker, ResultDelivery resultDelivery) throws Exception {
+        //TODO: Might be better to create the entire expression manually rather than parsing a string
+        StringBuilder builder = new StringBuilder();
+        builder.append("insert into " + brokerSubscriptionDataset + " as r (\n");
+        builder.append("(select value {\"" + BADConstants.ChannelSubscriptionId + "\":s."
+                + BADConstants.ChannelSubscriptionId + ",\"" + BADConstants.BrokerSubscriptionId
+                + "\":create_uuid(), \"" + BADConstants.DataverseName + "\":\"" + broker.getDataverseName() + "\", \""
+                + BADConstants.BrokerName + "\":\"" + broker.getBrokerName() + "\"}\n");
+        builder.append("from " + channelSubscriptionsDataset + " s where ");
+        for (int i = 0; i < paramList.size(); i++) {
+            builder.append("param" + i + " =  " + paramList.get(i));
+            if (i < paramList.size() - 1) {
+                builder.append(" and ");
+            }
+        }
+        builder.append(" limit 1)\n");
+        builder.append(") returning r." + BADConstants.BrokerSubscriptionId + ";");
+        BADParserFactory factory = new BADParserFactory();
+        List<Statement> fStatements = factory.createParser(new StringReader(builder.toString())).parse();
+        ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider, fStatements.get(0), hcc,
+                hdc, resultDelivery, null, stats, false, null, null, null);
+    }
+
+    private void moveBrokerSubscription(IStatementExecutor statementExecutor, MetadataProvider metadataProvider,
+            IHyracksClientConnection hcc, IHyracksDataset hdc, Stats stats, String brokerSubscriptionDataset,
+            Broker broker, ResultDelivery resultDelivery, String subscriptionString) throws Exception {
+        //TODO: Might be better to create the entire expression manually rather than parsing a string
+        StringBuilder builder = new StringBuilder();
+        builder.append("upsert into " + brokerSubscriptionDataset + "(\n");
+        builder.append(
+                "(select value {\"" + BADConstants.ChannelSubscriptionId + "\":s." + BADConstants.ChannelSubscriptionId
+                        + ",\"" + BADConstants.BrokerSubscriptionId + "\":s." + BADConstants.BrokerSubscriptionId
+                        + ",\"" + BADConstants.DataverseName + "\":\"" + broker.getDataverseName() + "\", \""
+                        + BADConstants.BrokerName + "\":\"" + broker.getBrokerName() + "\"}\n");
+        builder.append("from " + brokerSubscriptionDataset + " s where ");
+        builder.append("s." + BADConstants.BrokerSubscriptionId + " = uuid(\"" + subscriptionString + "\"))\n");
+        builder.append(");");
+        BADParserFactory factory = new BADParserFactory();
+        List<Statement> fStatements = factory.createParser(new StringReader(builder.toString())).parse();
+        ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider, fStatements.get(0), hcc,
+                hdc, resultDelivery, null, stats, false, null, null, null);
     }
 
 }

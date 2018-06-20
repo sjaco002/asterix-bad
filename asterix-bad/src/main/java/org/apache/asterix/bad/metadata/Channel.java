@@ -70,9 +70,11 @@ public class Channel implements IExtensionMetadataEntity {
             this.dependencies.add(new ArrayList<>());
             this.dependencies.add(new ArrayList<>());
             List<String> resultsList = Arrays.asList(dataverseName, resultsDatasetName);
-            List<String> subscriptionList = Arrays.asList(dataverseName, channelSubscriptionsDatasetName);
+            List<String> channelSubscriptionList = Arrays.asList(dataverseName, channelSubscriptionsDatasetName);
+            List<String> brokerSubscriptionList = Arrays.asList(dataverseName, brokerSubscriptionsDatasetName);
             this.dependencies.get(0).add(resultsList);
-            this.dependencies.get(0).add(subscriptionList);
+            this.dependencies.get(0).add(channelSubscriptionList);
+            this.dependencies.get(0).add(brokerSubscriptionList);
             this.dependencies.get(1).add(functionAsPath);
         } else {
             this.dependencies = dependencies;

@@ -16,14 +16,9 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-/*
-* Description  : Check Whether a Channel works after adding a new Index
-* Expected Res : Success
-* Date         : Apr 2018
-* Author       : Steven Jacobs
-*/
-
 use channels;
 
-select value array_count(
-(select * from EmergencyChannelResults where deliveryTime > datetime("2017-05-02T17:52:59.570Z")));
+subscribe to roomRecords(123) on brokerA;
+subscribe to roomRecords(350) on brokerA;
+subscribe to roomRecords(123) on brokerA;
+subscribe to roomRecords(350) on brokerB;

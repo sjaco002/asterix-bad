@@ -19,6 +19,6 @@
 use channels;
 
 select value param1
-from nearbyTweetChannelSubscriptions
+from nearbyTweetChannelChannelSubscriptions
 order by param1
 ;

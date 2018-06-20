@@ -16,16 +16,10 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-/*
-* Description  : Room Occupants Test
-* Expected Res : Success
-* Date         : Sep 2016
-* Author       : Steven Jacobs
-*/
-
 use channels;
 
-select test.param0
-from roomRecordsChannelSubscriptions test
-order by test.param0
-;
+upsert into UserLocations([
+{"userId":1, "roomNumber":123},
+{"userId":2, "roomNumber":222},
+{"userId":3, "roomNumber":350}]
+);
