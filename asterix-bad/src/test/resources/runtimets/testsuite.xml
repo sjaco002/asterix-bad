@@ -154,13 +154,18 @@
     <test-case FilePath="channel">
       <compilation-unit name="drop_subscriptions">
         <output-dir compare="Text">drop_subscriptions</output-dir>
-        <expected-error>Cannot alter dataset two.nearbyTweetChannelSubscriptions. two.nearbyTweetChannel(Channel) depends on it!</expected-error>
+        <expected-error>Cannot alter dataset two.nearbyTweetChannelChannelSubscriptions. two.nearbyTweetChannel(Channel) depends on it!</expected-error>
       </compilation-unit>
     </test-case>
     <test-case FilePath="channel">
       <compilation-unit name="drop_function_dataverse">
         <output-dir compare="Text">drop_function_dataverse</output-dir>
         <expected-error>Cannot drop dataverse channels. two.nearbyTweetChannel(Channel) depends on it!</expected-error>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="channel">
+      <compilation-unit name="shared_subscriptions">
+        <output-dir compare="Text">shared_subscriptions</output-dir>
       </compilation-unit>
     </test-case>
     <test-case FilePath="channel">

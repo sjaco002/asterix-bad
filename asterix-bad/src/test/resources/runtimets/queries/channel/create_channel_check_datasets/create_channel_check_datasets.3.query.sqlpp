@@ -21,6 +21,7 @@ use channels;
 select value x
 from Metadata.`Channel` result, Metadata.`Dataset` x
 where result.ChannelName = "nearbyTweetChannel"
-and (x.DatasetName = result.SubscriptionsDatasetName
+and (x.DatasetName = result.ChannelSubscriptionsDatasetName
+or x.DatasetName = result.BrokerSubscriptionsDatasetName
 or x.DatasetName = result.ResultsDatasetName)
 order by x.DatasetName;

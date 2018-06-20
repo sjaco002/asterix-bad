@@ -54,4 +54,4 @@ use two;
 
 create repetitive channel nearbyTweetChannel using channels.NearbyTweetsContainingText@2 period duration("PT10M");
 
-drop dataset two.nearbyTweetChannelSubscriptions;
+drop dataset two.nearbyTweetChannelChannelSubscriptions;

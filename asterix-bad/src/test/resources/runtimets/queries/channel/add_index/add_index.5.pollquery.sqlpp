@@ -22,5 +22,9 @@
 * Date         : Apr 2018
 * Author       : Steven Jacobs
 */
+// polltimeoutsecs=15
 
-15000
+use channels;
+
+select value array_count(
+(select * from EmergencyChannelResults where deliveryTime > datetime("2017-05-02T17:52:59.570Z")));

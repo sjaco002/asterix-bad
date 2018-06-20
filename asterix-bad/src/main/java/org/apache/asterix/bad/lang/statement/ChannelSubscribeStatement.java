@@ -234,7 +234,7 @@ public class ChannelSubscribeStatement extends ExtensionStatement {
                 builder.append(" and ");
             }
         }
-        builder.append(")\n");
+        builder.append(" limit 1)\n");
         builder.append(") returning r." + BADConstants.BrokerSubscriptionId + ";");
         BADParserFactory factory = new BADParserFactory();
         List<Statement> fStatements = factory.createParser(new StringReader(builder.toString())).parse();

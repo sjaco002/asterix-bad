@@ -20,7 +20,8 @@ use channels;
 
 select value x
 from Metadata.`Channel` result, Metadata.`Dataset` x
-where x.DatasetName = result.SubscriptionsDatasetName
+where x.DatasetName = result.BrokerSubscriptionsDatasetName
+or x.DatasetName = result.ChannelSubscriptionsDatasetName
 or x.DatasetName = result.ResultsDatasetName
 order by x.DatasetName
 ;

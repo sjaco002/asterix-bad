@@ -25,110 +25,106 @@
 
 use channels;
 
-insert into EmergencyChannelSubscriptions(
-[
-{"param0" : "w2294u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t4321u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t3398u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "w2488u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t3666u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t4489u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "p78u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "p544u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "p711u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t2828u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t4796u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t4082u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t4923u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "w2324u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "c1339u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "p520u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "c1092u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t4979u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "c1487u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t4330u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t3682u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "p117u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "w1741u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "w2434u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t3833u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "c1373u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "p89u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t4003u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "c910u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t4961u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t4475u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "w1960u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "p438u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "c1362u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "p588u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "c902u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t4684u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "c1609u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "c1510u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t3851u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "c1418u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t2559u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "w1815u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t4924u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t3320u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "p663u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t4571u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "p781u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "c919u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "c1121u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "p814u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t4006u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t2822u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t4953u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t3486u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t3107u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t2836u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "w2003u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t3256u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t4762u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t4900u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "p357u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t3630u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t3166u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t4687u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "p817u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t4433u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t3426u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "p582u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t3388u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t4823u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "c1664u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t4051u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "c857u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "c1412u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t2521u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t3114u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "p404u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "p111u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t3006u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t2903u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t2823u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t4153u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t2589u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "c1459u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "p766u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "p593u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "p168u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t4253u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t4177u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "p387u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t2571u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "c1513u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "p618u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t2735u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t4859u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "w1848u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t3306u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "t2558u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" },
-{"param0" : "p180u1" , "DataverseName" : "channels" , "BrokerName" : "brokerA" }
-]
-);
+subscribe to EmergencyChannel("w2294u1") on brokerA;
+subscribe to EmergencyChannel("t4321u1") on brokerA;
+subscribe to EmergencyChannel("t3398u1") on brokerA;
+subscribe to EmergencyChannel("w2488u1") on brokerA;
+subscribe to EmergencyChannel("t3666u1") on brokerA;
+subscribe to EmergencyChannel("t4489u1") on brokerA;
+subscribe to EmergencyChannel("p78u1") on brokerA;
+subscribe to EmergencyChannel("p544u1") on brokerA;
+subscribe to EmergencyChannel("p711u1") on brokerA;
+subscribe to EmergencyChannel("t2828u1") on brokerA;
+subscribe to EmergencyChannel("t4796u1") on brokerA;
+subscribe to EmergencyChannel("t4082u1") on brokerA;
+subscribe to EmergencyChannel("t4923u1") on brokerA;
+subscribe to EmergencyChannel("w2324u1") on brokerA;
+subscribe to EmergencyChannel("c1339u1") on brokerA;
+subscribe to EmergencyChannel("p520u1") on brokerA;
+subscribe to EmergencyChannel("c1092u1") on brokerA;
+subscribe to EmergencyChannel("t4979u1") on brokerA;
+subscribe to EmergencyChannel("c1487u1") on brokerA;
+subscribe to EmergencyChannel("t4330u1") on brokerA;
+subscribe to EmergencyChannel("t3682u1") on brokerA;
+subscribe to EmergencyChannel("p117u1") on brokerA;
+subscribe to EmergencyChannel("w1741u1") on brokerA;
+subscribe to EmergencyChannel("w2434u1") on brokerA;
+subscribe to EmergencyChannel("t3833u1") on brokerA;
+subscribe to EmergencyChannel("c1373u1") on brokerA;
+subscribe to EmergencyChannel("p89u1") on brokerA;
+subscribe to EmergencyChannel("t4003u1") on brokerA;
+subscribe to EmergencyChannel("c910u1") on brokerA;
+subscribe to EmergencyChannel("t4961u1") on brokerA;
+subscribe to EmergencyChannel("t4475u1") on brokerA;
+subscribe to EmergencyChannel("w1960u1") on brokerA;
+subscribe to EmergencyChannel("p438u1") on brokerA;
+subscribe to EmergencyChannel("c1362u1") on brokerA;
+subscribe to EmergencyChannel("p588u1") on brokerA;
+subscribe to EmergencyChannel("c902u1") on brokerA;
+subscribe to EmergencyChannel("t4684u1") on brokerA;
+subscribe to EmergencyChannel("c1609u1") on brokerA;
+subscribe to EmergencyChannel("c1510u1") on brokerA;
+subscribe to EmergencyChannel("t3851u1") on brokerA;
+subscribe to EmergencyChannel("c1418u1") on brokerA;
+subscribe to EmergencyChannel("t2559u1") on brokerA;
+subscribe to EmergencyChannel("w1815u1") on brokerA;
+subscribe to EmergencyChannel("t4924u1") on brokerA;
+subscribe to EmergencyChannel("t3320u1") on brokerA;
+subscribe to EmergencyChannel("p663u1") on brokerA;
+subscribe to EmergencyChannel("t4571u1") on brokerA;
+subscribe to EmergencyChannel("p781u1") on brokerA;
+subscribe to EmergencyChannel("c919u1") on brokerA;
+subscribe to EmergencyChannel("c1121u1") on brokerA;
+subscribe to EmergencyChannel("p814u1") on brokerA;
+subscribe to EmergencyChannel("t4006u1") on brokerA;
+subscribe to EmergencyChannel("t2822u1") on brokerA;
+subscribe to EmergencyChannel("t4953u1") on brokerA;
+subscribe to EmergencyChannel("t3486u1") on brokerA;
+subscribe to EmergencyChannel("t3107u1") on brokerA;
+subscribe to EmergencyChannel("t2836u1") on brokerA;
+subscribe to EmergencyChannel("w2003u1") on brokerA;
+subscribe to EmergencyChannel("t3256u1") on brokerA;
+subscribe to EmergencyChannel("t4762u1") on brokerA;
+subscribe to EmergencyChannel("t4900u1") on brokerA;
+subscribe to EmergencyChannel("p357u1") on brokerA;
+subscribe to EmergencyChannel("t3630u1") on brokerA;
+subscribe to EmergencyChannel("t3166u1") on brokerA;
+subscribe to EmergencyChannel("t4687u1") on brokerA;
+subscribe to EmergencyChannel("p817u1") on brokerA;
+subscribe to EmergencyChannel("t4433u1") on brokerA;
+subscribe to EmergencyChannel("t3426u1") on brokerA;
+subscribe to EmergencyChannel("p582u1") on brokerA;
+subscribe to EmergencyChannel("t3388u1") on brokerA;
+subscribe to EmergencyChannel("t4823u1") on brokerA;
+subscribe to EmergencyChannel("c1664u1") on brokerA;
+subscribe to EmergencyChannel("t4051u1") on brokerA;
+subscribe to EmergencyChannel("c857u1") on brokerA;
+subscribe to EmergencyChannel("c1412u1") on brokerA;
+subscribe to EmergencyChannel("t2521u1") on brokerA;
+subscribe to EmergencyChannel("t3114u1") on brokerA;
+subscribe to EmergencyChannel("p404u1") on brokerA;
+subscribe to EmergencyChannel("p111u1") on brokerA;
+subscribe to EmergencyChannel("t3006u1") on brokerA;
+subscribe to EmergencyChannel("t2903u1") on brokerA;
+subscribe to EmergencyChannel("t2823u1") on brokerA;
+subscribe to EmergencyChannel("t4153u1") on brokerA;
+subscribe to EmergencyChannel("t2589u1") on brokerA;
+subscribe to EmergencyChannel("c1459u1") on brokerA;
+subscribe to EmergencyChannel("p766u1") on brokerA;
+subscribe to EmergencyChannel("p593u1") on brokerA;
+subscribe to EmergencyChannel("p168u1") on brokerA;
+subscribe to EmergencyChannel("t4253u1") on brokerA;
+subscribe to EmergencyChannel("t4177u1") on brokerA;
+subscribe to EmergencyChannel("p387u1") on brokerA;
+subscribe to EmergencyChannel("t2571u1") on brokerA;
+subscribe to EmergencyChannel("c1513u1") on brokerA;
+subscribe to EmergencyChannel("p618u1") on brokerA;
+subscribe to EmergencyChannel("t2735u1") on brokerA;
+subscribe to EmergencyChannel("t4859u1") on brokerA;
+subscribe to EmergencyChannel("w1848u1") on brokerA;
+subscribe to EmergencyChannel("t3306u1") on brokerA;
+subscribe to EmergencyChannel("t2558u1") on brokerA;
+subscribe to EmergencyChannel("p180u1") on brokerA;
 
 insert into Shelters (
 [
