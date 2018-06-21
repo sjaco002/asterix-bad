@@ -181,7 +181,11 @@ public class ChannelSubscribeStatement extends ExtensionStatement {
         builder.append("upsert into " + channelSubscriptionsDataset + "(\n");
         builder.append("(let v = (select value s from " + channelSubscriptionsDataset + " s where ");
         for (int i = 0; i < argList.size(); i++) {
-            String quote = ((LiteralExpr) argList.get(i)).getValue() instanceof StringLiteral ? "\"" : "";
+            String quote = "";
+            if (argList.get(i) instanceof LiteralExpr
+                    && ((LiteralExpr) argList.get(i)).getValue() instanceof StringLiteral) {
+                quote = "\"";
+            }
             builder.append("param" + i + " =  " + quote + ((LiteralExpr) argList.get(i)).getValue() + quote);
             if (i < argList.size() - 1) {
                 builder.append(" and ");
@@ -192,7 +196,11 @@ public class ChannelSubscribeStatement extends ExtensionStatement {
         builder.append("WHEN true THEN {\"" + BADConstants.ChannelSubscriptionId + "\":v[0]."
                 + BADConstants.ChannelSubscriptionId + ", ");
         for (int i = 0; i < argList.size(); i++) {
-            String quote = ((LiteralExpr) argList.get(i)).getValue() instanceof StringLiteral ? "\"" : "";
+            String quote = "";
+            if (argList.get(i) instanceof LiteralExpr
+                    && ((LiteralExpr) argList.get(i)).getValue() instanceof StringLiteral) {
+                quote = "\"";
+            }
             builder.append("\"param" + i + "\": " + quote + ((LiteralExpr) argList.get(i)).getValue() + quote);
             if (i < argList.size() - 1) {
                 builder.append(", ");
@@ -201,7 +209,11 @@ public class ChannelSubscribeStatement extends ExtensionStatement {
         builder.append("}\n");
         builder.append("ELSE {\"" + BADConstants.ChannelSubscriptionId + "\":create_uuid(), ");
         for (int i = 0; i < argList.size(); i++) {
-            String quote = ((LiteralExpr) argList.get(i)).getValue() instanceof StringLiteral ? "\"" : "";
+            String quote = "";
+            if (argList.get(i) instanceof LiteralExpr
+                    && ((LiteralExpr) argList.get(i)).getValue() instanceof StringLiteral) {
+                quote = "\"";
+            }
             builder.append("\"param" + i + "\": " + quote + ((LiteralExpr) argList.get(i)).getValue() + quote);
             if (i < argList.size() - 1) {
                 builder.append(", ");
@@ -228,7 +240,11 @@ public class ChannelSubscribeStatement extends ExtensionStatement {
                 + BADConstants.BrokerName + "\":\"" + broker.getBrokerName() + "\"}\n");
         builder.append("from " + channelSubscriptionsDataset + " s where ");
         for (int i = 0; i < argList.size(); i++) {
-            String quote = ((LiteralExpr) argList.get(i)).getValue() instanceof StringLiteral ? "\"" : "";
+            String quote = "";
+            if (argList.get(i) instanceof LiteralExpr
+                    && ((LiteralExpr) argList.get(i)).getValue() instanceof StringLiteral) {
+                quote = "\"";
+            }
             builder.append("param" + i + " =  " + quote + ((LiteralExpr) argList.get(i)).getValue() + quote);
             if (i < argList.size() - 1) {
                 builder.append(" and ");
