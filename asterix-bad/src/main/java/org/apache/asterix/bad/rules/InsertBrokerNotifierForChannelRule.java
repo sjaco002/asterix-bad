@@ -61,7 +61,9 @@ import org.apache.hyracks.algebricks.core.algebra.operators.logical.GroupByOpera
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.InsertDeleteUpsertOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.NestedTupleSourceOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.ProjectOperator;
+import org.apache.hyracks.algebricks.core.algebra.operators.logical.ReplicateOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.SelectOperator;
+import org.apache.hyracks.algebricks.core.algebra.operators.logical.SinkOperator;
 import org.apache.hyracks.algebricks.core.algebra.plan.ALogicalPlanImpl;
 import org.apache.hyracks.algebricks.core.rewriter.base.IAlgebraicRewriteRule;
 
@@ -82,6 +84,7 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
         }
 
         boolean push = false;
+        //Find commit operator
         AbstractLogicalOperator op = findOp(op1, 4, "", "");
         if (op == null) {
             push = true;
@@ -90,13 +93,14 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
         DataSourceScanOperator subscriptionsScan;
         String channelDataverse;
         String channelName;
+        InsertDeleteUpsertOperator insertOp = null;
 
         if (!push) {
             AbstractLogicalOperator descendantOp = (AbstractLogicalOperator) op.getInputs().get(0).getValue();
             if (descendantOp.getOperatorTag() != LogicalOperatorTag.INSERT_DELETE_UPSERT) {
                 return false;
             }
-            InsertDeleteUpsertOperator insertOp = (InsertDeleteUpsertOperator) descendantOp;
+            insertOp = (InsertDeleteUpsertOperator) descendantOp;
             if (insertOp.getOperation() != InsertDeleteUpsertOperator.Kind.INSERT) {
                 return false;
             }
@@ -157,7 +161,7 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
             return false;
         }
         DataSourceScanOperator brokerScan =
-                moveScans(opAboveBrokersScan, op1, context, channelName + "BrokerSubscriptions");
+                moveScans(opAboveBrokersScan, insertOp, context, channelName + "BrokerSubscriptions");
 
         if (brokerScan == null) {
             return false;
@@ -176,7 +180,7 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
         LogicalVariable brokerEndpointVar = context.newVar();
         AssignOperator assign = createAssignAndSelect(brokerDataverseVar, brokerNameVar, brokerVar,
                 brokerSubscriptionVar, brokerSubscriptionIdVar, brokerEndpointVar, channelSubscriptionIdVar,
-                brokerSubscriptionChannelIdVar, context, op1);
+                brokerSubscriptionChannelIdVar, context, brokerScan);
 
         context.computeAndSetTypeEnvironmentForOperator(op1);
 
@@ -195,7 +199,13 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
                         assign,
                         (DistributeResultOperator) op1, channelDataverse, channelName);
 
-        opRef.setValue(dOp);
+        SinkOperator sink = new SinkOperator();
+        sink.getInputs().add(new MutableObject<>(op));
+        sink.getInputs().add(new MutableObject<>(dOp));
+
+        context.computeAndSetTypeEnvironmentForOperator(sink);
+
+        opRef.setValue(sink);
 
         return true;
     }
@@ -203,7 +213,8 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
     private AssignOperator createAssignAndSelect(LogicalVariable brokerDataverseVar, LogicalVariable brokerNameVar,
             LogicalVariable brokerVar, LogicalVariable brokerSubscriptionVar, LogicalVariable brokerSubscriptionIdVar,
             LogicalVariable brokerEndpointVar, LogicalVariable channelSubscriptionIdVar,
-            LogicalVariable brokerSubscriptionChannelIdVar, IOptimizationContext context, AbstractLogicalOperator op1)
+            LogicalVariable brokerSubscriptionChannelIdVar, IOptimizationContext context,
+            AbstractLogicalOperator brokerScan)
             throws AlgebricksException {
 
         FunctionInfo finfoGetField =
@@ -240,7 +251,8 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
                         new MutableObject<>(brokerDataverseCheck), new MutableObject<>(brokerNameCheck));
 
         SelectOperator select = new SelectOperator(new MutableObject<>(andExpression), false, null);
-        select.getInputs().addAll(op1.getInputs());
+
+        select.getInputs().add(new MutableObject<>(brokerScan));
 
         //Create Assign Operator
         ScalarFunctionCallExpression getEndPoint = new ScalarFunctionCallExpression(finfoGetField,
@@ -249,16 +261,14 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
         AssignOperator assign = new AssignOperator(brokerEndpointVar, new MutableObject<>(getEndPoint));
         assign.getInputs().add(new MutableObject<>(select));
 
-        op1.getInputs().set(0, new MutableObject<>(assign));
         context.computeAndSetTypeEnvironmentForOperator(select);
         context.computeAndSetTypeEnvironmentForOperator(assign);
-        context.computeAndSetTypeEnvironmentForOperator(op1);
 
         return assign;
 
     }
 
-    private DataSourceScanOperator moveScans(AbstractLogicalOperator opAboveScan, AbstractLogicalOperator op1,
+    private DataSourceScanOperator moveScans(AbstractLogicalOperator opAboveScan, AbstractLogicalOperator insertOp,
             IOptimizationContext context, String subscriptionsName) throws AlgebricksException {
 
         DataSourceScanOperator brokerScan = null;
@@ -280,14 +290,20 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
         if (!isSubscriptionsScan(brokerSubcriptionsScan, subscriptionsName, BADConstants.BrokerSubscriptionsType)) {
             return null;
         }
+
         opAboveScan.getInputs().set(i, brokerSubcriptionsScan.getInputs().get(0));
         context.computeAndSetTypeEnvironmentForOperator(opAboveScan);
 
-        brokerSubcriptionsScan.getInputs().set(0, op1.getInputs().get(0));
-        op1.getInputs().set(0, new MutableObject<>(brokerScan));
+        ReplicateOperator replicateOperator = new ReplicateOperator(2);
+        replicateOperator.getInputs().add(insertOp.getInputs().get(0));
+
+        brokerSubcriptionsScan.getInputs().set(0, new MutableObject<>(replicateOperator));
+        insertOp.getInputs().set(0, new MutableObject<>(replicateOperator));
+
+        context.computeAndSetTypeEnvironmentForOperator(replicateOperator);
+        context.computeAndSetTypeEnvironmentForOperator(insertOp);
         context.computeAndSetTypeEnvironmentForOperator(brokerSubcriptionsScan);
         context.computeAndSetTypeEnvironmentForOperator(brokerScan);
-        context.computeAndSetTypeEnvironmentForOperator(op1);
         return brokerScan;
 
     }
