@@ -32,8 +32,6 @@ import org.apache.asterix.common.exceptions.AsterixException;
 import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.lang.common.base.Expression;
 import org.apache.asterix.lang.common.base.Statement;
-import org.apache.asterix.lang.common.expression.LiteralExpr;
-import org.apache.asterix.lang.common.literal.StringLiteral;
 import org.apache.asterix.lang.common.struct.Identifier;
 import org.apache.asterix.lang.common.visitor.base.ILangVisitor;
 import org.apache.asterix.metadata.MetadataManager;
@@ -56,11 +54,13 @@ public class ChannelSubscribeStatement extends ExtensionStatement {
     private final Identifier brokerDataverseName;
     private final Identifier brokerName;
     private final List<Expression> argList;
+    private final List<String> paramList;
     private final String subscriptionId;
     private final int varCounter;
 
     public ChannelSubscribeStatement(Identifier dataverseName, Identifier channelName, List<Expression> argList,
-            int varCounter, Identifier brokerDataverseName, Identifier brokerName, String subscriptionId) {
+            int varCounter, Identifier brokerDataverseName, Identifier brokerName, String subscriptionId,
+            List<String> paramList) {
         this.channelName = channelName;
         this.dataverseName = dataverseName;
         this.brokerDataverseName = brokerDataverseName;
@@ -68,6 +68,7 @@ public class ChannelSubscribeStatement extends ExtensionStatement {
         this.argList = argList;
         this.subscriptionId = subscriptionId;
         this.varCounter = varCounter;
+        this.paramList = paramList;
     }
 
     public Identifier getDataverseName() {
@@ -180,14 +181,9 @@ public class ChannelSubscribeStatement extends ExtensionStatement {
         StringBuilder builder = new StringBuilder();
         builder.append("upsert into " + channelSubscriptionsDataset + "(\n");
         builder.append("(let v = (select value s from " + channelSubscriptionsDataset + " s where ");
-        for (int i = 0; i < argList.size(); i++) {
-            String quote = "";
-            if (argList.get(i) instanceof LiteralExpr
-                    && ((LiteralExpr) argList.get(i)).getValue() instanceof StringLiteral) {
-                quote = "\"";
-            }
-            builder.append("param" + i + " =  " + quote + ((LiteralExpr) argList.get(i)).getValue() + quote);
-            if (i < argList.size() - 1) {
+        for (int i = 0; i < paramList.size(); i++) {
+            builder.append("param" + i + " =  " + paramList.get(i));
+            if (i < paramList.size() - 1) {
                 builder.append(" and ");
             }
         }
@@ -195,27 +191,17 @@ public class ChannelSubscribeStatement extends ExtensionStatement {
         builder.append("select value (CASE (array_count(v) > 0)\n");
         builder.append("WHEN true THEN {\"" + BADConstants.ChannelSubscriptionId + "\":v[0]."
                 + BADConstants.ChannelSubscriptionId + ", ");
-        for (int i = 0; i < argList.size(); i++) {
-            String quote = "";
-            if (argList.get(i) instanceof LiteralExpr
-                    && ((LiteralExpr) argList.get(i)).getValue() instanceof StringLiteral) {
-                quote = "\"";
-            }
-            builder.append("\"param" + i + "\": " + quote + ((LiteralExpr) argList.get(i)).getValue() + quote);
-            if (i < argList.size() - 1) {
+        for (int i = 0; i < paramList.size(); i++) {
+            builder.append("\"param" + i + "\": " + paramList.get(i));
+            if (i < paramList.size() - 1) {
                 builder.append(", ");
             }
         }
         builder.append("}\n");
         builder.append("ELSE {\"" + BADConstants.ChannelSubscriptionId + "\":create_uuid(), ");
-        for (int i = 0; i < argList.size(); i++) {
-            String quote = "";
-            if (argList.get(i) instanceof LiteralExpr
-                    && ((LiteralExpr) argList.get(i)).getValue() instanceof StringLiteral) {
-                quote = "\"";
-            }
-            builder.append("\"param" + i + "\": " + quote + ((LiteralExpr) argList.get(i)).getValue() + quote);
-            if (i < argList.size() - 1) {
+        for (int i = 0; i < paramList.size(); i++) {
+            builder.append("\"param" + i + "\": " + paramList.get(i));
+            if (i < paramList.size() - 1) {
                 builder.append(", ");
             }
         }
@@ -239,14 +225,9 @@ public class ChannelSubscribeStatement extends ExtensionStatement {
                 + "\":create_uuid(), \"" + BADConstants.DataverseName + "\":\"" + broker.getDataverseName() + "\", \""
                 + BADConstants.BrokerName + "\":\"" + broker.getBrokerName() + "\"}\n");
         builder.append("from " + channelSubscriptionsDataset + " s where ");
-        for (int i = 0; i < argList.size(); i++) {
-            String quote = "";
-            if (argList.get(i) instanceof LiteralExpr
-                    && ((LiteralExpr) argList.get(i)).getValue() instanceof StringLiteral) {
-                quote = "\"";
-            }
-            builder.append("param" + i + " =  " + quote + ((LiteralExpr) argList.get(i)).getValue() + quote);
-            if (i < argList.size() - 1) {
+        for (int i = 0; i < paramList.size(); i++) {
+            builder.append("param" + i + " =  " + paramList.get(i));
+            if (i < paramList.size() - 1) {
                 builder.append(" and ");
             }
         }

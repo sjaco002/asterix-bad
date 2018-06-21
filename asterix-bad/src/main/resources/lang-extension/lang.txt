@@ -226,21 +226,40 @@ Statement ChannelSubscriptionStatement() throws ParseException:
   String id = null;
   String subscriptionId = null;
   Pair<Identifier,Identifier> brokerName = null;
+  Token beginPos;
+  Token endPos;
+  String paramString;
+  List<String> paramList = new ArrayList<String>();
 }
 {
   (
   "subscribe" <TO> nameComponents = QualifiedName()
-   <LEFTPAREN> (tmp = Expression()
+   <LEFTPAREN>
+   (
    {
-      argList.add(tmp);
+   beginPos = token;
    }
-   (<COMMA> tmp = Expression()
+   tmp = Expression()
    {
       argList.add(tmp);
+      endPos = token;
+      paramString = extractFragment(beginPos.endLine, beginPos.endColumn, endPos.endLine, endPos.endColumn+1);
+      paramList.add(paramString);
+   }
+   (<COMMA>
+   {
+   beginPos = token;
+   }
+    tmp = Expression()
+   {
+      argList.add(tmp);
+      endPos = token;
+      paramString = extractFragment(beginPos.endLine, beginPos.endColumn, endPos.endLine, endPos.endColumn+1);
+      paramList.add(paramString);
    }
    )*)? <RIGHTPAREN> <ON> brokerName = QualifiedName()
    {
-      stmt = new ChannelSubscribeStatement(nameComponents.first, nameComponents.second, argList, getVarCounter(), brokerName.first, brokerName.second, subscriptionId);
+      stmt = new ChannelSubscribeStatement(nameComponents.first, nameComponents.second, argList, getVarCounter(), brokerName.first, brokerName.second, subscriptionId, paramList);
    }
    | "unsubscribe" id = StringLiteral() <FROM> nameComponents = QualifiedName()
       {
@@ -253,7 +272,7 @@ Statement ChannelSubscriptionStatement() throws ParseException:
       }
      | "move" "subscription" subscriptionId = StringLiteral()  <ON> nameComponents = QualifiedName() <TO> brokerName = QualifiedName()
       {
-        stmt = new ChannelSubscribeStatement(nameComponents.first, nameComponents.second, argList, getVarCounter(), brokerName.first, brokerName.second, subscriptionId);
+        stmt = new ChannelSubscribeStatement(nameComponents.first, nameComponents.second, argList, getVarCounter(), brokerName.first, brokerName.second, subscriptionId, paramList);
       }
     )
     {
