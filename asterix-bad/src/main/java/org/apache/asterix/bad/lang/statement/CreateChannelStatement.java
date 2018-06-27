@@ -267,10 +267,19 @@ public class CreateChannelStatement extends ExtensionStatement {
         builder.append("select result, ");
         builder.append(BADConstants.ChannelExecutionTime + ", ");
         builder.append("sub." + BADConstants.ChannelSubscriptionId + " as " + BADConstants.ChannelSubscriptionId + ",");
-        builder.append("current_datetime() as " + BADConstants.DeliveryTime + "\n");
-        builder.append("from " + dataverse + "." + channelSubscriptionsTableName + " sub,\n");
+        builder.append("current_datetime() as " + BADConstants.DeliveryTime + ",\n");
+
+        builder.append(
+                "(select b." + BADConstants.BrokerEndPoint + ", bs." + BADConstants.BrokerSubscriptionId + " from\n");
         builder.append(dataverse + "." + brokerSubscriptionsTableName + " bs,\n");
-        builder.append(BADConstants.BAD_DATAVERSE_NAME + "." + BADConstants.BROKER_KEYWORD + " b, \n");
+        builder.append(BADConstants.BAD_DATAVERSE_NAME + "." + BADConstants.BROKER_KEYWORD + " b\n");
+        builder.append("where bs." + BADConstants.BrokerName + " = b." + BADConstants.BrokerName + "\n");
+        builder.append("and bs." + BADConstants.DataverseName + " = b." + BADConstants.DataverseName + "\n");
+        builder.append(
+                "and bs." + BADConstants.ChannelSubscriptionId + " = sub." + BADConstants.ChannelSubscriptionId + "\n");
+        builder.append(") as brokerSubIds\n");
+
+        builder.append("from " + dataverse + "." + channelSubscriptionsTableName + " sub,\n");
         builder.append(function.getNamespace() + "." + function.getName() + "(");
         int i = 0;
         for (; i < function.getArity() - 1; i++) {
