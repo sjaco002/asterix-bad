@@ -337,7 +337,14 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
         for (Mutable<ILogicalOperator> subOp : op.getInputs()) {
             if (searchId == 1) {
                 if (subOp.getValue().getOperatorTag() == LogicalOperatorTag.SUBPLAN) {
-                    return (AbstractLogicalOperator) subOp.getValue();
+                    if (op.getOperatorTag() == LogicalOperatorTag.ASSIGN) {
+                        ScalarFunctionCallExpression resultCreation =
+                                (ScalarFunctionCallExpression) ((AssignOperator) op).getExpressions().get(0).getValue();
+
+                        resultCreation.getArguments().remove(resultCreation.getArguments().size() - 1);
+                        resultCreation.getArguments().remove(resultCreation.getArguments().size() - 1);
+                        return (AbstractLogicalOperator) subOp.getValue();
+                    }
                 } else {
                     AbstractLogicalOperator nestedOp = findOp((AbstractLogicalOperator) subOp.getValue(),
                             searchId, param1, param2);
