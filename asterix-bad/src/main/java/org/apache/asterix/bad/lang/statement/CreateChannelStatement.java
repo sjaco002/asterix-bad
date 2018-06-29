@@ -242,7 +242,8 @@ public class CreateChannelStatement extends ExtensionStatement {
     private JobSpecification createChannelJob(IStatementExecutor statementExecutor, MetadataProvider metadataProvider,
             IHyracksClientConnection hcc, IHyracksDataset hdc, Stats stats) throws Exception {
         /*
-            SET inline_with "false";
+            pull version:
+            set inline_with "false";
             insert into channels.ChannelNameResults as a (
             with channelExecutionTime as current_datetime()
             select result, channelExecutionTime, sub.channelSubId as channelSubId,current_datetime() as deliveryTime,
@@ -256,6 +257,21 @@ public class CreateChannelStatement extends ExtensionStatement {
             from channels.ChannelNameChannelSubscriptions sub,
             channels.ChannelFunctionName(sub.param0, sub.param1, ...) result
             ) returning a;
+        
+            push version:
+            set inline_with "false";
+            select value {"payload": {"result":result, "subscriptionIds": brokerSubIds}} from (
+            with channelExecutionTime as current_datetime()
+            select b.BrokerEndPoint, result, bs.brokerSubId as brokerSubId, channelExecutionTime
+            from channels.EmergenciesNearMeChannelChannelSubscriptions sub,
+            channels.EmergenciesNearMe(sub.param0,sub.param1) result
+            channels.EmergenciesNearMeChannelBrokerSubscriptions bs,
+            Metadata.Broker b
+            where bs.BrokerName = b.BrokerName
+            and bs.DataverseName = b.DataverseName
+            and bs.channelSubId = sub.channelSubId
+            ) results
+            group by BrokerEndPoint,result, channelExecutionTime group as brokerSubIds (brokerSubId as subscriptionId);
          */
         StringBuilder builder = new StringBuilder();
         builder.append("SET inline_with \"false\";\n");

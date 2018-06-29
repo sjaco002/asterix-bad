@@ -1,64 +1,105 @@
 -- NOTIFY_BROKERS  |PARTITIONED|
   -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
-    -- PRE_CLUSTERED_GROUP_BY[$$94, $$channelExecutionTime]  |PARTITIONED|
+    -- PRE_CLUSTERED_GROUP_BY[$$103, $$channelExecutionTime]  |PARTITIONED|
             {
               -- AGGREGATE  |LOCAL|
                 -- NESTED_TUPLE_SOURCE  |LOCAL|
             }
       -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
-        -- STABLE_SORT [$$94(ASC), $$channelExecutionTime(ASC)]  |PARTITIONED|
-          -- HASH_PARTITION_EXCHANGE [$$94, $$channelExecutionTime]  |PARTITIONED|
+        -- STABLE_SORT [$$103(ASC), $$channelExecutionTime(ASC)]  |PARTITIONED|
+          -- HASH_PARTITION_EXCHANGE [$$103, $$channelExecutionTime]  |PARTITIONED|
             -- PRE_SORTED_DISTINCT_BY  |PARTITIONED|
               -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
-                -- STABLE_SORT [$$79(ASC)]  |PARTITIONED|
-                  -- HASH_PARTITION_EXCHANGE [$$79]  |PARTITIONED|
+                -- STABLE_SORT [$$104(ASC)]  |PARTITIONED|
+                  -- HASH_PARTITION_EXCHANGE [$$104]  |PARTITIONED|
                     -- STREAM_PROJECT  |PARTITIONED|
-                      -- COMMIT  |PARTITIONED|
+                      -- ASSIGN  |PARTITIONED|
                         -- STREAM_PROJECT  |PARTITIONED|
-                          -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
-                            -- INDEX_INSERT_DELETE  |PARTITIONED|
-                              -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+                          -- UNNEST  |PARTITIONED|
+                            -- STREAM_PROJECT  |PARTITIONED|
+                              -- COMMIT  |PARTITIONED|
                                 -- STREAM_PROJECT  |PARTITIONED|
                                   -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
-                                    -- INSERT_DELETE  |PARTITIONED|
-                                      -- HASH_PARTITION_EXCHANGE [$$73]  |PARTITIONED|
-                                        -- ASSIGN  |PARTITIONED|
-                                          -- STREAM_PROJECT  |PARTITIONED|
-                                            -- ASSIGN  |PARTITIONED|
-                                              -- STREAM_PROJECT  |PARTITIONED|
+                                    -- INDEX_INSERT_DELETE  |PARTITIONED|
+                                      -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+                                        -- STREAM_PROJECT  |PARTITIONED|
+                                          -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+                                            -- INSERT_DELETE  |PARTITIONED|
+                                              -- HASH_PARTITION_EXCHANGE [$$91]  |PARTITIONED|
                                                 -- ASSIGN  |PARTITIONED|
                                                   -- STREAM_PROJECT  |PARTITIONED|
                                                     -- ASSIGN  |PARTITIONED|
                                                       -- STREAM_PROJECT  |PARTITIONED|
-                                                        -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
-                                                          -- NESTED_LOOP  |PARTITIONED|
-                                                            -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+                                                        -- ASSIGN  |PARTITIONED|
+                                                          -- STREAM_PROJECT  |PARTITIONED|
+                                                            -- ASSIGN  |PARTITIONED|
                                                               -- STREAM_PROJECT  |PARTITIONED|
                                                                 -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
-                                                                  -- HYBRID_HASH_JOIN [$$86, $$84][$$80, $$81]  |PARTITIONED|
-                                                                    -- HASH_PARTITION_EXCHANGE [$$86, $$84]  |PARTITIONED|
-                                                                      -- STREAM_PROJECT  |PARTITIONED|
-                                                                        -- ASSIGN  |PARTITIONED|
-                                                                          -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
-                                                                            -- DATASOURCE_SCAN  |PARTITIONED|
-                                                                              -- BROADCAST_EXCHANGE  |PARTITIONED|
-                                                                                -- ASSIGN  |UNPARTITIONED|
-                                                                                  -- EMPTY_TUPLE_SOURCE  |UNPARTITIONED|
-                                                                    -- HASH_PARTITION_EXCHANGE [$$80, $$81]  |PARTITIONED|
-                                                                      -- STREAM_PROJECT  |PARTITIONED|
-                                                                        -- ASSIGN  |PARTITIONED|
-                                                                          -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
-                                                                            -- DATASOURCE_SCAN  |PARTITIONED|
-                                                                              -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
-                                                                                -- EMPTY_TUPLE_SOURCE  |PARTITIONED|
-                                                            -- BROADCAST_EXCHANGE  |PARTITIONED|
-                                                              -- STREAM_PROJECT  |PARTITIONED|
-                                                                -- ASSIGN  |PARTITIONED|
-                                                                  -- STREAM_PROJECT  |PARTITIONED|
+                                                                  -- PRE_CLUSTERED_GROUP_BY[$$122]  |PARTITIONED|
+                                                                          {
+                                                                            -- AGGREGATE  |LOCAL|
+                                                                              -- STREAM_SELECT  |LOCAL|
+                                                                                -- NESTED_TUPLE_SOURCE  |LOCAL|
+                                                                          }
                                                                     -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
-                                                                      -- DATASOURCE_SCAN  |PARTITIONED|
-                                                                        -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
-                                                                          -- EMPTY_TUPLE_SOURCE  |PARTITIONED|
+                                                                      -- STABLE_SORT [$$122(ASC)]  |PARTITIONED|
+                                                                        -- HASH_PARTITION_EXCHANGE [$$122]  |PARTITIONED|
+                                                                          -- STREAM_PROJECT  |PARTITIONED|
+                                                                            -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+                                                                              -- HYBRID_HASH_JOIN [$$97][$$99]  |PARTITIONED|
+                                                                                -- HASH_PARTITION_EXCHANGE [$$97]  |PARTITIONED|
+                                                                                  -- ASSIGN  |PARTITIONED|
+                                                                                    -- STREAM_PROJECT  |PARTITIONED|
+                                                                                      -- UNNEST  |PARTITIONED|
+                                                                                        -- STREAM_PROJECT  |PARTITIONED|
+                                                                                          -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+                                                                                            -- PRE_CLUSTERED_GROUP_BY[$$119]  |PARTITIONED|
+                                                                                                    {
+                                                                                                      -- AGGREGATE  |LOCAL|
+                                                                                                        -- STREAM_SELECT  |LOCAL|
+                                                                                                          -- NESTED_TUPLE_SOURCE  |LOCAL|
+                                                                                                    }
+                                                                                              -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+                                                                                                -- STABLE_SORT [$$119(ASC)]  |PARTITIONED|
+                                                                                                  -- HASH_PARTITION_EXCHANGE [$$119]  |PARTITIONED|
+                                                                                                    -- STREAM_PROJECT  |PARTITIONED|
+                                                                                                      -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+                                                                                                        -- NESTED_LOOP  |PARTITIONED|
+                                                                                                          -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+                                                                                                            -- STREAM_PROJECT  |PARTITIONED|
+                                                                                                              -- ASSIGN  |PARTITIONED|
+                                                                                                                -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+                                                                                                                  -- DATASOURCE_SCAN  |PARTITIONED|
+                                                                                                                    -- BROADCAST_EXCHANGE  |PARTITIONED|
+                                                                                                                      -- ASSIGN  |UNPARTITIONED|
+                                                                                                                        -- EMPTY_TUPLE_SOURCE  |UNPARTITIONED|
+                                                                                                          -- BROADCAST_EXCHANGE  |PARTITIONED|
+                                                                                                            -- STREAM_PROJECT  |PARTITIONED|
+                                                                                                              -- ASSIGN  |PARTITIONED|
+                                                                                                                -- STREAM_PROJECT  |PARTITIONED|
+                                                                                                                  -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+                                                                                                                    -- DATASOURCE_SCAN  |PARTITIONED|
+                                                                                                                      -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+                                                                                                                        -- EMPTY_TUPLE_SOURCE  |PARTITIONED|
+                                                                                -- HASH_PARTITION_EXCHANGE [$$99]  |PARTITIONED|
+                                                                                  -- ASSIGN  |PARTITIONED|
+                                                                                    -- STREAM_PROJECT  |PARTITIONED|
+                                                                                      -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+                                                                                        -- HYBRID_HASH_JOIN [$$109, $$111][$$101, $$102]  |PARTITIONED|
+                                                                                          -- HASH_PARTITION_EXCHANGE [$$109, $$111]  |PARTITIONED|
+                                                                                            -- STREAM_PROJECT  |PARTITIONED|
+                                                                                              -- ASSIGN  |PARTITIONED|
+                                                                                                -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+                                                                                                  -- DATASOURCE_SCAN  |PARTITIONED|
+                                                                                                    -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+                                                                                                      -- EMPTY_TUPLE_SOURCE  |PARTITIONED|
+                                                                                          -- HASH_PARTITION_EXCHANGE [$$101, $$102]  |PARTITIONED|
+                                                                                            -- STREAM_PROJECT  |PARTITIONED|
+                                                                                              -- ASSIGN  |PARTITIONED|
+                                                                                                -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+                                                                                                  -- DATASOURCE_SCAN  |PARTITIONED|
+                                                                                                    -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+                                                                                                      -- EMPTY_TUPLE_SOURCE  |PARTITIONED|
 -- COMMIT  |PARTITIONED|
   -- STREAM_PROJECT  |PARTITIONED|
     -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
@@ -68,8 +109,9 @@
             -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
               -- ASSIGN  |PARTITIONED|
                 -- STREAM_PROJECT  |PARTITIONED|
-                  -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
-                    -- BTREE_SEARCH  |PARTITIONED|
+                  -- STREAM_SELECT  |PARTITIONED|
+                    -- STREAM_PROJECT  |PARTITIONED|
                       -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
-                        -- ASSIGN  |PARTITIONED|
-                          -- EMPTY_TUPLE_SOURCE  |PARTITIONED|
+                        -- DATASOURCE_SCAN  |PARTITIONED|
+                          -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+                            -- EMPTY_TUPLE_SOURCE  |PARTITIONED|
