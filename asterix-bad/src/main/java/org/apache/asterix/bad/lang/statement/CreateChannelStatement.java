@@ -262,34 +262,60 @@ public class CreateChannelStatement extends ExtensionStatement {
         if (!push) {
             builder.append("insert into " + dataverse + "." + resultsTableName);
             builder.append(" as a (\n");
-        }
-        builder.append("with " + BADConstants.ChannelExecutionTime + " as current_datetime() \n");
-        builder.append("select result, ");
-        builder.append(BADConstants.ChannelExecutionTime + ", ");
-        builder.append("sub." + BADConstants.ChannelSubscriptionId + " as " + BADConstants.ChannelSubscriptionId + ",");
-        builder.append("current_datetime() as " + BADConstants.DeliveryTime + ",\n");
 
-        builder.append(
-                "(select b." + BADConstants.BrokerEndPoint + ", bs." + BADConstants.BrokerSubscriptionId + " from\n");
+            builder.append("with " + BADConstants.ChannelExecutionTime + " as current_datetime() \n");
+            builder.append("select result, ");
+            builder.append(BADConstants.ChannelExecutionTime + ", ");
+            builder.append(
+                    "sub." + BADConstants.ChannelSubscriptionId + " as " + BADConstants.ChannelSubscriptionId + ",");
+            builder.append("current_datetime() as " + BADConstants.DeliveryTime + ",\n");
+
+            builder.append("(select b." + BADConstants.BrokerEndPoint + ", bs." + BADConstants.BrokerSubscriptionId
+                    + " from\n");
+        } else {
+            builder.append(
+                    "select value {\"payload\": {\"result\":result, \"subscriptionIds\": brokerSubIds}} from (\n");
+            builder.append("with " + BADConstants.ChannelExecutionTime + " as current_datetime() \n");
+            builder.append(
+                    "select b." + BADConstants.BrokerEndPoint + ", result, bs." + BADConstants.BrokerSubscriptionId);
+            builder.append(
+                    " as " + BADConstants.BrokerSubscriptionId + ", " + BADConstants.ChannelExecutionTime + "\n");
+            builder.append("from " + dataverse + "." + channelSubscriptionsTableName + " sub,\n");
+            builder.append(function.getNamespace() + "." + function.getName() + "(");
+            int i = 0;
+            for (; i < function.getArity() - 1; i++) {
+                builder.append("sub.param" + i + ",");
+            }
+            builder.append("sub.param" + i + ") result,\n");
+
+        }
         builder.append(dataverse + "." + brokerSubscriptionsTableName + " bs,\n");
         builder.append(BADConstants.BAD_DATAVERSE_NAME + "." + BADConstants.BROKER_KEYWORD + " b\n");
+
         builder.append("where bs." + BADConstants.BrokerName + " = b." + BADConstants.BrokerName + "\n");
         builder.append("and bs." + BADConstants.DataverseName + " = b." + BADConstants.DataverseName + "\n");
         builder.append(
                 "and bs." + BADConstants.ChannelSubscriptionId + " = sub." + BADConstants.ChannelSubscriptionId + "\n");
-        builder.append(") as brokerSubIds\n");
 
-        builder.append("from " + dataverse + "." + channelSubscriptionsTableName + " sub,\n");
-        builder.append(function.getNamespace() + "." + function.getName() + "(");
-        int i = 0;
-        for (; i < function.getArity() - 1; i++) {
-            builder.append("sub.param" + i + ",");
-        }
-        builder.append("sub.param" + i + ") result \n");
         if (!push) {
+            builder.append(") as brokerSubIds\n");
+
+            builder.append("from " + dataverse + "." + channelSubscriptionsTableName + " sub,\n");
+            builder.append(function.getNamespace() + "." + function.getName() + "(");
+            int i = 0;
+            for (; i < function.getArity() - 1; i++) {
+                builder.append("sub.param" + i + ",");
+            }
+            builder.append("sub.param" + i + ") result \n");
             builder.append(")");
             builder.append(" returning a");
+
+        } else {
+            builder.append(") results\n");
+            builder.append("group by " + BADConstants.BrokerEndPoint + ",result, " + BADConstants.ChannelExecutionTime);
+            builder.append(" group as brokerSubIds (" + BADConstants.BrokerSubscriptionId + " as subscriptionId)");
         }
+
         builder.append(";");
         body = builder.toString();
         BADParserFactory factory = new BADParserFactory();

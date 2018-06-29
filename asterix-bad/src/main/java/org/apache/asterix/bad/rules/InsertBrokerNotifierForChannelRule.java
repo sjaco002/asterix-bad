@@ -87,9 +87,16 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
             push = true;
         }
 
+
         DataSourceScanOperator subscriptionsScan;
         String channelDataverse;
         String channelName;
+        AssignOperator pushAssign = null;
+        AssignOperator newAssign = null;
+        GroupByOperator pushGroupBy = null;
+        LogicalVariable brokerSubsVar = null;
+        LogicalVariable brokerEndpoint = null;
+        LogicalVariable brokerSubId = null;
 
         if (!push) {
             AbstractLogicalOperator descendantOp = (AbstractLogicalOperator) op.getInputs().get(0).getValue();
@@ -123,6 +130,20 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
             if (op.getOperatorTag() != LogicalOperatorTag.PROJECT) {
                 return false;
             }
+            ProjectOperator pushProject = (ProjectOperator) op;
+
+            AbstractLogicalOperator op2 = (AbstractLogicalOperator) pushProject.getInputs().get(0).getValue();
+            if (op2.getOperatorTag() != LogicalOperatorTag.ASSIGN) {
+                return false;
+            }
+            pushAssign = (AssignOperator) op2;
+
+            AbstractLogicalOperator op3 = (AbstractLogicalOperator) pushAssign.getInputs().get(0).getValue();
+            if (op3.getOperatorTag() != LogicalOperatorTag.GROUP) {
+                return false;
+            }
+            pushGroupBy = (GroupByOperator) op3;
+
             //if push, get the channel name here instead
             subscriptionsScan = (DataSourceScanOperator) findOp(op, 3, "", BADConstants.ChannelSubscriptionsType);
             if (subscriptionsScan == null) {
@@ -132,6 +153,7 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
             String datasetName = dds.getDataset().getDatasetName();
             channelDataverse = dds.getDataset().getDataverseName();
             channelName = datasetName.substring(0, datasetName.length() - 13);
+            brokerEndpoint = pushGroupBy.getGroupByList().get(0).first;
         }
 
         //The channelExecutionTime is created just before the scan
@@ -144,32 +166,33 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
             return false;
         }
 
-        //move broker scan
-        SubplanOperator subplanOperator = (SubplanOperator) findOp(op, 1, "", "");
-        if (subplanOperator == null) {
-            return false;
+        if (!push) {
+            //move broker scan
+            SubplanOperator subplanOperator = (SubplanOperator) findOp(op, 1, "", "");
+            if (subplanOperator == null) {
+                return false;
+            }
+            brokerEndpoint = context.newVar();
+            brokerSubId = context.newVar();
+            brokerSubsVar = ((AggregateOperator) subplanOperator.getNestedPlans().get(0).getRoots().get(0).getValue())
+                    .getVariables().get(0);
+
+            newAssign = createAssignsAndUnnest(brokerSubsVar, brokerEndpoint, brokerSubId, op, context);
+
+            context.computeAndSetTypeEnvironmentForOperator(op1);
+        } else {
+            channelExecutionVar = pushGroupBy.getGroupByList().get(2).first;
         }
-
-        LogicalVariable brokerEndpoint = context.newVar();
-        LogicalVariable brokerSubId = context.newVar();
-        LogicalVariable brokerSubsVar =
-                ((AggregateOperator) subplanOperator.getNestedPlans().get(0).getRoots().get(0).getValue())
-                        .getVariables().get(0);
-
-        AssignOperator newAssign = createAssignsAndUnnest(brokerSubsVar, brokerEndpoint, brokerSubId, op, context);
-
-        context.computeAndSetTypeEnvironmentForOperator(op1);
-
         //Maybe we need to add a project???
         ProjectOperator badProject = (ProjectOperator) findOp(op1, 2, "", "");
         badProject.getVariables().add(channelExecutionVar);
-        badProject.getVariables().add(brokerSubsVar);
+        badProject.getVariables().add(push ? brokerEndpoint : brokerSubsVar);
         context.computeAndSetTypeEnvironmentForOperator(badProject);
 
         //Create my brokerNotify plan above the extension Operator
         DelegateOperator dOp = push
-                ? createNotifyBrokerPushPlan(brokerEndpoint, badProject.getVariables().get(0), channelExecutionVar,
-                        context, newAssign, (DistributeResultOperator) op1, channelDataverse, channelName)
+                ? createNotifyBrokerPushPlan(brokerEndpoint, channelExecutionVar, context, pushAssign, channelDataverse,
+                        channelName)
                 : createNotifyBrokerPullPlan(brokerEndpoint, brokerSubId, channelExecutionVar, context, newAssign,
                         (DistributeResultOperator) op1, channelDataverse, channelName);
 
@@ -237,23 +260,19 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
         return extensionOp;
     }
 
-    private DelegateOperator createNotifyBrokerPushPlan(LogicalVariable brokerEndpointVar, LogicalVariable sendVar,
-            LogicalVariable channelExecutionVar, IOptimizationContext context, ILogicalOperator eOp,
-            DistributeResultOperator distributeOp, String channelDataverse, String channelName)
+    private DelegateOperator createNotifyBrokerPushPlan(LogicalVariable brokerEndpointVar,
+            LogicalVariable channelExecutionVar, IOptimizationContext context, AssignOperator payLoadAssign,
+            String channelDataverse, String channelName)
             throws AlgebricksException {
-        //Find the assign operator to get the result type that we need
-        AbstractLogicalOperator assign = (AbstractLogicalOperator) eOp.getInputs().get(0).getValue();
-        while (assign.getOperatorTag() != LogicalOperatorTag.ASSIGN) {
-            assign = (AbstractLogicalOperator) assign.getInputs().get(0).getValue();
-        }
-        IVariableTypeEnvironment env = assign.computeOutputTypeEnvironment(context);
-        IAType resultType = (IAType) env.getVarType(sendVar);
+        IVariableTypeEnvironment env = payLoadAssign.computeOutputTypeEnvironment(context);
+        IAType resultType = (IAType) env.getVarType(payLoadAssign.getVariables().get(0));
 
         //Create the NotifyBrokerOperator
-        DelegateOperator extensionOp = createBrokerOp(brokerEndpointVar, sendVar, channelExecutionVar, channelDataverse,
+        DelegateOperator extensionOp = createBrokerOp(brokerEndpointVar, payLoadAssign.getVariables().get(0),
+                channelExecutionVar, channelDataverse,
                 channelName, true, resultType);
 
-        extensionOp.getInputs().add(new MutableObject<>(eOp));
+        extensionOp.getInputs().add(new MutableObject<>(payLoadAssign));
         context.computeAndSetTypeEnvironmentForOperator(extensionOp);
 
         return extensionOp;
