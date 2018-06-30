@@ -55,7 +55,6 @@ import org.apache.hyracks.algebricks.core.algebra.operators.logical.AssignOperat
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.DataSourceScanOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.DelegateOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.DistinctOperator;
-import org.apache.hyracks.algebricks.core.algebra.operators.logical.DistributeResultOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.GroupByOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.InsertDeleteUpsertOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.NestedTupleSourceOperator;
@@ -82,7 +81,7 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
         }
 
         boolean push = false;
-        AbstractLogicalOperator op = findOp(op1, 4, "", "");
+        AbstractLogicalOperator op = findOp(op1, LogicalOperatorTag.DELEGATE_OPERATOR, "", "");
         if (op == null) {
             push = true;
         }
@@ -120,7 +119,8 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
             channelName = datasetName.substring(0, datasetName.length() - 7);
             String subscriptionsName = channelName + "ChannelSubscriptions";
             subscriptionsScan =
-                    (DataSourceScanOperator) findOp(op, 3, subscriptionsName, BADConstants.ChannelSubscriptionsType);
+                    (DataSourceScanOperator) findOp(op, LogicalOperatorTag.DATASOURCESCAN, subscriptionsName,
+                            BADConstants.ChannelSubscriptionsType);
             if (subscriptionsScan == null) {
                 return false;
             }
@@ -145,7 +145,8 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
             pushGroupBy = (GroupByOperator) op3;
 
             //if push, get the channel name here instead
-            subscriptionsScan = (DataSourceScanOperator) findOp(op, 3, "", BADConstants.ChannelSubscriptionsType);
+            subscriptionsScan = (DataSourceScanOperator) findOp(op, LogicalOperatorTag.DATASOURCESCAN, "",
+                    BADConstants.ChannelSubscriptionsType);
             if (subscriptionsScan == null) {
                 return false;
             }
@@ -168,7 +169,7 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
 
         if (!push) {
             //move broker scan
-            SubplanOperator subplanOperator = (SubplanOperator) findOp(op, 1, "", "");
+            SubplanOperator subplanOperator = (SubplanOperator) findOp(op, LogicalOperatorTag.SUBPLAN, "", "");
             if (subplanOperator == null) {
                 return false;
             }
@@ -183,8 +184,8 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
         } else {
             channelExecutionVar = pushGroupBy.getGroupByList().get(2).first;
         }
-        //Maybe we need to add a project???
-        ProjectOperator badProject = (ProjectOperator) findOp(op1, 2, "", "");
+        //Maintain the variables through the existing project
+        ProjectOperator badProject = (ProjectOperator) findOp(op1, LogicalOperatorTag.PROJECT, "", "");
         badProject.getVariables().add(channelExecutionVar);
         badProject.getVariables().add(push ? brokerEndpoint : brokerSubsVar);
         context.computeAndSetTypeEnvironmentForOperator(badProject);
@@ -194,7 +195,7 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
                 ? createNotifyBrokerPushPlan(brokerEndpoint, channelExecutionVar, context, pushAssign, channelDataverse,
                         channelName)
                 : createNotifyBrokerPullPlan(brokerEndpoint, brokerSubId, channelExecutionVar, context, newAssign,
-                        (DistributeResultOperator) op1, channelDataverse, channelName);
+                        channelDataverse, channelName);
 
         opRef.setValue(dOp);
 
@@ -242,7 +243,6 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
         context.computeAndSetTypeEnvironmentForOperator(assignBrokerSubId);
 
         return assignBrokerSubId;
-
     }
 
 
@@ -281,7 +281,7 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
 
     private DelegateOperator createNotifyBrokerPullPlan(LogicalVariable brokerEndpointVar,
             LogicalVariable sendVar, LogicalVariable channelExecutionVar, IOptimizationContext context,
-            ILogicalOperator eOp, DistributeResultOperator distributeOp, String channelDataverse, String channelName)
+            ILogicalOperator eOp, String channelDataverse, String channelName)
                     throws AlgebricksException {
 
         //Create the Distinct Op
@@ -340,101 +340,54 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
     }
 
 
-    /*This function is used to find specific operators within the plan, either
-     * 1. The assign for the record being inserted
-     * 2. The highest project of the plan
-     * 3. The subscriptions scan
-     * 4. Commit operator
-     *
-     * param1 is the name of the expected subscriptions dataset when searching for a subscriptions scan
-     * and param2 is the type of the subscriptions dataset (channel or broker)
-     */
-    private AbstractLogicalOperator findOp(AbstractLogicalOperator op, int searchId, String param1, String param2) {
+    //Find Specific Operators within the plan
+    private AbstractLogicalOperator findOp(AbstractLogicalOperator op, LogicalOperatorTag searchTag,
+            String subscriptionsName, String subscriptionType) {
         if (!op.hasInputs()) {
             return null;
         }
         for (Mutable<ILogicalOperator> subOp : op.getInputs()) {
-            if (searchId == 1) {
-                if (subOp.getValue().getOperatorTag() == LogicalOperatorTag.SUBPLAN) {
+            if (subOp.getValue().getOperatorTag() == searchTag) {
+                if (searchTag == LogicalOperatorTag.SUBPLAN) {
                     if (op.getOperatorTag() == LogicalOperatorTag.ASSIGN) {
                         ScalarFunctionCallExpression resultCreation =
                                 (ScalarFunctionCallExpression) ((AssignOperator) op).getExpressions().get(0).getValue();
-
                         resultCreation.getArguments().remove(resultCreation.getArguments().size() - 1);
                         resultCreation.getArguments().remove(resultCreation.getArguments().size() - 1);
                         return (AbstractLogicalOperator) subOp.getValue();
                     }
-                } else {
-                    AbstractLogicalOperator nestedOp = findOp((AbstractLogicalOperator) subOp.getValue(),
-                            searchId, param1, param2);
-                    if (nestedOp != null) {
-                        return nestedOp;
-                    }
-                }
-
-            } else if (searchId == 2) {
-                if (subOp.getValue().getOperatorTag() == LogicalOperatorTag.PROJECT) {
+                } else if (searchTag == LogicalOperatorTag.PROJECT) {
                     return (AbstractLogicalOperator) subOp.getValue();
-                } else {
-                    AbstractLogicalOperator nestedOp = findOp((AbstractLogicalOperator) subOp.getValue(),
-                            searchId, param1, param2);
-                    if (nestedOp != null) {
-                        return nestedOp;
-                    }
-                }
-            }
 
-            else if (searchId == 3) {
-                if (isSubscriptionsScan((AbstractLogicalOperator) subOp.getValue(), param1, param2)) {
+                } else if (searchTag == LogicalOperatorTag.DATASOURCESCAN && isSubscriptionsScan(
+                        (AbstractLogicalOperator) subOp.getValue(), subscriptionsName, subscriptionType)) {
                     return (AbstractLogicalOperator) subOp.getValue();
-                } else {
-                    AbstractLogicalOperator nestedOp = findOp((AbstractLogicalOperator) subOp.getValue(),
-                            searchId, param1, param2);
-                    if (nestedOp != null) {
-                        return nestedOp;
-                    }
-                }
 
-            } else if (searchId == 4) {
-                if (subOp.getValue().getOperatorTag() == LogicalOperatorTag.DELEGATE_OPERATOR) {
+                } else if (searchTag == LogicalOperatorTag.DELEGATE_OPERATOR) {
                     DelegateOperator dOp = (DelegateOperator) subOp.getValue();
                     if (dOp.getDelegate() instanceof CommitOperator) {
                         return (AbstractLogicalOperator) subOp.getValue();
                     }
-                } else {
-                    AbstractLogicalOperator nestedOp =
-                            findOp((AbstractLogicalOperator) subOp.getValue(), searchId, param1, param2);
-                    if (nestedOp != null) {
-                        return nestedOp;
-                    }
+                }
+
+            } else {
+                AbstractLogicalOperator nestedOp = findOp((AbstractLogicalOperator) subOp.getValue(), searchTag,
+                        subscriptionsName, subscriptionType);
+                if (nestedOp != null) {
+                    return nestedOp;
                 }
             }
         }
         return null;
     }
 
-    private boolean isBrokerScan(AbstractLogicalOperator op) {
-        if (op instanceof DataSourceScanOperator) {
-            if (((DataSourceScanOperator) op).getDataSource() instanceof DatasetDataSource) {
-                DatasetDataSource dds = (DatasetDataSource) ((DataSourceScanOperator) op).getDataSource();
-                if (dds.getDataset().getDataverseName().equals("Metadata")
-                        && dds.getDataset().getDatasetName().equals("Broker")) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
     private boolean isSubscriptionsScan(AbstractLogicalOperator op, String subscriptionsName, String subscriptionType) {
-        if (op instanceof DataSourceScanOperator) {
-            if (((DataSourceScanOperator) op).getDataSource() instanceof DatasetDataSource) {
-                DatasetDataSource dds = (DatasetDataSource) ((DataSourceScanOperator) op).getDataSource();
-                if (dds.getDataset().getItemTypeDataverseName().equals("Metadata")
-                        && dds.getDataset().getItemTypeName().equals(subscriptionType)) {
-                    if (subscriptionsName.equals("") || dds.getDataset().getDatasetName().equals(subscriptionsName)) {
-                        return true;
-                    }
+        if (((DataSourceScanOperator) op).getDataSource() instanceof DatasetDataSource) {
+            DatasetDataSource dds = (DatasetDataSource) ((DataSourceScanOperator) op).getDataSource();
+            if (dds.getDataset().getItemTypeDataverseName().equals("Metadata")
+                    && dds.getDataset().getItemTypeName().equals(subscriptionType)) {
+                if (subscriptionsName.equals("") || dds.getDataset().getDatasetName().equals(subscriptionsName)) {
+                    return true;
                 }
             }
         }

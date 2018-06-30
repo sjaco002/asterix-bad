@@ -178,11 +178,14 @@ public class ChannelSubscribeStatement extends ExtensionStatement {
             IHyracksClientConnection hcc, IHyracksDataset hdc, Stats stats, String channelSubscriptionsDataset,
             ResultDelivery resultDelivery) throws Exception {
         //TODO: Might be better to create the entire expression manually rather than parsing a string
+        String channelSubVar = "channelSub";
+        String param = "param";
         StringBuilder builder = new StringBuilder();
         builder.append("upsert into " + channelSubscriptionsDataset + "(\n");
-        builder.append("(let v = (select value s from " + channelSubscriptionsDataset + " s where ");
+        builder.append("(let v = (select value " + channelSubVar + " from " + channelSubscriptionsDataset + " "
+                + channelSubVar + " where ");
         for (int i = 0; i < paramList.size(); i++) {
-            builder.append("param" + i + " =  " + paramList.get(i));
+            builder.append(param + i + " =  " + paramList.get(i));
             if (i < paramList.size() - 1) {
                 builder.append(" and ");
             }
@@ -192,7 +195,7 @@ public class ChannelSubscribeStatement extends ExtensionStatement {
         builder.append("WHEN true THEN {\"" + BADConstants.ChannelSubscriptionId + "\":v[0]."
                 + BADConstants.ChannelSubscriptionId + ", ");
         for (int i = 0; i < paramList.size(); i++) {
-            builder.append("\"param" + i + "\": " + paramList.get(i));
+            builder.append("\"" + param + i + "\": " + paramList.get(i));
             if (i < paramList.size() - 1) {
                 builder.append(", ");
             }
@@ -200,7 +203,7 @@ public class ChannelSubscribeStatement extends ExtensionStatement {
         builder.append("}\n");
         builder.append("ELSE {\"" + BADConstants.ChannelSubscriptionId + "\":create_uuid(), ");
         for (int i = 0; i < paramList.size(); i++) {
-            builder.append("\"param" + i + "\": " + paramList.get(i));
+            builder.append("\"" + param + i + "\": " + paramList.get(i));
             if (i < paramList.size() - 1) {
                 builder.append(", ");
             }
@@ -218,6 +221,7 @@ public class ChannelSubscribeStatement extends ExtensionStatement {
             IHyracksClientConnection hcc, IHyracksDataset hdc, Stats stats, String channelSubscriptionsDataset,
             String brokerSubscriptionDataset, Broker broker, ResultDelivery resultDelivery) throws Exception {
         //TODO: Might be better to create the entire expression manually rather than parsing a string
+        String param = "param";
         StringBuilder builder = new StringBuilder();
         builder.append("insert into " + brokerSubscriptionDataset + " as r (\n");
         builder.append("(select value {\"" + BADConstants.ChannelSubscriptionId + "\":s."
@@ -226,7 +230,7 @@ public class ChannelSubscribeStatement extends ExtensionStatement {
                 + BADConstants.BrokerName + "\":\"" + broker.getBrokerName() + "\"}\n");
         builder.append("from " + channelSubscriptionsDataset + " s where ");
         for (int i = 0; i < paramList.size(); i++) {
-            builder.append("param" + i + " =  " + paramList.get(i));
+            builder.append(param + i + " =  " + paramList.get(i));
             if (i < paramList.size() - 1) {
                 builder.append(" and ");
             }
@@ -243,15 +247,18 @@ public class ChannelSubscribeStatement extends ExtensionStatement {
             IHyracksClientConnection hcc, IHyracksDataset hdc, Stats stats, String brokerSubscriptionDataset,
             Broker broker, ResultDelivery resultDelivery, String subscriptionString) throws Exception {
         //TODO: Might be better to create the entire expression manually rather than parsing a string
+        String channelSubVar = "channelSub";
         StringBuilder builder = new StringBuilder();
         builder.append("upsert into " + brokerSubscriptionDataset + "(\n");
         builder.append(
-                "(select value {\"" + BADConstants.ChannelSubscriptionId + "\":s." + BADConstants.ChannelSubscriptionId
-                        + ",\"" + BADConstants.BrokerSubscriptionId + "\":s." + BADConstants.BrokerSubscriptionId
+                "(select value {\"" + BADConstants.ChannelSubscriptionId + "\":" + channelSubVar + "."
+                        + BADConstants.ChannelSubscriptionId + ",\"" + BADConstants.BrokerSubscriptionId + "\":"
+                        + channelSubVar + "." + BADConstants.BrokerSubscriptionId
                         + ",\"" + BADConstants.DataverseName + "\":\"" + broker.getDataverseName() + "\", \""
                         + BADConstants.BrokerName + "\":\"" + broker.getBrokerName() + "\"}\n");
-        builder.append("from " + brokerSubscriptionDataset + " s where ");
-        builder.append("s." + BADConstants.BrokerSubscriptionId + " = uuid(\"" + subscriptionString + "\"))\n");
+        builder.append("from " + brokerSubscriptionDataset + " " + channelSubVar + " where ");
+        builder.append("" + channelSubVar + "." + BADConstants.BrokerSubscriptionId + " = uuid(\"" + subscriptionString
+                + "\"))\n");
         builder.append(");");
         BADParserFactory factory = new BADParserFactory();
         List<Statement> fStatements = factory.createParser(new StringReader(builder.toString())).parse();

@@ -167,9 +167,9 @@ public class CreateChannelStatement extends ExtensionStatement {
         List<List<String>> partitionFields = new ArrayList<>();
         List<Integer> keyIndicators = new ArrayList<>();
         keyIndicators.add(0);
-        List<String> fieldName = new ArrayList<>();
-        fieldName.add(BADConstants.ChannelSubscriptionId);
-        partitionFields.add(fieldName);
+        List<String> channelSubKey = new ArrayList<>();
+        channelSubKey.add(BADConstants.ChannelSubscriptionId);
+        partitionFields.add(channelSubKey);
         IDatasetDetailsDecl idd = new InternalDetailsDecl(partitionFields, keyIndicators, false, null);
         DatasetDecl createChannelSubscriptionsDataset =
                 new DatasetDecl(dataverseName, new Identifier(channelSubscriptionsTableName),
@@ -185,12 +185,12 @@ public class CreateChannelStatement extends ExtensionStatement {
         keyIndicators = new ArrayList<>();
         keyIndicators.add(0);
         keyIndicators.add(0);
-        fieldName = new ArrayList<>();
-        List<String> fieldName2 = new ArrayList<>();
-        fieldName.add(BADConstants.ChannelSubscriptionId);
-        fieldName2.add(BADConstants.BrokerSubscriptionId);
-        partitionFields.add(fieldName);
-        partitionFields.add(fieldName2);
+        channelSubKey = new ArrayList<>();
+        List<String> brokerSubKey = new ArrayList<>();
+        channelSubKey.add(BADConstants.ChannelSubscriptionId);
+        brokerSubKey.add(BADConstants.BrokerSubscriptionId);
+        partitionFields.add(channelSubKey);
+        partitionFields.add(brokerSubKey);
         idd = new InternalDetailsDecl(partitionFields, keyIndicators, false, null);
         DatasetDecl createBrokerSubscriptionsDataset =
                 new DatasetDecl(dataverseName, new Identifier(brokerSubscriptionsTableName),
@@ -204,9 +204,9 @@ public class CreateChannelStatement extends ExtensionStatement {
         if (!push) {
             //Setup the results dataset
             partitionFields = new ArrayList<>();
-            fieldName = new ArrayList<>();
-            fieldName.add(BADConstants.ResultId);
-            partitionFields.add(fieldName);
+            channelSubKey = new ArrayList<>();
+            channelSubKey.add(BADConstants.ResultId);
+            partitionFields.add(channelSubKey);
             idd = new InternalDetailsDecl(partitionFields, keyIndicators, true, null);
             DatasetDecl createResultsDataset = new DatasetDecl(dataverseName, new Identifier(resultsTableName),
                     new Identifier(BADConstants.BAD_DATAVERSE_NAME), resultsTypeName, null, null, null, new HashMap<>(),
@@ -275,60 +275,76 @@ public class CreateChannelStatement extends ExtensionStatement {
          */
         StringBuilder builder = new StringBuilder();
         builder.append("SET inline_with \"false\";\n");
+        String insertedRecordVar = "a";
+        String channelSubscriptionRecordVar = "sub";
+        String channelParamPrefix = channelSubscriptionRecordVar + ".param";
+        String functionResultVar = "result";
+        String brokerRecordVar = "b";
+        String brokerSubscriptionRecordVar = "bs";
         if (!push) {
             builder.append("insert into " + dataverse + "." + resultsTableName);
-            builder.append(" as a (\n");
+            builder.append(" as " + insertedRecordVar + " (\n");
 
             builder.append("with " + BADConstants.ChannelExecutionTime + " as current_datetime() \n");
-            builder.append("select result, ");
+            builder.append("select " + functionResultVar + ", ");
             builder.append(BADConstants.ChannelExecutionTime + ", ");
             builder.append(
-                    "sub." + BADConstants.ChannelSubscriptionId + " as " + BADConstants.ChannelSubscriptionId + ",");
+                    channelSubscriptionRecordVar + "." + BADConstants.ChannelSubscriptionId + " as "
+                            + BADConstants.ChannelSubscriptionId + ",");
             builder.append("current_datetime() as " + BADConstants.DeliveryTime + ",\n");
 
-            builder.append("(select b." + BADConstants.BrokerEndPoint + ", bs." + BADConstants.BrokerSubscriptionId
+            builder.append("(select " + brokerRecordVar + "." + BADConstants.BrokerEndPoint + ", "
+                    + brokerSubscriptionRecordVar + "." + BADConstants.BrokerSubscriptionId
                     + " from\n");
         } else {
             builder.append(
-                    "select value {\"payload\": {\"result\":result, \"subscriptionIds\": brokerSubIds}} from (\n");
+                    "select value {\"payload\": {\"" + functionResultVar + "\":" + functionResultVar
+                            + ", \"subscriptionIds\": brokerSubIds}} from (\n");
             builder.append("with " + BADConstants.ChannelExecutionTime + " as current_datetime() \n");
             builder.append(
-                    "select b." + BADConstants.BrokerEndPoint + ", result, bs." + BADConstants.BrokerSubscriptionId);
+                    "select " + brokerRecordVar + "." + BADConstants.BrokerEndPoint + ", " + functionResultVar + ", "
+                            + brokerSubscriptionRecordVar + "." + BADConstants.BrokerSubscriptionId);
             builder.append(
                     " as " + BADConstants.BrokerSubscriptionId + ", " + BADConstants.ChannelExecutionTime + "\n");
-            builder.append("from " + dataverse + "." + channelSubscriptionsTableName + " sub,\n");
+            builder.append("from " + dataverse + "." + channelSubscriptionsTableName + " "
+                    + channelSubscriptionRecordVar + ",\n");
             builder.append(function.getNamespace() + "." + function.getName() + "(");
             int i = 0;
             for (; i < function.getArity() - 1; i++) {
-                builder.append("sub.param" + i + ",");
+                builder.append(channelParamPrefix + i + ",");
             }
-            builder.append("sub.param" + i + ") result,\n");
+            builder.append(channelParamPrefix + i + ") " + functionResultVar + ",\n");
 
         }
-        builder.append(dataverse + "." + brokerSubscriptionsTableName + " bs,\n");
-        builder.append(BADConstants.BAD_DATAVERSE_NAME + "." + BADConstants.BROKER_KEYWORD + " b\n");
-
-        builder.append("where bs." + BADConstants.BrokerName + " = b." + BADConstants.BrokerName + "\n");
-        builder.append("and bs." + BADConstants.DataverseName + " = b." + BADConstants.DataverseName + "\n");
+        builder.append(dataverse + "." + brokerSubscriptionsTableName + " " + brokerSubscriptionRecordVar + ",\n");
         builder.append(
-                "and bs." + BADConstants.ChannelSubscriptionId + " = sub." + BADConstants.ChannelSubscriptionId + "\n");
+                BADConstants.BAD_DATAVERSE_NAME + "." + BADConstants.BROKER_KEYWORD + " " + brokerRecordVar + "\n");
+
+        builder.append("where " + brokerSubscriptionRecordVar + "." + BADConstants.BrokerName + " = " + brokerRecordVar
+                + "." + BADConstants.BrokerName + "\n");
+        builder.append("and " + brokerSubscriptionRecordVar + "." + BADConstants.DataverseName + " = " + brokerRecordVar
+                + "." + BADConstants.DataverseName + "\n");
+        builder.append("and " + brokerSubscriptionRecordVar + "." + BADConstants.ChannelSubscriptionId + " = "
+                + channelSubscriptionRecordVar + "." + BADConstants.ChannelSubscriptionId + "\n");
 
         if (!push) {
             builder.append(") as brokerSubIds\n");
 
-            builder.append("from " + dataverse + "." + channelSubscriptionsTableName + " sub,\n");
+            builder.append("from " + dataverse + "." + channelSubscriptionsTableName + " "
+                    + channelSubscriptionRecordVar + ",\n");
             builder.append(function.getNamespace() + "." + function.getName() + "(");
             int i = 0;
             for (; i < function.getArity() - 1; i++) {
-                builder.append("sub.param" + i + ",");
+                builder.append(channelParamPrefix + i + ",");
             }
-            builder.append("sub.param" + i + ") result \n");
+            builder.append(channelParamPrefix + i + ") " + functionResultVar + " \n");
             builder.append(")");
-            builder.append(" returning a");
+            builder.append(" returning " + insertedRecordVar);
 
         } else {
             builder.append(") results\n");
-            builder.append("group by " + BADConstants.BrokerEndPoint + ",result, " + BADConstants.ChannelExecutionTime);
+            builder.append("group by " + BADConstants.BrokerEndPoint + "," + functionResultVar + ", "
+                    + BADConstants.ChannelExecutionTime);
             builder.append(" group as brokerSubIds (" + BADConstants.BrokerSubscriptionId + " as subscriptionId)");
         }
 
