@@ -339,9 +339,6 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
 
     }
 
-
-    //
-
     /**
      * Find Specific Operators within the plan
      *

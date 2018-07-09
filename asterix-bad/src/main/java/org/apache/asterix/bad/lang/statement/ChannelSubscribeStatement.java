@@ -18,7 +18,6 @@
  */
 package org.apache.asterix.bad.lang.statement;
 
-import java.io.StringReader;
 import java.util.List;
 
 import org.apache.asterix.algebra.extension.ExtensionStatement;
@@ -213,7 +212,7 @@ public class ChannelSubscribeStatement extends ExtensionStatement {
         builder.append("END))\n");
         builder.append(");");
         BADParserFactory factory = new BADParserFactory();
-        List<Statement> fStatements = factory.createParser(new StringReader(builder.toString())).parse();
+        List<Statement> fStatements = factory.createParser(builder.toString()).parse();
         ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider, fStatements.get(0), hcc,
                 hdc, resultDelivery, null, stats, false, null, null, null);
     }
@@ -238,7 +237,7 @@ public class ChannelSubscribeStatement extends ExtensionStatement {
         builder.append(" limit 1)\n");
         builder.append(") returning r." + BADConstants.BrokerSubscriptionId + ";");
         BADParserFactory factory = new BADParserFactory();
-        List<Statement> fStatements = factory.createParser(new StringReader(builder.toString())).parse();
+        List<Statement> fStatements = factory.createParser(builder.toString()).parse();
         ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider, fStatements.get(0), hcc,
                 hdc, resultDelivery, null, stats, false, null, null, null);
     }
@@ -261,7 +260,7 @@ public class ChannelSubscribeStatement extends ExtensionStatement {
                 + "\"))\n");
         builder.append(");");
         BADParserFactory factory = new BADParserFactory();
-        List<Statement> fStatements = factory.createParser(new StringReader(builder.toString())).parse();
+        List<Statement> fStatements = factory.createParser(builder.toString()).parse();
         ((QueryTranslator) statementExecutor).handleInsertUpsertStatement(metadataProvider, fStatements.get(0), hcc,
                 hdc, resultDelivery, null, stats, false, null, null, null);
     }

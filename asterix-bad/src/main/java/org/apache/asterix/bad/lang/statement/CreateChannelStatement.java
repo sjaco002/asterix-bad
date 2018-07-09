@@ -20,7 +20,6 @@ package org.apache.asterix.bad.lang.statement;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
-import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -345,7 +344,7 @@ public class CreateChannelStatement extends ExtensionStatement {
         builder.append(";");
         body = builder.toString();
         BADParserFactory factory = new BADParserFactory();
-        List<Statement> fStatements = factory.createParser(new StringReader(builder.toString())).parse();
+        List<Statement> fStatements = factory.createParser(builder.toString()).parse();
 
         SetStatement ss = (SetStatement) fStatements.get(0);
         metadataProvider.getConfig().put(ss.getPropName(), ss.getPropValue());
