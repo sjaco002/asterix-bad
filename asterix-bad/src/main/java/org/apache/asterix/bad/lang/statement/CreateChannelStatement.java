@@ -22,6 +22,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Level;
@@ -90,6 +92,13 @@ public class CreateChannelStatement extends ExtensionStatement {
     private String resultsTableName;
     private String dataverse;
     private final boolean push;
+
+    private static final String INSERTED_RECORD_VAR = "a";
+    private static final String CHANNEL_SUB_RECORD_VAR = "sub";
+    private static final String CHANNEL_PARAM_PREFIX = CHANNEL_SUB_RECORD_VAR + ".param";
+    private static final String FUNCTION_RESULT_VAR = "result";
+    private static final String BROKER_RECORD_VAR = "b";
+    private static final String BROKER_SUB_RECORD_VAR = "bs";
 
     public CreateChannelStatement(Identifier dataverseName, Identifier channelName, FunctionSignature function,
             Expression period, boolean push) {
@@ -165,12 +174,10 @@ public class CreateChannelStatement extends ExtensionStatement {
         Identifier resultsTypeName = new Identifier(BADConstants.ChannelResultsType);
         //Setup the subscriptions dataset
         List<List<String>> partitionFields = new ArrayList<>();
-        List<Integer> keyIndicators = new ArrayList<>();
-        keyIndicators.add(0);
         List<String> channelSubKey = new ArrayList<>();
         channelSubKey.add(BADConstants.ChannelSubscriptionId);
         partitionFields.add(channelSubKey);
-        IDatasetDetailsDecl idd = new InternalDetailsDecl(partitionFields, keyIndicators, false, null);
+        IDatasetDetailsDecl idd = new InternalDetailsDecl(partitionFields, Collections.singletonList(0), false, null);
         DatasetDecl createChannelSubscriptionsDataset =
                 new DatasetDecl(dataverseName, new Identifier(channelSubscriptionsTableName),
                         new Identifier(BADConstants.BAD_DATAVERSE_NAME), subscriptionsTypeName, null, null, null,
@@ -182,16 +189,11 @@ public class CreateChannelStatement extends ExtensionStatement {
         //Create broker subscriptions dataset
         Identifier brokerSubscriptionsTypeName = new Identifier(BADConstants.BrokerSubscriptionsType);
         partitionFields = new ArrayList<>();
-        keyIndicators = new ArrayList<>();
-        keyIndicators.add(0);
-        keyIndicators.add(0);
-        channelSubKey = new ArrayList<>();
-        List<String> brokerSubKey = new ArrayList<>();
-        channelSubKey.add(BADConstants.ChannelSubscriptionId);
-        brokerSubKey.add(BADConstants.BrokerSubscriptionId);
+        channelSubKey = Collections.singletonList(BADConstants.ChannelSubscriptionId);
+        List<String> brokerSubKey = Collections.singletonList(BADConstants.BrokerSubscriptionId);
         partitionFields.add(channelSubKey);
         partitionFields.add(brokerSubKey);
-        idd = new InternalDetailsDecl(partitionFields, keyIndicators, false, null);
+        idd = new InternalDetailsDecl(partitionFields, Arrays.asList(0, 0), false, null);
         DatasetDecl createBrokerSubscriptionsDataset =
                 new DatasetDecl(dataverseName, new Identifier(brokerSubscriptionsTableName),
                         new Identifier(BADConstants.BAD_DATAVERSE_NAME), brokerSubscriptionsTypeName, null, null, null,
@@ -203,11 +205,9 @@ public class CreateChannelStatement extends ExtensionStatement {
 
         if (!push) {
             //Setup the results dataset
-            partitionFields = new ArrayList<>();
-            channelSubKey = new ArrayList<>();
-            channelSubKey.add(BADConstants.ResultId);
-            partitionFields.add(channelSubKey);
-            idd = new InternalDetailsDecl(partitionFields, keyIndicators, true, null);
+            channelSubKey = Collections.singletonList(BADConstants.ResultId);
+            partitionFields = Collections.singletonList(channelSubKey);
+            idd = new InternalDetailsDecl(partitionFields, Arrays.asList(0, 0), true, null);
             DatasetDecl createResultsDataset = new DatasetDecl(dataverseName, new Identifier(resultsTableName),
                     new Identifier(BADConstants.BAD_DATAVERSE_NAME), resultsTypeName, null, null, null, new HashMap<>(),
                     DatasetType.INTERNAL, idd, null, true);
@@ -239,111 +239,105 @@ public class CreateChannelStatement extends ExtensionStatement {
 
     }
 
+    /**
+     * pull version:
+     * set inline_with "false";
+     * insert into channels.ChannelNameResults as a (
+     * with channelExecutionTime as current_datetime()
+     * select result, channelExecutionTime, sub.channelSubId as channelSubId,current_datetime() as deliveryTime,
+     * (select b.BrokerEndPoint, bs.brokerSubId from
+     * channels.ChannelNameBrokerSubscriptions bs,
+     * Metadata.`Broker` b
+     * where bs.BrokerName = b.BrokerName
+     * and bs.DataverseName = b.DataverseName
+     * and bs.channelSubId = sub.channelSubId
+     * ) as brokerSubIds
+     * from channels.ChannelNameChannelSubscriptions sub,
+     * channels.ChannelFunctionName(sub.param0, sub.param1, ...) result
+     * ) returning a;
+     *
+     * push version:
+     * set inline_with "false";
+     * select value {"payload": {"result":result, "subscriptionIds": brokerSubIds}} from (
+     * with channelExecutionTime as current_datetime()
+     * select b.BrokerEndPoint, result, bs.brokerSubId as brokerSubId, channelExecutionTime
+     * from channels.EmergenciesNearMeChannelChannelSubscriptions sub,
+     * channels.EmergenciesNearMe(sub.param0,sub.param1) result
+     * channels.EmergenciesNearMeChannelBrokerSubscriptions bs,
+     * Metadata.Broker b
+     * where bs.BrokerName = b.BrokerName
+     * and bs.DataverseName = b.DataverseName
+     * and bs.channelSubId = sub.channelSubId
+     * ) results
+     * group by BrokerEndPoint,result, channelExecutionTime group as brokerSubIds (brokerSubId as subscriptionId);
+     */
     private JobSpecification createChannelJob(IStatementExecutor statementExecutor, MetadataProvider metadataProvider,
             IHyracksClientConnection hcc, IHyracksDataset hdc, Stats stats) throws Exception {
-        /*
-            pull version:
-            set inline_with "false";
-            insert into channels.ChannelNameResults as a (
-            with channelExecutionTime as current_datetime()
-            select result, channelExecutionTime, sub.channelSubId as channelSubId,current_datetime() as deliveryTime,
-            (select b.BrokerEndPoint, bs.brokerSubId from
-            channels.ChannelNameBrokerSubscriptions bs,
-            Metadata.`Broker` b
-            where bs.BrokerName = b.BrokerName
-            and bs.DataverseName = b.DataverseName
-            and bs.channelSubId = sub.channelSubId
-            ) as brokerSubIds
-            from channels.ChannelNameChannelSubscriptions sub,
-            channels.ChannelFunctionName(sub.param0, sub.param1, ...) result
-            ) returning a;
-        
-            push version:
-            set inline_with "false";
-            select value {"payload": {"result":result, "subscriptionIds": brokerSubIds}} from (
-            with channelExecutionTime as current_datetime()
-            select b.BrokerEndPoint, result, bs.brokerSubId as brokerSubId, channelExecutionTime
-            from channels.EmergenciesNearMeChannelChannelSubscriptions sub,
-            channels.EmergenciesNearMe(sub.param0,sub.param1) result
-            channels.EmergenciesNearMeChannelBrokerSubscriptions bs,
-            Metadata.Broker b
-            where bs.BrokerName = b.BrokerName
-            and bs.DataverseName = b.DataverseName
-            and bs.channelSubId = sub.channelSubId
-            ) results
-            group by BrokerEndPoint,result, channelExecutionTime group as brokerSubIds (brokerSubId as subscriptionId);
-         */
         StringBuilder builder = new StringBuilder();
         builder.append("SET inline_with \"false\";\n");
-        String insertedRecordVar = "a";
-        String channelSubscriptionRecordVar = "sub";
-        String channelParamPrefix = channelSubscriptionRecordVar + ".param";
-        String functionResultVar = "result";
-        String brokerRecordVar = "b";
-        String brokerSubscriptionRecordVar = "bs";
         if (!push) {
             builder.append("insert into " + dataverse + "." + resultsTableName);
-            builder.append(" as " + insertedRecordVar + " (\n");
+            builder.append(" as " + INSERTED_RECORD_VAR + " (\n");
 
             builder.append("with " + BADConstants.ChannelExecutionTime + " as current_datetime() \n");
-            builder.append("select " + functionResultVar + ", ");
+            builder.append("select " + FUNCTION_RESULT_VAR + ", ");
             builder.append(BADConstants.ChannelExecutionTime + ", ");
             builder.append(
-                    channelSubscriptionRecordVar + "." + BADConstants.ChannelSubscriptionId + " as "
+                    CHANNEL_SUB_RECORD_VAR + "." + BADConstants.ChannelSubscriptionId + " as "
                             + BADConstants.ChannelSubscriptionId + ",");
             builder.append("current_datetime() as " + BADConstants.DeliveryTime + ",\n");
 
-            builder.append("(select " + brokerRecordVar + "." + BADConstants.BrokerEndPoint + ", "
-                    + brokerSubscriptionRecordVar + "." + BADConstants.BrokerSubscriptionId
+            builder.append("(select " + BROKER_RECORD_VAR + "." + BADConstants.BrokerEndPoint + ", "
+                    + BROKER_SUB_RECORD_VAR + "." + BADConstants.BrokerSubscriptionId
                     + " from\n");
         } else {
             builder.append(
-                    "select value {\"payload\": {\"" + functionResultVar + "\":" + functionResultVar
+                    "select value {\"payload\": {\"" + FUNCTION_RESULT_VAR + "\":" + FUNCTION_RESULT_VAR
                             + ", \"subscriptionIds\": brokerSubIds}} from (\n");
             builder.append("with " + BADConstants.ChannelExecutionTime + " as current_datetime() \n");
             builder.append(
-                    "select " + brokerRecordVar + "." + BADConstants.BrokerEndPoint + ", " + functionResultVar + ", "
-                            + brokerSubscriptionRecordVar + "." + BADConstants.BrokerSubscriptionId);
+                    "select " + BROKER_RECORD_VAR + "." + BADConstants.BrokerEndPoint + ", " + FUNCTION_RESULT_VAR
+                            + ", " + BROKER_SUB_RECORD_VAR + "." + BADConstants.BrokerSubscriptionId);
             builder.append(
                     " as " + BADConstants.BrokerSubscriptionId + ", " + BADConstants.ChannelExecutionTime + "\n");
             builder.append("from " + dataverse + "." + channelSubscriptionsTableName + " "
-                    + channelSubscriptionRecordVar + ",\n");
+                    + CHANNEL_SUB_RECORD_VAR + ",\n");
             builder.append(function.getNamespace() + "." + function.getName() + "(");
             int i = 0;
             for (; i < function.getArity() - 1; i++) {
-                builder.append(channelParamPrefix + i + ",");
+                builder.append(CHANNEL_PARAM_PREFIX + i + ",");
             }
-            builder.append(channelParamPrefix + i + ") " + functionResultVar + ",\n");
+            builder.append(CHANNEL_PARAM_PREFIX + i + ") " + FUNCTION_RESULT_VAR + ",\n");
 
         }
-        builder.append(dataverse + "." + brokerSubscriptionsTableName + " " + brokerSubscriptionRecordVar + ",\n");
+        builder.append(dataverse + "." + brokerSubscriptionsTableName + " " + BROKER_SUB_RECORD_VAR + ",\n");
         builder.append(
-                BADConstants.BAD_DATAVERSE_NAME + "." + BADConstants.BROKER_KEYWORD + " " + brokerRecordVar + "\n");
+                BADConstants.BAD_DATAVERSE_NAME + "." + BADConstants.BROKER_KEYWORD + " " + BROKER_RECORD_VAR + "\n");
 
-        builder.append("where " + brokerSubscriptionRecordVar + "." + BADConstants.BrokerName + " = " + brokerRecordVar
+        builder.append("where " + BROKER_SUB_RECORD_VAR + "." + BADConstants.BrokerName + " = " + BROKER_RECORD_VAR
                 + "." + BADConstants.BrokerName + "\n");
-        builder.append("and " + brokerSubscriptionRecordVar + "." + BADConstants.DataverseName + " = " + brokerRecordVar
+        builder.append("and " + BROKER_SUB_RECORD_VAR + "." + BADConstants.DataverseName + " = " + BROKER_RECORD_VAR
                 + "." + BADConstants.DataverseName + "\n");
-        builder.append("and " + brokerSubscriptionRecordVar + "." + BADConstants.ChannelSubscriptionId + " = "
-                + channelSubscriptionRecordVar + "." + BADConstants.ChannelSubscriptionId + "\n");
+        builder.append("and " + BROKER_SUB_RECORD_VAR + "." + BADConstants.ChannelSubscriptionId + " = "
+                + CHANNEL_SUB_RECORD_VAR + "." + BADConstants.ChannelSubscriptionId + "\n");
 
         if (!push) {
             builder.append(") as brokerSubIds\n");
 
             builder.append("from " + dataverse + "." + channelSubscriptionsTableName + " "
-                    + channelSubscriptionRecordVar + ",\n");
+                    + CHANNEL_SUB_RECORD_VAR + ",\n");
             builder.append(function.getNamespace() + "." + function.getName() + "(");
             int i = 0;
             for (; i < function.getArity() - 1; i++) {
-                builder.append(channelParamPrefix + i + ",");
+                builder.append(CHANNEL_PARAM_PREFIX + i + ",");
             }
-            builder.append(channelParamPrefix + i + ") " + functionResultVar + " \n");
+            builder.append(CHANNEL_PARAM_PREFIX + i + ") " + FUNCTION_RESULT_VAR + " \n");
             builder.append(")");
-            builder.append(" returning " + insertedRecordVar);
+            builder.append(" returning " + INSERTED_RECORD_VAR);
 
         } else {
             builder.append(") results\n");
-            builder.append("group by " + BADConstants.BrokerEndPoint + "," + functionResultVar + ", "
+            builder.append("group by " + BADConstants.BrokerEndPoint + "," + FUNCTION_RESULT_VAR + ", "
                     + BADConstants.ChannelExecutionTime);
             builder.append(" group as brokerSubIds (" + BADConstants.BrokerSubscriptionId + " as subscriptionId)");
         }

@@ -58,6 +58,9 @@ public class ChannelSubscribeStatement extends ExtensionStatement {
     private final String subscriptionId;
     private final int varCounter;
 
+    private static final String CHANNEL_SUB_VAR = "channelSub";
+    private static final String PARAM_PREFIX = "param";
+
     public ChannelSubscribeStatement(Identifier dataverseName, Identifier channelName, List<Expression> argList,
             int varCounter, Identifier brokerDataverseName, Identifier brokerName, String subscriptionId,
             List<String> paramList) {
@@ -178,14 +181,12 @@ public class ChannelSubscribeStatement extends ExtensionStatement {
             IHyracksClientConnection hcc, IHyracksDataset hdc, Stats stats, String channelSubscriptionsDataset,
             ResultDelivery resultDelivery) throws Exception {
         //TODO: Might be better to create the entire expression manually rather than parsing a string
-        String channelSubVar = "channelSub";
-        String param = "param";
         StringBuilder builder = new StringBuilder();
         builder.append("upsert into " + channelSubscriptionsDataset + "(\n");
-        builder.append("(let v = (select value " + channelSubVar + " from " + channelSubscriptionsDataset + " "
-                + channelSubVar + " where ");
+        builder.append("(let v = (select value " + CHANNEL_SUB_VAR + " from " + channelSubscriptionsDataset + " "
+                + CHANNEL_SUB_VAR + " where ");
         for (int i = 0; i < paramList.size(); i++) {
-            builder.append(param + i + " =  " + paramList.get(i));
+            builder.append(PARAM_PREFIX + i + " =  " + paramList.get(i));
             if (i < paramList.size() - 1) {
                 builder.append(" and ");
             }
@@ -195,7 +196,7 @@ public class ChannelSubscribeStatement extends ExtensionStatement {
         builder.append("WHEN true THEN {\"" + BADConstants.ChannelSubscriptionId + "\":v[0]."
                 + BADConstants.ChannelSubscriptionId + ", ");
         for (int i = 0; i < paramList.size(); i++) {
-            builder.append("\"" + param + i + "\": " + paramList.get(i));
+            builder.append("\"" + PARAM_PREFIX + i + "\": " + paramList.get(i));
             if (i < paramList.size() - 1) {
                 builder.append(", ");
             }
@@ -203,7 +204,7 @@ public class ChannelSubscribeStatement extends ExtensionStatement {
         builder.append("}\n");
         builder.append("ELSE {\"" + BADConstants.ChannelSubscriptionId + "\":create_uuid(), ");
         for (int i = 0; i < paramList.size(); i++) {
-            builder.append("\"" + param + i + "\": " + paramList.get(i));
+            builder.append("\"" + PARAM_PREFIX + i + "\": " + paramList.get(i));
             if (i < paramList.size() - 1) {
                 builder.append(", ");
             }
@@ -221,7 +222,6 @@ public class ChannelSubscribeStatement extends ExtensionStatement {
             IHyracksClientConnection hcc, IHyracksDataset hdc, Stats stats, String channelSubscriptionsDataset,
             String brokerSubscriptionDataset, Broker broker, ResultDelivery resultDelivery) throws Exception {
         //TODO: Might be better to create the entire expression manually rather than parsing a string
-        String param = "param";
         StringBuilder builder = new StringBuilder();
         builder.append("insert into " + brokerSubscriptionDataset + " as r (\n");
         builder.append("(select value {\"" + BADConstants.ChannelSubscriptionId + "\":s."
@@ -230,7 +230,7 @@ public class ChannelSubscribeStatement extends ExtensionStatement {
                 + BADConstants.BrokerName + "\":\"" + broker.getBrokerName() + "\"}\n");
         builder.append("from " + channelSubscriptionsDataset + " s where ");
         for (int i = 0; i < paramList.size(); i++) {
-            builder.append(param + i + " =  " + paramList.get(i));
+            builder.append(PARAM_PREFIX + i + " =  " + paramList.get(i));
             if (i < paramList.size() - 1) {
                 builder.append(" and ");
             }
@@ -247,17 +247,17 @@ public class ChannelSubscribeStatement extends ExtensionStatement {
             IHyracksClientConnection hcc, IHyracksDataset hdc, Stats stats, String brokerSubscriptionDataset,
             Broker broker, ResultDelivery resultDelivery, String subscriptionString) throws Exception {
         //TODO: Might be better to create the entire expression manually rather than parsing a string
-        String channelSubVar = "channelSub";
         StringBuilder builder = new StringBuilder();
         builder.append("upsert into " + brokerSubscriptionDataset + "(\n");
         builder.append(
-                "(select value {\"" + BADConstants.ChannelSubscriptionId + "\":" + channelSubVar + "."
+                "(select value {\"" + BADConstants.ChannelSubscriptionId + "\":" + CHANNEL_SUB_VAR + "."
                         + BADConstants.ChannelSubscriptionId + ",\"" + BADConstants.BrokerSubscriptionId + "\":"
-                        + channelSubVar + "." + BADConstants.BrokerSubscriptionId
+                        + CHANNEL_SUB_VAR + "." + BADConstants.BrokerSubscriptionId
                         + ",\"" + BADConstants.DataverseName + "\":\"" + broker.getDataverseName() + "\", \""
                         + BADConstants.BrokerName + "\":\"" + broker.getBrokerName() + "\"}\n");
-        builder.append("from " + brokerSubscriptionDataset + " " + channelSubVar + " where ");
-        builder.append("" + channelSubVar + "." + BADConstants.BrokerSubscriptionId + " = uuid(\"" + subscriptionString
+        builder.append("from " + brokerSubscriptionDataset + " " + CHANNEL_SUB_VAR + " where ");
+        builder.append("" + CHANNEL_SUB_VAR + "." + BADConstants.BrokerSubscriptionId + " = uuid(\""
+                + subscriptionString
                 + "\"))\n");
         builder.append(");");
         BADParserFactory factory = new BADParserFactory();

@@ -340,14 +340,34 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
     }
 
 
-    //Find Specific Operators within the plan
+    //
+
+    /**
+     * Find Specific Operators within the plan
+     *
+     * @param op
+     *            The operator to begin the search at
+     * @param searchTag
+     *            The type of operator to find
+     * @param subscriptionsName
+     *            When searching for a scan, pass the name of the dataset
+     * @param subscriptionType
+     *            When searching for a scan, pass the type of the dataset
+     * @return
+     */
     private AbstractLogicalOperator findOp(AbstractLogicalOperator op, LogicalOperatorTag searchTag,
             String subscriptionsName, String subscriptionType) {
         if (!op.hasInputs()) {
             return null;
         }
         for (Mutable<ILogicalOperator> subOp : op.getInputs()) {
-            if (subOp.getValue().getOperatorTag() == searchTag) {
+            if (subOp.getValue().getOperatorTag() != searchTag) {
+                AbstractLogicalOperator nestedOp = findOp((AbstractLogicalOperator) subOp.getValue(), searchTag,
+                        subscriptionsName, subscriptionType);
+                if (nestedOp != null) {
+                    return nestedOp;
+                }
+            } else {
                 if (searchTag == LogicalOperatorTag.SUBPLAN) {
                     if (op.getOperatorTag() == LogicalOperatorTag.ASSIGN) {
                         ScalarFunctionCallExpression resultCreation =
@@ -370,12 +390,6 @@ public class InsertBrokerNotifierForChannelRule implements IAlgebraicRewriteRule
                     }
                 }
 
-            } else {
-                AbstractLogicalOperator nestedOp = findOp((AbstractLogicalOperator) subOp.getValue(), searchTag,
-                        subscriptionsName, subscriptionType);
-                if (nestedOp != null) {
-                    return nestedOp;
-                }
             }
         }
         return null;
