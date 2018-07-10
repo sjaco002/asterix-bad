@@ -110,7 +110,6 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
         this.executorService = ses;
     }
 
-
     public ScheduledExecutorService getExecutorService() {
         return executorService;
     }
@@ -192,7 +191,7 @@ public class DeployedJobSpecEventListener implements IActiveEntityEventsListener
     }
 
     @Override
-    public synchronized void subscribe(IActiveEntityEventSubscriber subscriber) throws HyracksDataException {
+    public synchronized void subscribe(IActiveEntityEventSubscriber subscriber) {
         // no op
     }
 
