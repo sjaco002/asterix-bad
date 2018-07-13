@@ -334,7 +334,8 @@ public class BADStatementExecutor extends QueryTranslator {
                 }
             }
         }
-        final IRequestParameters requestParameters = new RequestParameters(null, null, null, null, null, null, null);
+        final IRequestParameters requestParameters =
+                new RequestParameters(null, null, null, null, null, null, null, true);
         for (Channel channel : channels) {
             if (!channel.getChannelId().getDataverse().equals(dvId.getValue())) {
                 continue;
