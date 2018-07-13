@@ -22,6 +22,7 @@ import java.util.Collection;
 
 import org.apache.asterix.om.types.IAType;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
+import org.apache.hyracks.algebricks.common.utils.Pair;
 import org.apache.hyracks.algebricks.core.algebra.base.LogicalVariable;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractDelegatedLogicalOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.IOperatorDelegate;
@@ -31,9 +32,9 @@ import org.apache.hyracks.algebricks.core.algebra.visitors.ILogicalExpressionRef
  * An operator for sending broker notifications
  */
 public class NotifyBrokerOperator extends AbstractDelegatedLogicalOperator {
-    private final LogicalVariable brokerEndpointVar;
-    private final LogicalVariable channelExecutionVar;
-    private final LogicalVariable pushListVar;
+    private LogicalVariable brokerEndpointVar;
+    private LogicalVariable channelExecutionVar;
+    private LogicalVariable pushListVar;
     private final boolean push;
     private final IAType recordType;
 
@@ -93,6 +94,19 @@ public class NotifyBrokerOperator extends AbstractDelegatedLogicalOperator {
         usedVars.add(pushListVar);
         usedVars.add(brokerEndpointVar);
         usedVars.add(channelExecutionVar);
+    }
+
+    @Override
+    public void replaceVariables(Pair<LogicalVariable, LogicalVariable> arg) {
+        if (pushListVar.equals(arg.first)) {
+            pushListVar = arg.second;
+        }
+        if (brokerEndpointVar.equals(arg.first)) {
+            brokerEndpointVar = arg.second;
+        }
+        if (channelExecutionVar.equals(arg.first)) {
+            channelExecutionVar = arg.second;
+        }
     }
 
     @Override
