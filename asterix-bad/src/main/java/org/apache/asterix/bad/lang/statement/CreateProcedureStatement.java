@@ -69,6 +69,7 @@ import org.apache.asterix.translator.IRequestParameters;
 import org.apache.asterix.translator.IStatementExecutor;
 import org.apache.asterix.translator.IStatementExecutor.ResultDelivery;
 import org.apache.asterix.translator.IStatementExecutor.Stats;
+import org.apache.asterix.translator.IStatementExecutorContext;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.algebricks.common.utils.Pair;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
@@ -175,8 +176,7 @@ public class CreateProcedureStatement extends ExtensionStatement {
     }
 
     private Pair<JobSpecification, PrecompiledType> createProcedureJob(IStatementExecutor statementExecutor,
-            MetadataProvider metadataProvider, IHyracksClientConnection hcc, Stats stats)
-            throws Exception {
+            MetadataProvider metadataProvider, IHyracksClientConnection hcc, Stats stats) throws Exception {
         if (getProcedureBodyStatement().getKind() == Statement.Kind.INSERT) {
             if (!varList.isEmpty()) {
                 throw new CompilationException("Insert procedures cannot have parameters");
@@ -193,8 +193,7 @@ public class CreateProcedureStatement extends ExtensionStatement {
             dependencies.get(1).addAll(FunctionUtil.getFunctionDependencies(fact.createQueryRewriter(),
                     ((Query) getProcedureBodyStatement()).getBody(), metadataProvider).get(1));
             Pair<JobSpecification, PrecompiledType> pair = new Pair<>(BADJobService.compileQueryJob(statementExecutor,
-                    metadataProvider, hcc, (Query) getProcedureBodyStatement()),
-                    PrecompiledType.QUERY);
+                    metadataProvider, hcc, (Query) getProcedureBodyStatement()), PrecompiledType.QUERY);
             dependencies.get(0).addAll(FunctionUtil.getFunctionDependencies(fact.createQueryRewriter(),
                     ((Query) getProcedureBodyStatement()).getBody(), metadataProvider).get(0));
             return pair;
@@ -216,8 +215,7 @@ public class CreateProcedureStatement extends ExtensionStatement {
     }
 
     private void setupDeployedJobSpec(EntityId entityId, JobSpecification jobSpec, IHyracksClientConnection hcc,
-            DeployedJobSpecEventListener listener, ResultSetId resultSetId, Stats stats)
-            throws Exception {
+            DeployedJobSpecEventListener listener, ResultSetId resultSetId, Stats stats) throws Exception {
         jobSpec.setProperty(ActiveNotificationHandler.ACTIVE_ENTITY_PROPERTY_NAME, entityId);
         DeployedJobSpecId deployedJobSpecId = hcc.deployJobSpec(jobSpec);
         listener.setDeployedJobSpecId(deployedJobSpecId);
@@ -225,8 +223,8 @@ public class CreateProcedureStatement extends ExtensionStatement {
 
     @Override
     public void handle(IHyracksClientConnection hcc, IStatementExecutor statementExecutor,
-            IRequestParameters requestParameters, MetadataProvider metadataProvider, int resultSetId)
-            throws HyracksDataException, AlgebricksException {
+            IRequestParameters requestParameters, MetadataProvider metadataProvider, int resultSetId,
+            IStatementExecutorContext executorCtx) throws HyracksDataException, AlgebricksException {
         ICcApplicationContext appCtx = metadataProvider.getApplicationContext();
         ActiveNotificationHandler activeEventHandler =
                 (ActiveNotificationHandler) appCtx.getActiveNotificationHandler();
