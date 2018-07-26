@@ -30,6 +30,7 @@ import org.apache.asterix.test.runtime.ExecutionTestUtil;
 import org.apache.asterix.testframework.context.TestCaseContext;
 import org.apache.asterix.testframework.xml.TestGroup;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hyracks.storage.am.lsm.btree.impl.TestLsmBtreeLocalResource;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -57,6 +58,7 @@ public class BADExecutionTest {
     private static final boolean cleanupOnStop = true;
 
     protected static TestGroup FailedGroup;
+    protected TestLsmBtreeLocalResource resource = null;
 
     @BeforeClass
     public static void setUp() throws Exception {

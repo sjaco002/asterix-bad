@@ -50,6 +50,7 @@ import org.apache.asterix.om.base.IAObject;
 import org.apache.asterix.translator.ConstantHelper;
 import org.apache.asterix.translator.IRequestParameters;
 import org.apache.asterix.translator.IStatementExecutor;
+import org.apache.asterix.translator.IStatementExecutorContext;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
@@ -96,8 +97,8 @@ public class ExecuteProcedureStatement extends ExtensionStatement {
 
     @Override
     public void handle(IHyracksClientConnection hcc, IStatementExecutor statementExecutor,
-            IRequestParameters requestParameters, MetadataProvider metadataProvider, int resultSetId)
-            throws HyracksDataException, AlgebricksException {
+            IRequestParameters requestParameters, MetadataProvider metadataProvider, int resultSetId,
+            IStatementExecutorContext executorCtx) throws HyracksDataException, AlgebricksException {
         ICcApplicationContext appCtx = metadataProvider.getApplicationContext();
         ActiveNotificationHandler activeEventHandler =
                 (ActiveNotificationHandler) appCtx.getActiveNotificationHandler();
@@ -119,9 +120,8 @@ public class ExecuteProcedureStatement extends ExtensionStatement {
             DeployedJobSpecId deployedJobSpecId = listener.getDeployedJobSpecId();
             if (procedure.getDuration().equals("")) {
                 BADJobService.runDeployedJobSpec(deployedJobSpecId, hcc, requestParameters.getHyracksDataset(),
-                        contextRuntimeVarMap, entityId,
-                        metadataProvider.getTxnIdFactory(), appCtx, listener, (QueryTranslator) statementExecutor);
-
+                        contextRuntimeVarMap, entityId, metadataProvider.getTxnIdFactory(), appCtx, listener,
+                        (QueryTranslator) statementExecutor);
 
             } else {
                 ScheduledExecutorService ses = BADJobService.startRepetitiveDeployedJobSpec(deployedJobSpecId, hcc,
@@ -142,8 +142,7 @@ public class ExecuteProcedureStatement extends ExtensionStatement {
         }
     }
 
-    private Map<byte[], byte[]> createParameterMap(Procedure procedure)
-            throws AsterixException, HyracksDataException {
+    private Map<byte[], byte[]> createParameterMap(Procedure procedure) throws AsterixException, HyracksDataException {
         Map<byte[], byte[]> map = new HashMap<>();
         if (procedure.getParams().size() != argList.size()) {
             throw AsterixException.create(ErrorCode.COMPILATION_INVALID_PARAMETER_NUMBER,
