@@ -97,7 +97,7 @@ public class NotifyBrokerOperator extends AbstractDelegatedLogicalOperator {
     }
 
     @Override
-    public void replaceVariables(Pair<LogicalVariable, LogicalVariable> arg) {
+    public void replaceVariable(Pair<LogicalVariable, LogicalVariable> arg) {
         if (pushListVar.equals(arg.first)) {
             pushListVar = arg.second;
         }
