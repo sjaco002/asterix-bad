@@ -47,15 +47,15 @@
                                                       -- BROADCAST_EXCHANGE  |PARTITIONED|
                                                         -- STREAM_PROJECT  |PARTITIONED|
                                                           -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
-                                                            -- PRE_CLUSTERED_GROUP_BY[$$231]  |PARTITIONED|
+                                                            -- PRE_CLUSTERED_GROUP_BY[$$230]  |PARTITIONED|
                                                                     {
                                                                       -- AGGREGATE  |LOCAL|
                                                                         -- STREAM_SELECT  |LOCAL|
                                                                           -- NESTED_TUPLE_SOURCE  |LOCAL|
                                                                     }
                                                               -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
-                                                                -- STABLE_SORT [$$231(ASC)]  |PARTITIONED|
-                                                                  -- HASH_PARTITION_EXCHANGE [$$231]  |PARTITIONED|
+                                                                -- STABLE_SORT [$$230(ASC)]  |PARTITIONED|
+                                                                  -- HASH_PARTITION_EXCHANGE [$$230]  |PARTITIONED|
                                                                     -- UNION_ALL  |PARTITIONED|
                                                                       -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
                                                                         -- STREAM_PROJECT  |PARTITIONED|
