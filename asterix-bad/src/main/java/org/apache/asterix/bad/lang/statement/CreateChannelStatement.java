@@ -256,19 +256,18 @@ public class CreateChannelStatement extends ExtensionStatement {
      * ) returning a;
      *
      * push version:
-     * set inline_with "false";
-     * select value {"payload": {"result":result, "subscriptionIds": brokerSubIds}} from (
+     * SET inline_with "false";
+     * select value {"payload": {"result":r, "subscriptionId": brokerSubId}} from (
      * with channelExecutionTime as current_datetime()
-     * select b.BrokerEndPoint, result, bs.brokerSubId as brokerSubId, channelExecutionTime
-     * from channels.EmergenciesNearMeChannelChannelSubscriptions sub,
-     * channels.EmergenciesNearMe(sub.param0,sub.param1) result
-     * channels.EmergenciesNearMeChannelBrokerSubscriptions bs,
-     * Metadata.Broker b
+     * select b.BrokerEndPoint, result as r, bs.brokerSubId as brokerSubId, channelExecutionTime
+     * from steven.EmergencyChannelChannelSubscriptions sub,
+     * steven.RecentEmergenciesNearUser(sub.param0) result,
+     * steven.EmergencyChannelBrokerSubscriptions bs,
+     * steven.Broker b
      * where bs.BrokerName = b.BrokerName
      * and bs.DataverseName = b.DataverseName
      * and bs.channelSubId = sub.channelSubId
-     * ) results
-     * group by BrokerEndPoint,result, channelExecutionTime group as brokerSubIds (brokerSubId as subscriptionId);
+     * ) results;
      */
     private JobSpecification createChannelJob(IStatementExecutor statementExecutor, MetadataProvider metadataProvider,
             IHyracksClientConnection hcc, IHyracksDataset hdc, Stats stats) throws Exception {
